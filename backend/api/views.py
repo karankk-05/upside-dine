@@ -2,8 +2,25 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.db import connection
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 
 
+@extend_schema(
+    summary="Health Check",
+    description="Check if the API and database are running properly",
+    responses={
+        200: {
+            "type": "object",
+            "properties": {
+                "status": {"type": "string"},
+                "message": {"type": "string"},
+                "database": {"type": "string"},
+                "version": {"type": "string"}
+            }
+        }
+    }
+)
 @api_view(['GET'])
 def health_check(request):
     """
@@ -25,6 +42,55 @@ def health_check(request):
     })
 
 
+@extend_schema(
+    summary="Add Two Numbers",
+    description="Add two numbers together and return the result",
+    request={
+        "type": "object",
+        "properties": {
+            "a": {
+                "type": "number",
+                "description": "First number",
+                "example": 5
+            },
+            "b": {
+                "type": "number", 
+                "description": "Second number",
+                "example": 10
+            }
+        },
+        "required": ["a", "b"]
+    },
+    examples=[
+        OpenApiExample(
+            'Add 5 + 10',
+            value={'a': 5, 'b': 10},
+            request_only=True
+        ),
+        OpenApiExample(
+            'Add 15 + 27',
+            value={'a': 15, 'b': 27},
+            request_only=True
+        )
+    ],
+    responses={
+        200: {
+            "type": "object",
+            "properties": {
+                "a": {"type": "number"},
+                "b": {"type": "number"},
+                "result": {"type": "number"},
+                "operation": {"type": "string"}
+            }
+        },
+        400: {
+            "type": "object",
+            "properties": {
+                "error": {"type": "string"}
+            }
+        }
+    }
+)
 @api_view(['POST'])
 def add_numbers(request):
     """
@@ -75,3 +141,4 @@ def add_numbers(request):
             },
             status=status.HTTP_400_BAD_REQUEST
         )
+

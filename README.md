@@ -10,7 +10,7 @@ A comprehensive restaurant reservation and dining experience platform built with
 
 **TL;DR:**
 ```bash
-git clone <repo-url>
+git clone https://github.com/karankk-05/upside-dine.git
 cd upside_dine
 git checkout -b yourname-feature
 cp backend/.env.example backend/.env

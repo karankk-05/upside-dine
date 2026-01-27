@@ -20,7 +20,7 @@ Verify: `docker --version && docker-compose --version`
 
 ```bash
 # Clone repository
-git clone <repository-url>
+git clone https://github.com/karankk-05/upside-dine.git
 cd upside_dine
 
 # Create YOUR branch (NEVER use master/main!)

@@ -4,31 +4,21 @@ A comprehensive restaurant reservation and dining experience platform built with
 
 ## ⚡ Quick Start
 
-**New team member?** → See **[FIRST_TIME_SETUP.md](FIRST_TIME_SETUP.md)** for step-by-step guide
+**New team member?** → See **[QUICKSTART.md](QUICKSTART.md)** - Complete setup + Git workflow
 
-**Want full workflow?** → See **[CONTRIBUTING.md](CONTRIBUTING.md)** for Git branching and team workflow
+**Advanced setup?** → See **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Manual installation without Docker
 
-**Quick reference?** → See **[QUICKSTART.md](QUICKSTART.md)** for Docker commands
-
-**TL;DR for experienced developers:**
-
+**TL;DR:**
 ```bash
-# 1. Install Docker Desktop
-# 2. Clone repo and setup:
-git clone <repository-url>
+git clone <repo-url>
 cd upside_dine
-git checkout -b feature/yourname-description
+git checkout -b yourname-feature
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
-
-# 3. Start everything:
 docker-compose up --build
-
-# 4. In a new terminal, initialize database:
 docker-compose exec backend python manage.py migrate
 docker-compose exec -it backend python manage.py createsuperuser
-
-# 5. Open http://localhost:3000
+# Open http://localhost:3000
 ```
 
 ---

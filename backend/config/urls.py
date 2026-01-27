@@ -20,10 +20,8 @@ urlpatterns = [
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     
-    # API endpoints will be added here as we create apps
-    # path('api/', include('apps.users.urls')),
-    # path('api/', include('apps.restaurants.urls')),
-    # etc.
+    # API endpoints
+    path('api/', include('api.urls')),
 ]
 
 # Serve media files in development

@@ -57,7 +57,7 @@ docker-compose exec -it backend python manage.py createsuperuser
 
 ## 📝 Daily Workflow
 
-### Morning
+### Starting Environment
 ```bash
 cd upside_dine
 git checkout yourname-feature
@@ -91,7 +91,7 @@ git push origin yourname-feature
 4. Add description
 5. Request review
 
-### Evening
+### Closing Environment
 ```bash
 docker-compose down  # Optional - can leave running
 ```

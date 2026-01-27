@@ -33,6 +33,9 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "django_celery_beat",
     "django_celery_results",
+    
+    # Local apps
+    "api",
 ]
 
 MIDDLEWARE = [

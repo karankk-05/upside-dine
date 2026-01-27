@@ -2,8 +2,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.db import connection
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
-from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiExample
+from .serializers import AddNumbersSerializer
 
 
 @extend_schema(
@@ -45,22 +45,7 @@ def health_check(request):
 @extend_schema(
     summary="Add Two Numbers",
     description="Add two numbers together and return the result",
-    request={
-        "type": "object",
-        "properties": {
-            "a": {
-                "type": "number",
-                "description": "First number",
-                "example": 5
-            },
-            "b": {
-                "type": "number", 
-                "description": "Second number",
-                "example": 10
-            }
-        },
-        "required": ["a", "b"]
-    },
+    request=AddNumbersSerializer,
     examples=[
         OpenApiExample(
             'Add 5 + 10',

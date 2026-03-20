@@ -10,6 +10,7 @@ from .views import (
     ResetPasswordView,
     MeView,
     MessAccountView,
+    DeleteAccountView,
 )
 
 urlpatterns = [
@@ -22,4 +23,5 @@ urlpatterns = [
     path("auth/reset-password/", ResetPasswordView.as_view()),
     path("users/me/", MeView.as_view()),
     path("users/me/mess-account/", MessAccountView.as_view()),
+    path("users/me/delete/", DeleteAccountView.as_view()),
 ]

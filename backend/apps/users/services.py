@@ -18,6 +18,10 @@ def _otp_attempt_key(email):
     return f"otp:attempts:{email}"
 
 
+def _email_count_key(email):
+    return f"email:count:{email}"
+
+
 def generate_otp(email):
     otp = f"{random.randint(0, 999999):06d}"
     cache.set(_otp_key(email), otp, timeout=OTP_TTL_SECONDS)
@@ -41,8 +45,24 @@ def verify_otp(email, otp):
     return stored == otp
 
 
+def is_email_limit_reached(email):
+    """Check if the account has exceeded the max emails allowed."""
+    max_emails = getattr(settings, "MAX_EMAILS_PER_ACCOUNT", 10)
+    count = cache.get(_email_count_key(email), 0)
+    return count >= max_emails
+
+
 def send_otp_email(email, otp):
+    """Send OTP email if the per-account email limit has not been exceeded."""
+    if is_email_limit_reached(email):
+        raise ValueError("Email limit reached for this account. Max 10 emails allowed.")
+
     subject = "Upside Dine OTP Verification"
     message = f"Your OTP for Upside Dine is {otp}. It is valid for 5 minutes."
     from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@upsidedine.local")
     send_mail(subject, message, from_email, [email], fail_silently=False)
+
+    # Increment the email counter (persists for 24 hours)
+    key = _email_count_key(email)
+    count = cache.get(key, 0) + 1
+    cache.set(key, count, timeout=86400)

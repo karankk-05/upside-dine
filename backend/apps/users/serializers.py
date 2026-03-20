@@ -74,3 +74,21 @@ class MessAccountSerializer(serializers.ModelSerializer):
         model = MessAccount
         fields = ["balance", "last_updated"]
         read_only_fields = ["balance", "last_updated"]
+
+
+class RefreshTokenSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
+    new_password = serializers.CharField(min_length=8)
+
+
+class DeleteAccountSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True)

@@ -1,0 +1,111 @@
+Upside Dine - Person A Work (Users/Auth) Summary
+================================================
+
+Date: 2026-03-15
+Scope: Implement Person A responsibilities (Users/Auth) and wire into backend.
+
+What was implemented
+--------------------
+1. Custom user and role system
+   - Custom User model (email login) with roles and verification flags
+   - Role model with predefined roles
+   - Student and Staff profile models
+   - MessAccount model
+   - UserToken model to store refresh tokens
+
+2. Auth and profile APIs
+   - Register with OTP email
+   - Verify OTP
+   - Login (JWT access + refresh)
+   - Refresh access token
+   - Logout (blacklist refresh JTI)
+   - Forgot password (OTP)
+   - Reset password (OTP)
+   - Current user profile (GET/PATCH)
+   - Mess account view
+
+3. OTP and rate limiting
+   - OTP generation and verification via Redis cache
+   - OTP attempt rate limit
+   - API rate limit middleware (per-IP basic throttling)
+
+4. JWT authentication
+   - Custom JWTAuthentication that checks Redis blacklist
+
+5. Admin and forms
+   - Custom admin registration for user-related models
+   - Custom admin forms for the User model
+
+6. Wiring and settings
+   - Added app to INSTALLED_APPS
+   - Set AUTH_USER_MODEL
+   - Registered routes in config/urls.py
+   - Switched REST framework auth to custom JWTAuthentication
+   - Added email settings in config/settings.py
+
+7. Basic test
+   - Smoke test to ensure non-@iitk email registration fails
+
+Files added
+-----------
+backend\apps\__init__.py
+backend\apps\users\__init__.py
+backend\apps\users\apps.py
+backend\apps\users\managers.py
+backend\apps\users\models.py
+backend\apps\users\serializers.py
+backend\apps\users\services.py
+backend\apps\users\authentication.py
+backend\apps\users\permissions.py
+backend\apps\users\middleware.py
+backend\apps\users\forms.py
+backend\apps\users\admin.py
+backend\apps\users\views.py
+backend\apps\users\urls.py
+backend\apps\users\tests.py
+backend\apps\users\migrations\__init__.py
+
+Files modified
+--------------
+backend\config\settings.py
+  - added apps.users
+  - added RateLimitMiddleware
+  - set AUTH_USER_MODEL
+  - set REST framework auth class to apps.users.authentication.JWTAuthentication
+  - added email configuration settings
+
+backend\config\urls.py
+  - included apps.users.urls under /api/
+
+Environment files created
+-------------------------
+backend\.env (copied from backend\.env.example)
+frontend\.env (copied from frontend\.env.example)
+
+Pending / not completed
+-----------------------
+- Django migrations for users app were not created or applied because Docker
+  daemon is not running. To finish:
+
+  docker-compose exec backend python manage.py makemigrations users
+  docker-compose exec backend python manage.py migrate
+
+Notes
+-----
+- OTP email uses SMTP settings from backend\.env. Update EMAIL_HOST_USER and
+  EMAIL_HOST_PASSWORD to enable actual sending.
+- Rate limiting is a simple per-IP counter (120 req/min). Adjust as needed.
+- User roles are stored in Role model with fixed choices.
+
+Endpoints (under /api/)
+-----------------------
+POST  auth/register/
+POST  auth/verify-otp/
+POST  auth/login/
+POST  auth/refresh/
+POST  auth/logout/
+POST  auth/forgot-password/
+POST  auth/reset-password/
+GET   users/me/
+PATCH users/me/
+GET   users/me/mess-account/

@@ -5,6 +5,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from drf_spectacular.utils import extend_schema
 
 from .models import User, UserToken, MessAccount
 from .serializers import (
@@ -184,6 +185,7 @@ class DeleteAccountView(GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = DeleteAccountSerializer
 
+    @extend_schema(request=DeleteAccountSerializer)
     def delete(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)

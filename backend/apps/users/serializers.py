@@ -13,8 +13,6 @@ class RegisterSerializer(serializers.Serializer):
     )
 
     def validate_email(self, value):
-        if not value.lower().endswith("@iitk.ac.in"):
-            raise serializers.ValidationError("Only @iitk.ac.in emails are allowed.")
         return value.lower()
 
     def create(self, validated_data):

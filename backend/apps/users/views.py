@@ -86,7 +86,23 @@ class LoginView(GenericAPIView):
             expires_at=timezone.now() + timezone.timedelta(days=7),
         )
 
-        return Response({"access": access_token, "refresh": refresh_token})
+        # Return tokens + user info so frontend knows the role immediately
+        role = None
+        if user.is_superuser:
+            role = "superadmin"
+        elif user.role:
+            role = user.role.role_name
+
+        return Response({
+            "access": access_token,
+            "refresh": refresh_token,
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "role": role,
+                "is_superuser": user.is_superuser,
+            },
+        })
 
 
 class RefreshTokenView(GenericAPIView):
@@ -155,7 +171,7 @@ class ResetPasswordView(GenericAPIView):
         email = serializer.validated_data["email"].lower()
         otp = serializer.validated_data["otp"]
         new_password = serializer.validated_data["new_password"]
-        
+
         record_otp_attempt(email)
         if not verify_otp(email, otp):
             return Response({"detail": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)

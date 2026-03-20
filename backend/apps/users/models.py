@@ -12,7 +12,6 @@ class Role(models.Model):
         ("mess_worker", "Mess Worker"),
         ("canteen_manager", "Canteen Manager"),
         ("delivery_person", "Delivery Person"),
-        ("admin", "Admin"),
     ]
 
     role_name = models.CharField(max_length=50, unique=True, choices=ROLE_CHOICES)

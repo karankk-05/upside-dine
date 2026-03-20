@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 services:
   # PostgreSQL Database
@@ -108,6 +108,31 @@ services:
     depends_on:
       - db
       - redis
+
+  # ML Crowd Monitoring Service (FastAPI + YOLOv8)
+  ml_service:
+    build:
+      context: ./ml_service
+      dockerfile: Dockerfile
+    container_name: upside_dine_ml
+    command: uvicorn main:app --host 0.0.0.0 --port 8002 --reload
+    volumes:
+      - ./ml_service:/app
+    ports:
+      - "8002:8002"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - POLL_INTERVAL_SECONDS=30
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/ml/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # React Frontend
   frontend:

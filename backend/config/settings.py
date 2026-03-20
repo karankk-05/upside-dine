@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     # Local apps
     "api",
     "apps.users",
+    "apps.crowd",
 ]
 
 MIDDLEWARE = [
@@ -204,6 +205,7 @@ CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": config('REDIS_URL', default='redis://redis:6379/0'),
+        "KEY_PREFIX": "",
     }
 }
 

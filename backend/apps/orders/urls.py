@@ -1,0 +1,41 @@
+from django.urls import path
+
+from .views import (
+    CanteenManagerOrderAcceptView,
+    CanteenManagerOrderListView,
+    CanteenManagerOrderRejectView,
+    CanteenManagerOrderStatusUpdateView,
+    CanteenManagerVerifyPickupView,
+    OrderCancelView,
+    OrderDetailView,
+    OrderListCreateView,
+    OrderStatusView,
+)
+
+urlpatterns = [
+    path("orders/", OrderListCreateView.as_view(), name="orders-list-create"),
+    path("orders/<int:pk>/", OrderDetailView.as_view(), name="orders-detail"),
+    path("orders/<int:id>/cancel/", OrderCancelView.as_view(), name="orders-cancel"),
+    path("orders/<int:id>/status/", OrderStatusView.as_view(), name="orders-status"),
+    path("canteen-manager/orders/", CanteenManagerOrderListView.as_view(), name="canteen-manager-orders"),
+    path(
+        "canteen-manager/orders/<int:id>/accept/",
+        CanteenManagerOrderAcceptView.as_view(),
+        name="canteen-manager-order-accept",
+    ),
+    path(
+        "canteen-manager/orders/<int:id>/reject/",
+        CanteenManagerOrderRejectView.as_view(),
+        name="canteen-manager-order-reject",
+    ),
+    path(
+        "canteen-manager/orders/<int:id>/status/",
+        CanteenManagerOrderStatusUpdateView.as_view(),
+        name="canteen-manager-order-status-update",
+    ),
+    path(
+        "canteen-manager/orders/<int:id>/verify-pickup/",
+        CanteenManagerVerifyPickupView.as_view(),
+        name="canteen-manager-order-verify-pickup",
+    ),
+]

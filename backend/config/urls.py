@@ -23,6 +23,7 @@ urlpatterns = [
     # API endpoints
     path('api/', include('api.urls')),
     path('api/', include('apps.users.urls')),
+    path("api/mess/", include("apps.mess.urls")),
 ]
 
 # Serve media files in development

@@ -1,5 +1,6 @@
 import os
 from celery import Celery
+from celery.schedules import crontab
 
 # Set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
@@ -12,6 +13,17 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
+app.conf.beat_schedule = {
+    "mess-expire-stale-bookings-every-5-minutes": {
+        "task": "apps.mess.tasks.expire_stale_bookings",
+        "schedule": crontab(minute="*/5"),
+        "kwargs": {"batch_size": 500, "restore_inventory": True},
+    },
+    "mess-reset-daily-menu-inventory-at-midnight": {
+        "task": "apps.mess.tasks.reset_daily_menu_inventory",
+        "schedule": crontab(hour=0, minute=0),
+    },
+}
 
 
 @app.task(bind=True, ignore_result=True)

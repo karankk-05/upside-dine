@@ -38,6 +38,10 @@ INSTALLED_APPS = [
     "api",
     "apps.users",
     "apps.mess",
+    "apps.canteen",
+    "apps.orders",
+    "apps.payments",
+    "apps.crowd",
 ]
 
 MIDDLEWARE = [
@@ -205,6 +209,7 @@ CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": config('REDIS_URL', default='redis://redis:6379/0'),
+        "KEY_PREFIX": "",
     }
 }
 
@@ -218,3 +223,10 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+
+# Payments
+RAZORPAY_KEY_ID = config("RAZORPAY_KEY_ID", default="")
+RAZORPAY_KEY_SECRET = config("RAZORPAY_KEY_SECRET", default="")
+RAZORPAY_WEBHOOK_SECRET = config("RAZORPAY_WEBHOOK_SECRET", default="")
+RAZORPAY_BASE_URL = config("RAZORPAY_BASE_URL", default="https://api.razorpay.com/v1")

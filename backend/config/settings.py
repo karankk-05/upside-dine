@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     # Local apps
     "api",
     "apps.users",
+    "apps.mess",
     "apps.canteen",
     "apps.orders",
     "apps.payments",

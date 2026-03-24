@@ -37,6 +37,9 @@ INSTALLED_APPS = [
     # Local apps
     "api",
     "apps.users",
+    "apps.canteen",
+    "apps.orders",
+    "apps.payments",
     "apps.crowd",
 ]
 
@@ -219,3 +222,10 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+
+# Payments
+RAZORPAY_KEY_ID = config("RAZORPAY_KEY_ID", default="")
+RAZORPAY_KEY_SECRET = config("RAZORPAY_KEY_SECRET", default="")
+RAZORPAY_WEBHOOK_SECRET = config("RAZORPAY_WEBHOOK_SECRET", default="")
+RAZORPAY_BASE_URL = config("RAZORPAY_BASE_URL", default="https://api.razorpay.com/v1")

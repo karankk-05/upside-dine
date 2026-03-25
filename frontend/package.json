@@ -2,6 +2,7 @@
   "name": "upside-dine-frontend",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Frontend for Upside Dine restaurant reservation platform",
   "dependencies": {
     "react": "^18.2.0",
@@ -43,7 +44,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "format": "prettier --write \"src/**/*.{js,jsx,json,css,md}\"",
+    "format": "prettier --write \"src/**/*.{js,jsx,json,css}\"",
     "test": "vitest",
     "test:ui": "vitest --ui"
   },

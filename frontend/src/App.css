@@ -1,0 +1,55 @@
+/* Global Styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Colors - Stranger Things Palette */
+  --st-red: #d63434;
+  --st-red-glow: rgba(232, 85, 85, 0.5);
+  --st-dark: #0a0a0a;
+  --st-darker: #000000;
+  --st-gray: #1a1a1a;
+  --st-light-gray: #2a2a2a;
+  --st-text: #ffffff;
+  --st-text-dim: #999999;
+  --st-border: #333333;
+  --st-accent: #d45555;
+  --st-accent-dim: #b84444;
+  --st-subtle-glow: rgba(232, 85, 85, 0.12);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--st-dark);
+  color: var(--st-text);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--st-darker);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--st-gray);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--st-light-gray);
+}

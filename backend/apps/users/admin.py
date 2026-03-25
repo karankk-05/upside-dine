@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
 from .forms import UserCreationForm, UserChangeForm
-from .models import User, Role, Student, Staff, MessAccount, UserToken
+from .models import User, Role, Student, Staff, MessAccount, UserToken, EmployeeCode
 
 
 class StudentInline(admin.StackedInline):
@@ -72,6 +72,14 @@ class UserTokenAdmin(admin.ModelAdmin):
     list_display = ("user", "device_info", "ip_address", "expires_at", "is_revoked", "created_at")
     list_filter = ("is_revoked",)
     search_fields = ("user__email",)
+
+
+@admin.register(EmployeeCode)
+class EmployeeCodeAdmin(admin.ModelAdmin):
+    list_display = ("code", "role", "is_claimed", "claimed_by", "claimed_at", "created_at")
+    list_filter = ("role", "is_claimed")
+    search_fields = ("code", "claimed_by__email")
+    readonly_fields = ("claimed_by", "claimed_at", "created_at")
 
 
 admin.site.site_header = "Upside Dine Admin"

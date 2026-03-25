@@ -1,62 +1,87 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const CanteenManagerDashboard = () => {
+const AdminManagerDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [deliveryPersonnel, setDeliveryPersonnel] = useState([]);
+  const [managers, setManagers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     full_name: '',
     phone: '',
+    role_name: 'mess_manager',
+    canteen_id: '',
   });
   const [message, setMessage] = useState({ type: '', text: '' });
 
   useEffect(() => {
-    if (activeTab === 'delivery') {
-      fetchDeliveryPersonnel();
+    if (activeTab === 'managers') {
+      fetchManagers();
     }
   }, [activeTab]);
 
-  const fetchDeliveryPersonnel = async () => {
+  const fetchManagers = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await axios.get('/api/manager/delivery-personnel/', {
+      const response = await axios.get('/api/admin/managers/', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setDeliveryPersonnel(response.data);
+      setManagers(response.data);
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to load delivery personnel' });
+      setMessage({ type: 'error', text: 'Failed to load managers' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddDeliveryPerson = async (e) => {
+  const handleAddManager = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage({ type: '', text: '' });
 
     try {
       const token = localStorage.getItem('access_token');
-      const response = await axios.post('/api/manager/delivery-personnel/', formData, {
+      const payload = {
+        email: formData.email,
+        full_name: formData.full_name,
+        phone: formData.phone,
+        role_name: formData.role_name,
+      };
+      
+      // Only add canteen_id if it's a canteen manager and has a value
+      if (formData.role_name === 'canteen_manager' && formData.canteen_id) {
+        payload.canteen_id = parseInt(formData.canteen_id);
+      }
+      
+      const response = await axios.post('/api/admin/managers/', payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       setMessage({ 
         type: 'success', 
-        text: `Delivery person created! Temp password: ${response.data.temp_password}` 
+        text: `Manager created! Email: ${response.data.email}, Temp password: ${response.data.temp_password}, Employee Code: ${response.data.employee_code}` 
       });
-      setFormData({ email: '', full_name: '', phone: '' });
+      setFormData({ email: '', full_name: '', phone: '', role_name: 'mess_manager', canteen_id: '' });
       setShowAddForm(false);
-      fetchDeliveryPersonnel();
+      fetchManagers();
     } catch (error) {
-      setMessage({ 
-        type: 'error', 
-        text: error.response?.data?.email?.[0] || 'Failed to create delivery person' 
-      });
+      console.error('Error creating manager:', error.response?.data);
+      let errorMsg = 'Failed to create manager';
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        if (data.email) errorMsg = `Email error: ${data.email[0] || data.email}`;
+        else if (data.phone) errorMsg = `Phone error: ${data.phone[0] || data.phone}`;
+        else if (data.full_name) errorMsg = `Name error: ${data.full_name[0] || data.full_name}`;
+        else if (data.role_name) errorMsg = `Role error: ${data.role_name[0] || data.role_name}`;
+        else if (data.canteen_id) errorMsg = `Canteen ID error: ${data.canteen_id[0] || data.canteen_id}`;
+        else if (data.detail) errorMsg = data.detail;
+        else if (typeof data === 'string') errorMsg = data;
+      }
+      
+      setMessage({ type: 'error', text: errorMsg });
     } finally {
       setLoading(false);
     }
@@ -65,13 +90,13 @@ const CanteenManagerDashboard = () => {
   const handleToggleStatus = async (userId, currentStatus) => {
     try {
       const token = localStorage.getItem('access_token');
-      await axios.patch(`/api/manager/delivery-personnel/${userId}/toggle/`, {}, {
+      await axios.patch(`/api/admin/managers/${userId}/`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      fetchDeliveryPersonnel();
+      fetchManagers();
       setMessage({ 
         type: 'success', 
-        text: `Delivery person ${currentStatus ? 'deactivated' : 'activated'} successfully` 
+        text: `Manager ${currentStatus ? 'frozen' : 'activated'} successfully` 
       });
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to update status' });
@@ -81,7 +106,7 @@ const CanteenManagerDashboard = () => {
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff', padding: '10px' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <h1 style={{ color: '#d63434', marginBottom: '20px', fontSize: 'clamp(1.5rem, 5vw, 2rem)' }}>Canteen Manager Dashboard</h1>
+        <h1 style={{ color: '#d63434', marginBottom: '20px', fontSize: 'clamp(1.5rem, 5vw, 2rem)' }}>Admin Manager Dashboard</h1>
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '5px', marginBottom: '20px', borderBottom: '2px solid #333', overflowX: 'auto' }}>
@@ -101,19 +126,19 @@ const CanteenManagerDashboard = () => {
             Overview
           </button>
           <button
-            onClick={() => setActiveTab('delivery')}
+            onClick={() => setActiveTab('managers')}
             style={{
               padding: '10px 15px',
-              background: activeTab === 'delivery' ? '#d63434' : 'transparent',
+              background: activeTab === 'managers' ? '#d63434' : 'transparent',
               color: '#fff',
               border: 'none',
               cursor: 'pointer',
-              borderBottom: activeTab === 'delivery' ? '3px solid #d63434' : 'none',
+              borderBottom: activeTab === 'managers' ? '3px solid #d63434' : 'none',
               whiteSpace: 'nowrap',
               fontSize: 'clamp(0.875rem, 2vw, 1rem)'
             }}
           >
-            Delivery Personnel
+            Manage Managers
           </button>
         </div>
 
@@ -135,16 +160,16 @@ const CanteenManagerDashboard = () => {
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div>
-            <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)' }}>Welcome to Canteen Manager Dashboard</h2>
-            <p style={{ fontSize: 'clamp(0.875rem, 2vw, 1rem)' }}>Manage your canteen operations and delivery personnel from here.</p>
+            <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)' }}>Welcome to Admin Manager Dashboard</h2>
+            <p style={{ fontSize: 'clamp(0.875rem, 2vw, 1rem)' }}>Manage canteen and mess managers from here.</p>
           </div>
         )}
 
-        {/* Delivery Personnel Tab */}
-        {activeTab === 'delivery' && (
+        {/* Managers Tab */}
+        {activeTab === 'managers' && (
           <div>
             <div style={{ display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', justifyContent: 'space-between', alignItems: window.innerWidth < 768 ? 'stretch' : 'center', marginBottom: '20px', gap: '10px' }}>
-              <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', margin: 0 }}>Delivery Personnel Management</h2>
+              <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', margin: 0 }}>Manager Management</h2>
               <button
                 onClick={() => setShowAddForm(!showAddForm)}
                 style={{
@@ -157,19 +182,19 @@ const CanteenManagerDashboard = () => {
                   fontSize: 'clamp(0.875rem, 2vw, 1rem)'
                 }}
               >
-                {showAddForm ? 'Cancel' : '+ Add Delivery Person'}
+                {showAddForm ? 'Cancel' : '+ Add Manager'}
               </button>
             </div>
 
             {/* Add Form */}
             {showAddForm && (
-              <form onSubmit={handleAddDeliveryPerson} style={{
+              <form onSubmit={handleAddManager} style={{
                 background: '#1a1a1a',
                 padding: '15px',
                 borderRadius: '8px',
                 marginBottom: '20px'
               }}>
-                <h3 style={{ marginBottom: '15px', fontSize: 'clamp(1rem, 3vw, 1.25rem)' }}>Add New Delivery Person</h3>
+                <h3 style={{ marginBottom: '15px', fontSize: 'clamp(1rem, 3vw, 1.25rem)' }}>Add New Manager</h3>
                 <div style={{ display: 'grid', gap: '15px' }}>
                   <input
                     type="text"
@@ -216,6 +241,37 @@ const CanteenManagerDashboard = () => {
                       fontSize: 'clamp(0.875rem, 2vw, 1rem)'
                     }}
                   />
+                  <select
+                    value={formData.role_name}
+                    onChange={(e) => setFormData({ ...formData, role_name: e.target.value })}
+                    style={{
+                      padding: '10px',
+                      background: '#0a0a0a',
+                      border: '1px solid #333',
+                      color: '#fff',
+                      borderRadius: '5px',
+                      fontSize: 'clamp(0.875rem, 2vw, 1rem)'
+                    }}
+                  >
+                    <option value="mess_manager">Mess Manager</option>
+                    <option value="canteen_manager">Canteen Manager</option>
+                  </select>
+                  {formData.role_name === 'canteen_manager' && (
+                    <input
+                      type="number"
+                      placeholder="Canteen ID"
+                      value={formData.canteen_id}
+                      onChange={(e) => setFormData({ ...formData, canteen_id: e.target.value })}
+                      style={{
+                        padding: '10px',
+                        background: '#0a0a0a',
+                        border: '1px solid #333',
+                        color: '#fff',
+                        borderRadius: '5px',
+                        fontSize: 'clamp(0.875rem, 2vw, 1rem)'
+                      }}
+                    />
+                  )}
                   <button
                     type="submit"
                     disabled={loading}
@@ -229,26 +285,26 @@ const CanteenManagerDashboard = () => {
                       fontSize: 'clamp(0.875rem, 2vw, 1rem)'
                     }}
                   >
-                    {loading ? 'Creating...' : 'Create Delivery Person'}
+                    {loading ? 'Creating...' : 'Create Manager'}
                   </button>
                 </div>
               </form>
             )}
 
-            {/* Delivery Personnel List */}
+            {/* Managers List */}
             {loading && !showAddForm ? (
               <p>Loading...</p>
             ) : (
               <div style={{ background: '#1a1a1a', borderRadius: '8px', overflow: 'auto' }}>
                 {/* Mobile View - Cards */}
                 <div style={{ display: window.innerWidth < 768 ? 'block' : 'none' }}>
-                  {deliveryPersonnel.length === 0 ? (
+                  {managers.length === 0 ? (
                     <p style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-                      No delivery personnel found. Add one to get started.
+                      No managers found. Add one to get started.
                     </p>
                   ) : (
-                    deliveryPersonnel.map((person) => (
-                      <div key={person.id} style={{
+                    managers.map((manager) => (
+                      <div key={manager.id} style={{
                         padding: '15px',
                         borderBottom: '1px solid #333',
                         background: '#0a0a0a',
@@ -256,34 +312,37 @@ const CanteenManagerDashboard = () => {
                         borderRadius: '8px'
                       }}>
                         <div style={{ marginBottom: '10px' }}>
-                          <strong style={{ color: '#d63434' }}>{person.full_name}</strong>
+                          <strong style={{ color: '#d63434' }}>{manager.full_name}</strong>
                         </div>
                         <div style={{ fontSize: '0.875rem', marginBottom: '5px' }}>
-                          <span style={{ color: '#888' }}>Email:</span> {person.email}
+                          <span style={{ color: '#888' }}>Email:</span> {manager.email}
                         </div>
                         <div style={{ fontSize: '0.875rem', marginBottom: '5px' }}>
-                          <span style={{ color: '#888' }}>Phone:</span> {person.phone}
+                          <span style={{ color: '#888' }}>Phone:</span> {manager.phone}
                         </div>
                         <div style={{ fontSize: '0.875rem', marginBottom: '5px' }}>
-                          <span style={{ color: '#888' }}>Code:</span> {person.employee_code}
+                          <span style={{ color: '#888' }}>Role:</span> {manager.role_name}
+                        </div>
+                        <div style={{ fontSize: '0.875rem', marginBottom: '5px' }}>
+                          <span style={{ color: '#888' }}>Code:</span> {manager.employee_code}
                         </div>
                         <div style={{ marginBottom: '10px' }}>
                           <span style={{
                             padding: '5px 10px',
                             borderRadius: '5px',
-                            background: person.is_active ? '#1a4d1a' : '#4d1a1a',
-                            color: person.is_active ? '#4ade80' : '#f87171',
+                            background: manager.is_active ? '#1a4d1a' : '#4d1a1a',
+                            color: manager.is_active ? '#4ade80' : '#f87171',
                             fontSize: '0.875rem'
                           }}>
-                            {person.is_active ? 'Active' : 'Inactive'}
+                            {manager.is_active ? 'Active' : 'Frozen'}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', gap: '10px' }}>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                           <button
-                            onClick={() => handleToggleStatus(person.id, person.is_active)}
+                            onClick={() => handleToggleStatus(manager.id, manager.is_active)}
                             style={{
                               padding: '8px 15px',
-                              background: person.is_active ? '#7a2d2d' : '#2d7a2d',
+                              background: manager.is_active ? '#7a2d2d' : '#2d7a2d',
                               color: '#fff',
                               border: 'none',
                               borderRadius: '5px',
@@ -292,7 +351,7 @@ const CanteenManagerDashboard = () => {
                               flex: '1'
                             }}
                           >
-                            {person.is_active ? 'Deactivate' : 'Activate'}
+                            {manager.is_active ? 'Freeze' : 'Activate'}
                           </button>
                         </div>
                       </div>
@@ -307,48 +366,50 @@ const CanteenManagerDashboard = () => {
                       <th style={{ padding: '15px', textAlign: 'left' }}>Name</th>
                       <th style={{ padding: '15px', textAlign: 'left' }}>Email</th>
                       <th style={{ padding: '15px', textAlign: 'left' }}>Phone</th>
+                      <th style={{ padding: '15px', textAlign: 'left' }}>Role</th>
                       <th style={{ padding: '15px', textAlign: 'left' }}>Employee Code</th>
                       <th style={{ padding: '15px', textAlign: 'left' }}>Status</th>
                       <th style={{ padding: '15px', textAlign: 'left' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {deliveryPersonnel.length === 0 ? (
+                    {managers.length === 0 ? (
                       <tr>
-                        <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-                          No delivery personnel found. Add one to get started.
+                        <td colSpan="7" style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+                          No managers found. Add one to get started.
                         </td>
                       </tr>
                     ) : (
-                      deliveryPersonnel.map((person) => (
-                        <tr key={person.id} style={{ borderTop: '1px solid #333' }}>
-                          <td style={{ padding: '15px' }}>{person.full_name}</td>
-                          <td style={{ padding: '15px' }}>{person.email}</td>
-                          <td style={{ padding: '15px' }}>{person.phone}</td>
-                          <td style={{ padding: '15px' }}>{person.employee_code}</td>
+                      managers.map((manager) => (
+                        <tr key={manager.id} style={{ borderTop: '1px solid #333' }}>
+                          <td style={{ padding: '15px' }}>{manager.full_name}</td>
+                          <td style={{ padding: '15px' }}>{manager.email}</td>
+                          <td style={{ padding: '15px' }}>{manager.phone}</td>
+                          <td style={{ padding: '15px' }}>{manager.role_name}</td>
+                          <td style={{ padding: '15px' }}>{manager.employee_code}</td>
                           <td style={{ padding: '15px' }}>
                             <span style={{
                               padding: '5px 10px',
                               borderRadius: '5px',
-                              background: person.is_active ? '#1a4d1a' : '#4d1a1a',
-                              color: person.is_active ? '#4ade80' : '#f87171'
+                              background: manager.is_active ? '#1a4d1a' : '#4d1a1a',
+                              color: manager.is_active ? '#4ade80' : '#f87171'
                             }}>
-                              {person.is_active ? 'Active' : 'Inactive'}
+                              {manager.is_active ? 'Active' : 'Frozen'}
                             </span>
                           </td>
                           <td style={{ padding: '15px' }}>
                             <button
-                              onClick={() => handleToggleStatus(person.id, person.is_active)}
+                              onClick={() => handleToggleStatus(manager.id, manager.is_active)}
                               style={{
                                 padding: '8px 15px',
-                                background: person.is_active ? '#7a2d2d' : '#2d7a2d',
+                                background: manager.is_active ? '#7a2d2d' : '#2d7a2d',
                                 color: '#fff',
                                 border: 'none',
                                 borderRadius: '5px',
                                 cursor: 'pointer'
                               }}
                             >
-                              {person.is_active ? 'Deactivate' : 'Activate'}
+                              {manager.is_active ? 'Freeze' : 'Activate'}
                             </button>
                           </td>
                         </tr>
@@ -365,4 +426,4 @@ const CanteenManagerDashboard = () => {
   );
 };
 
-export default CanteenManagerDashboard;
+export default AdminManagerDashboard;

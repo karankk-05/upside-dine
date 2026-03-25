@@ -152,3 +152,203 @@ class ResetPasswordSerializer(serializers.Serializer):
 
 class DeleteAccountSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
+
+
+
+class CreateDeliveryPersonSerializer(serializers.Serializer):
+    """Serializer for canteen manager to create delivery personnel"""
+    email = serializers.EmailField()
+    full_name = serializers.CharField(max_length=100)
+    phone = serializers.CharField(max_length=20)
+
+    def validate_email(self, value):
+        value = value.lower()
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("User with this email already exists.")
+        return value
+
+    def create(self, validated_data):
+        import secrets
+        import string
+        from django.core.mail import send_mail
+        from django.conf import settings
+
+        # Generate secure temporary password
+        temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
+
+        # Get delivery person role
+        role, _ = Role.objects.get_or_create(role_name='delivery_person')
+
+        # Create user
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            password=temp_password,
+            phone=validated_data['phone'],
+            role=role,
+            is_verified=True,
+            is_active=True,
+        )
+
+        # Generate unique employee code
+        employee_code = f"DEL{secrets.token_hex(4).upper()}"
+        while Staff.objects.filter(employee_code=employee_code).exists():
+            employee_code = f"DEL{secrets.token_hex(4).upper()}"
+
+        # Get canteen manager's canteen_id from request context
+        canteen_manager = self.context.get('canteen_manager')
+        canteen_id = canteen_manager.staff_profile.canteen_id if canteen_manager and hasattr(canteen_manager, 'staff_profile') else None
+
+        # Create staff profile
+        Staff.objects.create(
+            user=user,
+            full_name=validated_data['full_name'],
+            employee_code=employee_code,
+            canteen_id=canteen_id,
+            is_mess_staff=False,
+        )
+
+        # Send email with credentials
+        try:
+            send_mail(
+                subject='Your Delivery Personnel Account - Upside Dine',
+                message=f'''Hello {validated_data['full_name']},
+
+Your delivery personnel account has been created.
+
+Login Credentials:
+Email: {validated_data['email']}
+Temporary Password: {temp_password}
+
+Please login and change your password immediately.
+
+Login at: {settings.CORS_ALLOWED_ORIGINS.split(',')[0] if settings.CORS_ALLOWED_ORIGINS else 'http://localhost:3000'}/login
+
+Best regards,
+Upside Dine Team''',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[validated_data['email']],
+                fail_silently=False,
+            )
+        except Exception as e:
+            # Log error but don't fail the creation
+            print(f"Failed to send email: {e}")
+
+        return {
+            'user': user,
+            'temp_password': temp_password,
+            'employee_code': employee_code,
+        }
+
+
+class DeliveryPersonSerializer(serializers.ModelSerializer):
+    """Serializer for listing delivery personnel"""
+    full_name = serializers.CharField(source='staff_profile.full_name', read_only=True)
+    employee_code = serializers.CharField(source='staff_profile.employee_code', read_only=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'phone', 'full_name', 'employee_code', 'is_active', 'date_joined']
+        read_only_fields = fields
+
+
+
+class CreateManagerSerializer(serializers.Serializer):
+    """Serializer for admin manager to create canteen/mess managers"""
+    email = serializers.EmailField()
+    full_name = serializers.CharField(max_length=100)
+    phone = serializers.CharField(max_length=20)
+    role_name = serializers.ChoiceField(choices=['canteen_manager', 'mess_manager'])
+    canteen_id = serializers.IntegerField(required=False, allow_null=True)
+
+    def validate_email(self, value):
+        value = value.lower()
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("User with this email already exists.")
+        return value
+
+    def create(self, validated_data):
+        import secrets
+        import string
+        from django.core.mail import send_mail
+        from django.conf import settings
+
+        # Generate secure temporary password
+        temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
+
+        # Get role
+        role, _ = Role.objects.get_or_create(role_name=validated_data['role_name'])
+
+        # Create user
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            password=temp_password,
+            phone=validated_data['phone'],
+            role=role,
+            is_verified=True,
+            is_active=True,
+        )
+
+        # Generate unique employee code
+        employee_code = f"{validated_data['role_name'].upper()[:3]}{secrets.token_hex(4).upper()}"
+        while Staff.objects.filter(employee_code=employee_code).exists():
+            employee_code = f"{validated_data['role_name'].upper()[:3]}{secrets.token_hex(4).upper()}"
+
+        # Create staff profile
+        Staff.objects.create(
+            user=user,
+            full_name=validated_data['full_name'],
+            employee_code=employee_code,
+            canteen_id=validated_data.get('canteen_id') if validated_data['role_name'] == 'canteen_manager' else None,
+            is_mess_staff=(validated_data['role_name'] == 'mess_manager'),
+        )
+
+        # Send email with credentials
+        try:
+            subject = f'Your {role.get_role_name_display()} Account - Upside Dine'
+            message = f'''Hello {validated_data['full_name']},
+
+Your {role.get_role_name_display()} account has been created.
+
+Login Credentials:
+==================
+Email: {validated_data['email']}
+Temporary Password: {temp_password}
+Employee Code: {employee_code}
+
+Login URL: http://localhost:3000/login
+
+IMPORTANT: Please change your password immediately after your first login.
+
+Best regards,
+Upside Dine Team'''
+            
+            from_email = settings.DEFAULT_FROM_EMAIL
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=from_email,
+                recipient_list=[validated_data['email']],
+                fail_silently=False,
+            )
+        except Exception as e:
+            # Log error but don't fail the creation
+            print(f"Failed to send email: {e}")
+
+        return {
+            'user': user,
+            'temp_password': temp_password,
+            'employee_code': employee_code,
+        }
+
+
+class ManagerSerializer(serializers.ModelSerializer):
+    """Serializer for listing managers"""
+    full_name = serializers.CharField(source='staff_profile.full_name', read_only=True)
+    employee_code = serializers.CharField(source='staff_profile.employee_code', read_only=True)
+    canteen_id = serializers.IntegerField(source='staff_profile.canteen_id', read_only=True)
+    role_name = serializers.CharField(source='role.role_name', read_only=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'phone', 'full_name', 'employee_code', 'canteen_id', 'role_name', 'is_active', 'date_joined']
+        read_only_fields = fields

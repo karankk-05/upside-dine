@@ -11,6 +11,10 @@ from .views import (
     MeView,
     MessAccountView,
     DeleteAccountView,
+    DeliveryPersonnelManagementView,
+    ToggleDeliveryPersonStatusView,
+    AdminManagerManagementView,
+    ToggleManagerStatusView,
 )
 
 urlpatterns = [
@@ -24,4 +28,8 @@ urlpatterns = [
     path("users/me/", MeView.as_view(), name="users-me"),
     path("users/me/mess-account/", MessAccountView.as_view(), name="users-me-mess-account"),
     path("users/me/delete/", DeleteAccountView.as_view(), name="users-me-delete"),
+    path("manager/delivery-personnel/", DeliveryPersonnelManagementView.as_view(), name="delivery-personnel-management"),
+    path("manager/delivery-personnel/<int:user_id>/toggle/", ToggleDeliveryPersonStatusView.as_view(), name="toggle-delivery-person-status"),
+    path("admin/managers/", AdminManagerManagementView.as_view(), name="admin-manager-management"),
+    path("admin/managers/<int:user_id>/", ToggleManagerStatusView.as_view(), name="toggle-manager-status"),
 ]

@@ -7,7 +7,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import extend_schema
 
-from .models import User, UserToken, MessAccount
+from .models import User, UserToken, MessAccount, Role
 from .serializers import (
     RegisterSerializer,
     VerifyOTPSerializer,
@@ -223,3 +223,192 @@ class MessAccountView(GenericAPIView):
         if not account:
             return Response({"detail": "Mess account not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(self.get_serializer(account).data)
+
+
+
+class DeliveryPersonnelManagementView(GenericAPIView):
+    """View for canteen managers to manage delivery personnel"""
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            from .serializers import CreateDeliveryPersonSerializer
+            return CreateDeliveryPersonSerializer
+        from .serializers import DeliveryPersonSerializer
+        return DeliveryPersonSerializer
+
+    def get(self, request):
+        """List all delivery personnel for this canteen manager"""
+        # Check if user is canteen manager
+        if not hasattr(request.user, 'staff_profile') or request.user.role.role_name != 'canteen_manager':
+            return Response({"detail": "Only canteen managers can access this."}, status=status.HTTP_403_FORBIDDEN)
+
+        canteen_id = request.user.staff_profile.canteen_id
+
+        # Get all delivery personnel for this canteen
+        delivery_role = Role.objects.filter(role_name='delivery_person').first()
+        if not delivery_role:
+            return Response([], status=status.HTTP_200_OK)
+
+        delivery_personnel = User.objects.filter(
+            role=delivery_role,
+            staff_profile__canteen_id=canteen_id
+        ).select_related('staff_profile')
+
+        from .serializers import DeliveryPersonSerializer
+        serializer = DeliveryPersonSerializer(delivery_personnel, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        """Create a new delivery person"""
+        # Check if user is canteen manager
+        if not hasattr(request.user, 'staff_profile') or request.user.role.role_name != 'canteen_manager':
+            return Response({"detail": "Only canteen managers can create delivery personnel."}, status=status.HTTP_403_FORBIDDEN)
+
+        from .serializers import CreateDeliveryPersonSerializer
+        serializer = CreateDeliveryPersonSerializer(data=request.data, context={'canteen_manager': request.user})
+        serializer.is_valid(raise_exception=True)
+        result = serializer.save()
+
+        return Response({
+            "detail": "Delivery person created successfully.",
+            "email": result['user'].email,
+            "temp_password": result['temp_password'],
+            "employee_code": result['employee_code'],
+        }, status=status.HTTP_201_CREATED)
+
+
+class ToggleDeliveryPersonStatusView(GenericAPIView):
+    """View for canteen managers to activate/deactivate delivery personnel"""
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, user_id):
+        """Toggle delivery person active status"""
+        # Check if user is canteen manager
+        if not hasattr(request.user, 'staff_profile') or request.user.role.role_name != 'canteen_manager':
+            return Response({"detail": "Only canteen managers can manage delivery personnel."}, status=status.HTTP_403_FORBIDDEN)
+
+        canteen_id = request.user.staff_profile.canteen_id
+
+        # Get delivery person
+        try:
+            delivery_person = User.objects.select_related('staff_profile', 'role').get(
+                id=user_id,
+                role__role_name='delivery_person',
+                staff_profile__canteen_id=canteen_id
+            )
+        except User.DoesNotExist:
+            return Response({"detail": "Delivery person not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Toggle active status
+        delivery_person.is_active = not delivery_person.is_active
+        delivery_person.save(update_fields=['is_active'])
+
+        status_text = "activated" if delivery_person.is_active else "deactivated"
+        return Response({
+            "detail": f"Delivery person {status_text} successfully.",
+            "is_active": delivery_person.is_active
+        })
+
+
+
+class AdminManagerManagementView(GenericAPIView):
+    """View for admin managers to manage canteen/mess managers"""
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            from .serializers import CreateManagerSerializer
+            return CreateManagerSerializer
+        from .serializers import ManagerSerializer
+        return ManagerSerializer
+
+    def get(self, request):
+        """List all canteen and mess managers"""
+        # Check if user is admin manager
+        if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
+            return Response({"detail": "Only admin managers can access this."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Get all canteen and mess managers
+        manager_roles = Role.objects.filter(role_name__in=['canteen_manager', 'mess_manager'])
+        managers = User.objects.filter(role__in=manager_roles).select_related('staff_profile', 'role')
+
+        from .serializers import ManagerSerializer
+        serializer = ManagerSerializer(managers, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        """Create a new canteen or mess manager"""
+        # Check if user is admin manager
+        if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
+            return Response({"detail": "Only admin managers can create managers."}, status=status.HTTP_403_FORBIDDEN)
+
+        print(f"DEBUG: Received data: {request.data}")  # Debug log
+        
+        from .serializers import CreateManagerSerializer
+        serializer = CreateManagerSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            print(f"DEBUG: Validation errors: {serializer.errors}")  # Debug log
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        result = serializer.save()
+
+        return Response({
+            "detail": "Manager created successfully.",
+            "email": result['user'].email,
+            "temp_password": result['temp_password'],
+            "employee_code": result['employee_code'],
+        }, status=status.HTTP_201_CREATED)
+
+
+class ToggleManagerStatusView(GenericAPIView):
+    """View for admin managers to activate/deactivate canteen/mess managers"""
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, user_id):
+        """Toggle manager active status (freeze/unfreeze)"""
+        # Check if user is admin manager
+        if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
+            return Response({"detail": "Only admin managers can manage managers."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Get manager
+        try:
+            manager = User.objects.select_related('staff_profile', 'role').get(
+                id=user_id,
+                role__role_name__in=['canteen_manager', 'mess_manager']
+            )
+        except User.DoesNotExist:
+            return Response({"detail": "Manager not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Toggle active status
+        manager.is_active = not manager.is_active
+        manager.save(update_fields=['is_active'])
+
+        status_text = "activated" if manager.is_active else "frozen"
+        return Response({
+            "detail": f"Manager {status_text} successfully.",
+            "is_active": manager.is_active
+        })
+
+    def delete(self, request, user_id):
+        """Delete a manager account"""
+        # Check if user is admin manager
+        if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
+            return Response({"detail": "Only admin managers can delete managers."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Get manager
+        try:
+            manager = User.objects.select_related('staff_profile', 'role').get(
+                id=user_id,
+                role__role_name__in=['canteen_manager', 'mess_manager']
+            )
+        except User.DoesNotExist:
+            return Response({"detail": "Manager not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        manager_email = manager.email
+        manager.delete()
+
+        return Response({
+            "detail": f"Manager {manager_email} deleted successfully."
+        })

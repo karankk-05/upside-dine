@@ -275,21 +275,6 @@ const SignupForm = ({ selectedRole }) => {
         </>
       )}
 
-      {selectedRole !== 'student' && (
-        <div className="input-group">
-          <label className="input-label">Employee Code</label>
-          <input
-            type="text"
-            name="employee_code"
-            className="input-field"
-            placeholder="Enter your employee code"
-            value={formData.employee_code}
-            onChange={handleChange}
-            required
-          />
-        </div>
-      )}
-
       <div className="input-group">
         <label className="input-label">Password</label>
         <div className="password-input-wrapper">

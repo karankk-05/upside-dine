@@ -71,7 +71,8 @@ const LoginForm = ({ selectedRole }) => {
         delivery_person: '/delivery',
       };
 
-      navigate(roleRoutes[selectedRole] || '/dashboard');
+      // Force a full page reload to clear any previous user's React Query cache / Zustand state
+      window.location.href = roleRoutes[selectedRole] || '/dashboard';
     } catch (err) {
       setError(
         err.response?.data?.message ||

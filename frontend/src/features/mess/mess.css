@@ -1,0 +1,1037 @@
+/* ============================================
+   Mess Interface — Stranger Things Theme CSS
+   ============================================ */
+
+/* --- Page Layout --- */
+.mess-page {
+  min-height: 100vh;
+  background: var(--st-dark);
+  padding-bottom: 80px;
+}
+
+.mess-page-header {
+  padding: 40px 20px 20px;
+  background: linear-gradient(180deg, var(--st-darker) 0%, var(--st-dark) 100%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--st-border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.mess-back-btn {
+  width: 36px;
+  height: 36px;
+  background: var(--st-gray);
+  border: 1px solid var(--st-border);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--st-text);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.mess-back-btn:hover {
+  border-color: var(--st-accent);
+  box-shadow: 0 0 10px var(--st-subtle-glow);
+}
+
+.mess-page-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--st-accent);
+  text-shadow: 0 0 4px var(--st-subtle-glow), 0 0 8px var(--st-subtle-glow);
+}
+
+.mess-content {
+  padding: 20px;
+}
+
+/* --- Feature Cards (Mess List Page) --- */
+.mess-feature-cards {
+  display: grid;
+  gap: 16px;
+}
+
+.mess-feature-card {
+  background: var(--st-gray);
+  border: 1px solid var(--st-border);
+  border-radius: 16px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mess-feature-card:hover {
+  border-color: var(--st-accent);
+  box-shadow: 0 0 15px var(--st-subtle-glow);
+  transform: translateY(-2px);
+}
+
+.mess-feature-card:active {
+  transform: scale(0.98);
+}
+
+.mess-feature-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mess-feature-icon {
+  width: 48px;
+  height: 48px;
+  background: var(--st-light-gray);
+  border: 2px solid var(--st-accent);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px var(--st-subtle-glow);
+  color: var(--st-accent);
+  flex-shrink: 0;
+}
+
+.mess-feature-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.mess-feature-description {
+  font-size: 13px;
+  color: var(--st-text-dim);
+  line-height: 1.5;
+}
+
+/* --- Tabs / Filters --- */
+.mess-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+  margin-bottom: 20px;
+}
+
+.mess-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.mess-tab {
+  padding: 10px 18px;
+  background: var(--st-gray);
+  border: 2px solid var(--st-border);
+  color: var(--st-text-dim);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.mess-tab:hover {
+  border-color: var(--st-accent);
+}
+
+.mess-tab.active {
+  background: var(--st-light-gray);
+  border-color: var(--st-accent);
+  color: var(--st-accent);
+  box-shadow: 0 0 12px var(--st-subtle-glow);
+}
+
+/* --- Menu Item Card --- */
+.mess-menu-item {
+  background: var(--st-gray);
+  border: 1px solid var(--st-border);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.mess-menu-item:hover {
+  border-color: var(--st-accent);
+}
+
+.mess-menu-item-info {
+  flex: 1;
+  margin-right: 12px;
+}
+
+.mess-menu-item-name {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.mess-menu-item-desc {
+  font-size: 12px;
+  color: var(--st-text-dim);
+  margin-bottom: 6px;
+}
+
+.mess-menu-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mess-menu-item-price {
+  color: var(--st-accent);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.mess-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  background: var(--st-light-gray);
+  border: 1px solid var(--st-border);
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--st-text-dim);
+}
+
+.mess-badge.breakfast { color: #ffa726; border-color: #ffa726; }
+.mess-badge.lunch { color: #66bb6a; border-color: #66bb6a; }
+.mess-badge.dinner { color: #42a5f5; border-color: #42a5f5; }
+.mess-badge.snack { color: #ab47bc; border-color: #ab47bc; }
+
+/* Remaining qty colors */
+.mess-qty-high { color: #00ff00; font-weight: 700; font-size: 12px; }
+.mess-qty-medium { color: #ffaa00; font-weight: 700; font-size: 12px; }
+.mess-qty-low { color: #ff3333; font-weight: 700; font-size: 12px; }
+
+/* --- Buttons --- */
+.mess-btn {
+  padding: 10px 20px;
+  background: var(--st-accent);
+  border: none;
+  border-radius: 8px;
+  color: var(--st-text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 10px var(--st-subtle-glow);
+  white-space: nowrap;
+}
+
+.mess-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 0 20px var(--st-subtle-glow);
+}
+
+.mess-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mess-btn-primary {
+  width: 100%;
+  padding: 18px;
+  background: var(--st-red);
+  border: none;
+  border-radius: 12px;
+  color: var(--st-text);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px var(--st-red-glow);
+  letter-spacing: 1px;
+}
+
+.mess-btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px var(--st-red-glow);
+}
+
+.mess-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mess-btn-small {
+  padding: 8px 16px;
+  background: var(--st-accent);
+  border: none;
+  border-radius: 8px;
+  color: var(--st-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mess-btn-small:hover {
+  box-shadow: 0 0 10px var(--st-subtle-glow);
+}
+
+.mess-btn-outline {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid var(--st-border);
+  border-radius: 8px;
+  color: var(--st-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mess-btn-outline:hover {
+  border-color: var(--st-accent);
+  color: var(--st-accent);
+}
+
+.mess-btn-danger {
+  padding: 10px 20px;
+  background: transparent;
+  border: 1px solid #ff3333;
+  border-radius: 8px;
+  color: #ff3333;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mess-btn-danger:hover:not(:disabled) {
+  background: rgba(255, 51, 51, 0.1);
+  box-shadow: 0 0 15px rgba(255, 51, 51, 0.3);
+}
+
+.mess-btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- QR Card --- */
+.mess-qr-container {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.mess-qr-card {
+  background: var(--st-gray);
+  border: 2px solid var(--st-accent);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 0 20px var(--st-subtle-glow);
+}
+
+.mess-qr-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.mess-qr-subtitle {
+  color: var(--st-text-dim);
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+
+.mess-qr-image {
+  width: 240px;
+  height: 240px;
+  margin: 0 auto 24px;
+  background: white;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.mess-qr-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.mess-qr-info {
+  margin-bottom: 8px;
+}
+
+.mess-qr-item-name {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.mess-qr-booking-id {
+  font-size: 13px;
+  color: var(--st-text-dim);
+}
+
+.mess-qr-validity {
+  color: var(--st-text-dim);
+  font-size: 13px;
+}
+
+.mess-qr-timer {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--st-accent);
+  margin: 16px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.mess-qr-timer.expiring-soon {
+  color: #ffaa00;
+  animation: pulse-timer 1s ease-in-out infinite;
+}
+
+.mess-qr-timer.expired {
+  color: #ff3333;
+}
+
+@keyframes pulse-timer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.mess-qr-details {
+  margin-top: 24px;
+  padding: 16px;
+  background: rgba(255, 0, 0, 0.1);
+  border: 1px solid var(--st-accent);
+  border-radius: 12px;
+  font-size: 12px;
+  color: var(--st-text-dim);
+  line-height: 1.6;
+  text-align: left;
+}
+
+.mess-qr-details strong {
+  color: var(--st-accent);
+}
+
+/* --- Booking Card --- */
+.mess-booking-card {
+  background: var(--st-gray);
+  border: 1px solid var(--st-border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mess-booking-card:hover {
+  border-color: var(--st-accent);
+}
+
+.mess-booking-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.mess-booking-id {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mess-status-badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mess-status-badge.pending {
+  background: rgba(255, 170, 0, 0.2);
+  color: #ffaa00;
+  border: 1px solid #ffaa00;
+}
+
+.mess-status-badge.redeemed {
+  background: rgba(0, 255, 0, 0.2);
+  color: #00ff00;
+  border: 1px solid #00ff00;
+}
+
+.mess-status-badge.expired {
+  background: rgba(255, 51, 51, 0.2);
+  color: #ff3333;
+  border: 1px solid #ff3333;
+}
+
+.mess-status-badge.cancelled {
+  background: rgba(153, 153, 153, 0.2);
+  color: #999999;
+  border: 1px solid #999999;
+}
+
+.mess-booking-details {
+  font-size: 13px;
+  color: var(--st-text-dim);
+  margin-bottom: 4px;
+}
+
+/* --- Account Card --- */
+.mess-account-card {
+  background: var(--st-gray);
+  border: 1px solid var(--st-accent);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 0 15px var(--st-subtle-glow);
+  margin-bottom: 20px;
+}
+
+.mess-account-label {
+  font-size: 13px;
+  color: var(--st-text-dim);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mess-account-balance {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--st-accent);
+  margin-bottom: 4px;
+}
+
+.mess-account-updated {
+  font-size: 11px;
+  color: var(--st-text-dim);
+}
+
+/* --- Modal --- */
+.mess-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.mess-modal {
+  background: var(--st-gray);
+  border: 1px solid var(--st-border);
+  border-radius: 20px;
+  padding: 24px;
+  max-width: 420px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalSlideUp 0.3s ease-out;
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mess-modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--st-accent);
+}
+
+/* --- Form Elements --- */
+.mess-input-group {
+  margin-bottom: 20px;
+}
+
+.mess-input-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: var(--st-text-dim);
+}
+
+.mess-input-field {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--st-light-gray);
+  border: 1px solid var(--st-border);
+  border-radius: 12px;
+  color: var(--st-text);
+  font-size: 15px;
+  transition: all 0.3s ease;
+}
+
+.mess-input-field:focus {
+  outline: none;
+  border-color: var(--st-accent);
+  box-shadow: 0 0 15px var(--st-subtle-glow);
+}
+
+.mess-input-field::placeholder {
+  color: #666666;
+}
+
+.mess-select {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--st-light-gray);
+  border: 1px solid var(--st-border);
+  border-radius: 12px;
+  color: var(--st-text);
+  font-size: 15px;
+  cursor: pointer;
+  appearance: none;
+  transition: all 0.3s ease;
+}
+
+.mess-select:focus {
+  outline: none;
+  border-color: var(--st-accent);
+  box-shadow: 0 0 15px var(--st-subtle-glow);
+}
+
+/* --- Quantity Stepper --- */
+.mess-qty-stepper {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.mess-qty-btn {
+  width: 36px;
+  height: 36px;
+  background: var(--st-light-gray);
+  border: 1px solid var(--st-border);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--st-text);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 18px;
+}
+
+.mess-qty-btn:hover:not(:disabled) {
+  border-color: var(--st-accent);
+  color: var(--st-accent);
+}
+
+.mess-qty-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.mess-qty-value {
+  font-size: 20px;
+  font-weight: 700;
+  min-width: 30px;
+  text-align: center;
+}
+
+/* --- Stats Grid --- */
+.mess-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.mess-stat-card {
+  background: var(--st-gray);
+  border: 1px solid var(--st-border);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+
+.mess-stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--st-accent);
+  margin-bottom: 4px;
+}
+
+.mess-stat-label {
+  font-size: 11px;
+  color: var(--st-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* --- Scanner --- */
+.mess-scanner-card {
+  background: var(--st-gray);
+  border: 2px solid var(--st-accent);
+  border-radius: 20px;
+  padding: 32px;
+  text-align: center;
+  margin-bottom: 24px;
+  box-shadow: 0 0 20px var(--st-subtle-glow);
+}
+
+.mess-scanner-frame {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 20px;
+  background: linear-gradient(135deg, var(--st-light-gray), var(--st-gray));
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.mess-scanner-frame::after {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border: 2px solid var(--st-accent);
+  border-radius: 8px;
+  box-shadow: 0 0 15px var(--st-red-glow);
+  animation: scanPulse 2s ease-in-out infinite;
+}
+
+@keyframes scanPulse {
+  0%, 100% { box-shadow: 0 0 15px var(--st-red-glow); }
+  50% { box-shadow: 0 0 25px var(--st-red-glow); }
+}
+
+.mess-scanner-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.mess-scanner-subtitle {
+  font-size: 13px;
+  color: var(--st-text-dim);
+}
+
+.mess-divider-text {
+  text-align: center;
+  color: var(--st-text-dim);
+  font-size: 13px;
+  margin: 20px 0;
+  position: relative;
+}
+
+.mess-divider-text::before,
+.mess-divider-text::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 40%;
+  height: 1px;
+  background: var(--st-border);
+}
+
+.mess-divider-text::before { left: 0; }
+.mess-divider-text::after { right: 0; }
+
+/* --- Verification Result --- */
+.mess-verify-result {
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  margin-bottom: 24px;
+  animation: resultSlideIn 0.3s ease-out;
+}
+
+@keyframes resultSlideIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.mess-verify-result.success {
+  background: rgba(0, 255, 0, 0.1);
+  border: 2px solid #00ff00;
+}
+
+.mess-verify-result.error {
+  background: rgba(255, 51, 51, 0.1);
+  border: 2px solid #ff3333;
+}
+
+.mess-verify-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.mess-verify-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.mess-verify-detail {
+  font-size: 13px;
+  color: var(--st-text-dim);
+  margin-bottom: 4px;
+}
+
+/* --- Transaction History --- */
+.mess-transaction {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--st-border);
+}
+
+.mess-transaction:last-child {
+  border-bottom: none;
+}
+
+.mess-transaction-info {
+  flex: 1;
+}
+
+.mess-transaction-name {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.mess-transaction-date {
+  font-size: 11px;
+  color: var(--st-text-dim);
+}
+
+.mess-transaction-amount {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ff5555;
+}
+
+/* --- Inventory Item --- */
+.mess-inventory-item {
+  background: var(--st-gray);
+  border: 1px solid var(--st-border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mess-inventory-info {
+  flex: 1;
+}
+
+.mess-inventory-name {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.mess-inventory-meta {
+  font-size: 12px;
+  color: var(--st-text-dim);
+}
+
+.mess-inventory-qty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mess-inventory-qty-input {
+  width: 70px;
+  padding: 8px 10px;
+  background: var(--st-light-gray);
+  border: 1px solid var(--st-border);
+  border-radius: 8px;
+  color: var(--st-text);
+  font-size: 14px;
+  text-align: center;
+}
+
+.mess-inventory-qty-input:focus {
+  outline: none;
+  border-color: var(--st-accent);
+}
+
+/* --- Section Header --- */
+.mess-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.mess-section-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* --- Loading & Error States --- */
+.mess-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mess-loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--st-border);
+  border-top-color: var(--st-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.mess-loading-text {
+  font-size: 14px;
+  color: var(--st-text-dim);
+}
+
+.mess-error {
+  text-align: center;
+  padding: 40px 20px;
+  color: #ff5555;
+  font-size: 14px;
+}
+
+.mess-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--st-text-dim);
+  font-size: 14px;
+}
+
+.mess-empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+/* --- Note Box --- */
+.mess-note {
+  background: var(--st-gray);
+  border: 1px solid var(--st-accent);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--st-text-dim);
+  line-height: 1.6;
+}
+
+.mess-note strong {
+  color: var(--st-accent);
+}
+
+/* --- Charts Section --- */
+.mess-chart-container {
+  background: var(--st-gray);
+  border: 1px solid var(--st-border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.mess-chart-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+/* — Confirm Dialog — */
+.mess-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 20px;
+}
+
+.mess-confirm-dialog {
+  background: var(--st-gray);
+  border: 1px solid var(--st-border);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 340px;
+  width: 100%;
+  text-align: center;
+  animation: modalSlideUp 0.3s ease-out;
+}
+
+.mess-confirm-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.mess-confirm-message {
+  font-size: 14px;
+  color: var(--st-text-dim);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.mess-confirm-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.mess-confirm-actions button {
+  flex: 1;
+}
+
+/* --- Status Dot --- */
+.mess-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.mess-status-dot.active {
+  background: #00ff00;
+  box-shadow: 0 0 8px #00ff00;
+}
+
+.mess-status-dot.inactive {
+  background: #ff3333;
+  box-shadow: 0 0 8px #ff3333;
+}
+
+/* --- Responsive --- */
+@media (max-width: 480px) {
+  .mess-content { padding: 16px; }
+  .mess-stat-grid { grid-template-columns: 1fr; }
+  .mess-qr-image { width: 200px; height: 200px; }
+  .mess-qr-timer { font-size: 26px; }
+}

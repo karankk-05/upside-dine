@@ -12,6 +12,7 @@ const AuthPage = () => {
   const roles = [
     { id: 'student', label: 'Student' },
     { id: 'mess_manager', label: 'Mess Manager' },
+    { id: 'mess_worker', label: 'Mess Worker' },
     { id: 'canteen_manager', label: 'Canteen Manager' },
     { id: 'delivery_person', label: 'Delivery Person' },
   ];
@@ -32,7 +33,7 @@ const AuthPage = () => {
           Choose your role and {authMode === 'login' ? 'sign in' : 'sign up'}
         </p>
 
-        {/* Role Selector - 2x2 Grid */}
+        {/* Role Selector Grid */}
         <div className="role-selector-grid">
           {roles.map((role) => (
             <button

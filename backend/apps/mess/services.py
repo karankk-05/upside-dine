@@ -102,12 +102,10 @@ def validate_booking_request(student, menu_item: MessMenuItem, quantity: int) ->
     total = calculate_booking_total(menu_item, quantity)
 
     try:
-        account = MessAccount.objects.get(student=student)
+        MessAccount.objects.get(student=student)
     except MessAccount.DoesNotExist as exc:
         raise BookingValidationError("Mess account not found for student.") from exc
 
-    if account.balance < total:
-        raise InsufficientBalanceError("Insufficient mess account balance.")
     return total
 
 
@@ -124,8 +122,6 @@ def debit_mess_account(student, amount: Decimal) -> MessAccount:
         raise BookingValidationError("Debit amount must be greater than zero.")
 
     account = _get_mess_account_for_update(student)
-    if account.balance < amount:
-        raise InsufficientBalanceError("Insufficient mess account balance.")
 
     account.balance = _quantize_amount(account.balance - amount)
     account.save(update_fields=["balance", "last_updated"])

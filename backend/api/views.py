@@ -1,10 +1,12 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from django.db import connection
 from drf_spectacular.utils import extend_schema, OpenApiExample
 from .serializers import AddNumbersSerializer
 
+
+from rest_framework.permissions import AllowAny
 
 @extend_schema(
     summary="Health Check",
@@ -22,6 +24,7 @@ from .serializers import AddNumbersSerializer
     }
 )
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def health_check(request):
     """
     Health check endpoint to verify the API is running.

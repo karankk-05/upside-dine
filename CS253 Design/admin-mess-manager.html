@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mess Manager - Upside Dine</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="dashboard">
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1 class="page-title neon-text-subtle">Mess Manager</h1>
+                <div class="profile-icon">
+                    <span style="font-size: 20px;">👨‍💼</span>
+                </div>
+            </div>
+
+            <!-- Admin Dashboard -->
+            <div class="admin-dashboard">
+                <!-- Add New Extras -->
+                <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">Add New Extras</h3>
+                <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+                    <button class="role-btn" style="flex: 1; padding: 16px 12px;">
+                        <div style="font-size: 24px; margin-bottom: 4px;">🌅</div>
+                        Breakfast
+                    </button>
+                    <button class="role-btn active"
+                        style="flex: 1; padding: 16px 12px; border: 2px solid var(--st-accent); box-shadow: 0 0 12px var(--st-subtle-glow);">
+                        <div style="font-size: 24px; margin-bottom: 4px;">☀️</div>
+                        Lunch
+                    </button>
+                    <button class="role-btn" style="flex: 1; padding: 16px 12px;">
+                        <div style="font-size: 24px; margin-bottom: 4px;">🌙</div>
+                        Dinner
+                    </button>
+                </div>
+
+                <!-- Current Extras with Remaining Quantity -->
+                <div style="margin-top: 16px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 style="font-size: 16px; font-weight: 700;">Today's Extras (Lunch)</h3>
+                        <button class="btn-book" style="padding: 8px 16px; font-size: 12px;">+ Add Extra</button>
+                    </div>
+
+                    <div class="menu-item">
+                        <div class="menu-item-info">
+                            <h3>Paneer Butter Masala</h3>
+                            <p class="menu-item-desc">₹40 • Lunch</p>
+                            <span style="color: #00ff00; font-weight: 700; font-size: 12px;">● 35 remaining</span>
+                        </div>
+                        <button class="btn-small primary">Edit</button>
+                    </div>
+
+                    <div class="menu-item">
+                        <div class="menu-item-info">
+                            <h3>Chicken Curry</h3>
+                            <p class="menu-item-desc">₹50 • Lunch</p>
+                            <span style="color: #ffaa00; font-weight: 700; font-size: 12px;">● 8 remaining</span>
+                        </div>
+                        <button class="btn-small primary">Edit</button>
+                    </div>
+
+                    <div class="menu-item">
+                        <div class="menu-item-info">
+                            <h3>Dal Tadka</h3>
+                            <p class="menu-item-desc">₹30 • Lunch</p>
+                            <span style="color: #00ff00; font-weight: 700; font-size: 12px;">● 50 remaining</span>
+                        </div>
+                        <button class="btn-small primary">Edit</button>
+                    </div>
+                </div>
+
+                <!-- Recent Bookings -->
+                <div style="margin-top: 32px;">
+                    <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">Recent Bookings</h3>
+
+                    <div class="order-card">
+                        <div class="order-header">
+                            <span class="order-id">#MB20240048</span>
+                            <span class="order-badge">Active</span>
+                        </div>
+                        <p class="order-details">Paneer Butter Masala • ₹40</p>
+                        <p class="order-details">Student: Karan Singh (CS2101048)</p>
+                        <p class="order-details">Valid until: 8:00 PM</p>
+                    </div>
+
+                    <div class="order-card">
+                        <div class="order-header">
+                            <span class="order-id">#MB20240047</span>
+                            <span class="order-badge" style="background: #00ff00;">Redeemed</span>
+                        </div>
+                        <p class="order-details">Chicken Curry • ₹50</p>
+                        <p class="order-details">Student: Priya Sharma (CS2101023)</p>
+                        <p class="order-details">Redeemed at: 1:15 PM</p>
+                    </div>
+
+                    <div class="order-card">
+                        <div class="order-header">
+                            <span class="order-id">#MB20240046</span>
+                            <span class="order-badge">Active</span>
+                        </div>
+                        <p class="order-details">Dal Tadka • ₹30</p>
+                        <p class="order-details">Student: Rahul Verma (CS2101089)</p>
+                        <p class="order-details">Valid until: 7:30 PM</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <a href="#" class="nav-item active">
+                    <span class="nav-icon">📊</span>
+                    Dashboard
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">📦</span>
+                    Inventory
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">📋</span>
+                    Bookings
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">⚙️</span>
+                    Settings
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        Navigation.requireRole('admin');
+
+        // Logout
+        document.querySelector('.profile-icon').addEventListener('click', () => {
+            if (confirm('Logout?')) {
+                AppState.logout();
+                Navigation.goTo('login.html');
+            }
+        });
+
+        // Meal selection
+        const mealBtns = document.querySelectorAll('.role-btn');
+        mealBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                mealBtns.forEach(b => {
+                    b.classList.remove('active');
+                    b.style.border = '';
+                    b.style.boxShadow = '';
+                });
+                btn.classList.add('active');
+                btn.style.border = '2px solid var(--st-accent)';
+                btn.style.boxShadow = '0 0 12px var(--st-subtle-glow)';
+            });
+        });
+
+        // Button placeholders
+        document.querySelectorAll('.btn-book, .btn-small').forEach(btn => {
+            btn.addEventListener('click', () => {
+                UI.showError('Feature coming soon!');
+            });
+        });
+    </script>
+</body>
+
+</html>

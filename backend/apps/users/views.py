@@ -93,6 +93,12 @@ class LoginView(GenericAPIView):
         elif user.role:
             role = user.role.role_name
 
+        print("--- DEBUG LOGIN ROUTING (BACKEND) ---")
+        print(f"1. Authenticated User Email: {user.email}")
+        print(f"2. User Has role assigned in DB?: {user.role is not None}")
+        print(f"3. Extracted Role String (to be returned): '{role}'")
+        print("-------------------------------------")
+
         return Response({
             "access": access_token,
             "refresh": refresh_token,

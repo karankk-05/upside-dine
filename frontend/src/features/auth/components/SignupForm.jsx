@@ -129,14 +129,15 @@ const SignupForm = ({ selectedRole }) => {
 
       // Navigate based on role
       const roleRoutes = {
-        student: '/dashboard',
-        mess_manager: '/manager/mess',
+        student: '/crowd',
+        mess_manager: '/manager/crowd',
         mess_worker: '/worker/scan',
         canteen_manager: '/manager/canteen',
         delivery_person: '/delivery',
       };
 
-      navigate(roleRoutes[selectedRole] || '/dashboard');
+      const normalizedRole = typeof selectedRole === 'string' ? selectedRole.toLowerCase().replace(/\s+/g, '_') : 'student';
+      navigate(roleRoutes[normalizedRole] || '/dashboard');
     } catch (err) {
       setError(
         err.response?.data?.message ||

@@ -52,7 +52,7 @@ const ForgotPasswordPage = () => {
       setError(
         err.response?.data?.message ||
           err.response?.data?.detail ||
-          'Failed to send OTP. Please check your email.'
+          'Unable to send OTP. Please check your email.'
       );
     } finally {
       setLoading(false);
@@ -81,7 +81,7 @@ const ForgotPasswordPage = () => {
       setError(
         err.response?.data?.message ||
           err.response?.data?.detail ||
-          'Failed to reset password. Please try again.'
+          'Unable to reset password. Please try again.'
       );
     } finally {
       setLoading(false);

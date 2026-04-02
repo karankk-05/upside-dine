@@ -54,7 +54,6 @@ const LoginForm = ({ selectedRole }) => {
       const response = await axios.post('/api/auth/login/', {
         email: formData.email,
         password: formData.password,
-        role: selectedRole,
       });
 
       // Use actual role from backend if available, fallback to selectedRole
@@ -79,6 +78,7 @@ const LoginForm = ({ selectedRole }) => {
         mess_worker: '/worker/scan',
         canteen_manager: '/manager/canteen',
         delivery_person: '/delivery',
+        admin_manager: '/admin/managers',
         superadmin: '/admin',
       };
 

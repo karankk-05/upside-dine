@@ -73,7 +73,7 @@ def generate_booking_qr_image(payload: dict | str) -> bytes:
     if isinstance(payload, dict):
         payload = json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
-    qr = qrcode.QRCode(version=1, box_size=8, border=2)
+    qr = qrcode.QRCode(version=1, box_size=8, border=4)
     qr.add_data(payload)
     qr.make(fit=True)
 
@@ -99,15 +99,39 @@ def validate_booking_request(student, menu_item: MessMenuItem, quantity: int) ->
     if menu_item.available_quantity < quantity:
         raise InsufficientStockError("Insufficient stock for requested quantity.")
 
+    # Apply 10 PM booking rule
+    # Students can book for "Today", OR they can book for "Tomorrow" only if it's past 10 PM today.
+    # Other days are restricted.
+    current_time = timezone.localtime(timezone.now())
+    current_day_idx = current_time.weekday()
+    
+    # 0=Monday, 1=Tuesday, ...
+    target_day_idx = {
+        'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
+        'friday': 4, 'saturday': 5, 'sunday': 6
+    }.get(menu_item.day_of_week.lower(), -1)
+
+    if target_day_idx != -1:
+        if current_day_idx != target_day_idx:
+            # It's not today. Is it tomorrow?
+            tomorrow_idx = (current_day_idx + 1) % 7
+            if target_day_idx == tomorrow_idx:
+                if current_time.hour < 22:
+                    raise BookingValidationError(
+                        f"Bookings for {menu_item.day_of_week.capitalize()} extras open at 10 PM today."
+                    )
+            else:
+                raise BookingValidationError(
+                    f"Bookings for {menu_item.day_of_week.capitalize()} are not yet open. You can only book for today, or for tomorrow after 10 PM."
+                )
+
     total = calculate_booking_total(menu_item, quantity)
 
     try:
-        account = MessAccount.objects.get(student=student)
+        MessAccount.objects.get(student=student)
     except MessAccount.DoesNotExist as exc:
         raise BookingValidationError("Mess account not found for student.") from exc
 
-    if account.balance < total:
-        raise InsufficientBalanceError("Insufficient mess account balance.")
     return total
 
 
@@ -124,8 +148,6 @@ def debit_mess_account(student, amount: Decimal) -> MessAccount:
         raise BookingValidationError("Debit amount must be greater than zero.")
 
     account = _get_mess_account_for_update(student)
-    if account.balance < amount:
-        raise InsufficientBalanceError("Insufficient mess account balance.")
 
     account.balance = _quantize_amount(account.balance - amount)
     account.save(update_fields=["balance", "last_updated"])
@@ -144,7 +166,7 @@ def refund_mess_account(student, amount: Decimal) -> MessAccount:
 
 
 @transaction.atomic
-def create_booking(student, menu_item_id: int, quantity: int, *, qr_validity_hours: int = 3) -> MessBooking:
+def create_booking(student, menu_item_id: int, quantity: int) -> MessBooking:
     try:
         menu_item = MessMenuItem.objects.select_for_update().get(pk=menu_item_id)
     except MessMenuItem.DoesNotExist as exc:
@@ -157,7 +179,21 @@ def create_booking(student, menu_item_id: int, quantity: int, *, qr_validity_hou
     menu_item.available_quantity -= quantity
     menu_item.save(update_fields=["available_quantity", "updated_at"])
 
-    now = timezone.now()
+    now = timezone.localtime(timezone.now())
+    
+    current_day_idx = now.weekday()
+    target_day_idx = {
+        'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
+        'friday': 4, 'saturday': 5, 'sunday': 6
+    }.get(menu_item.day_of_week.lower(), -1)
+
+    days_ahead = 0
+    if target_day_idx != -1:
+        days_ahead = (target_day_idx - current_day_idx) % 7
+        
+    target_date = now + timedelta(days=days_ahead)
+    target_expiry = target_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+
     booking = MessBooking.objects.create(
         student=student,
         menu_item=menu_item,
@@ -166,7 +202,7 @@ def create_booking(student, menu_item_id: int, quantity: int, *, qr_validity_hou
         meal_type=menu_item.meal_type,
         qr_code=generate_booking_qr_token(),
         qr_generated_at=now,
-        qr_expires_at=now + timedelta(hours=qr_validity_hours),
+        qr_expires_at=target_expiry,
     )
     return booking
 

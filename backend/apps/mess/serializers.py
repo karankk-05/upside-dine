@@ -181,6 +181,7 @@ class StaffBriefSerializer(serializers.ModelSerializer):
 
 class MessBookingListSerializer(serializers.ModelSerializer):
     menu_item = MessMenuItemBriefSerializer(read_only=True)
+    booking_reference = serializers.SerializerMethodField()
 
     class Meta:
         model = MessBooking
@@ -194,13 +195,23 @@ class MessBookingListSerializer(serializers.ModelSerializer):
             "status",
             "qr_expires_at",
             "created_at",
+            "booking_reference",
         )
+
+    def get_booking_reference(self, obj):
+        try:
+            from django.utils import timezone
+            date_str = timezone.localtime(obj.created_at).strftime("%y%m%d")
+            return f"BKG{date_str}{obj.id:04d}"
+        except Exception:
+            return f"BKG{obj.id:06d}"
 
 
 class MessBookingDetailSerializer(serializers.ModelSerializer):
     menu_item = MessMenuItemSerializer(read_only=True)
     redeemed_by_staff = StaffBriefSerializer(read_only=True)
     qr_payload = serializers.SerializerMethodField()
+    booking_reference = serializers.SerializerMethodField()
 
     class Meta:
         model = MessBooking
@@ -220,10 +231,19 @@ class MessBookingDetailSerializer(serializers.ModelSerializer):
             "redeemed_by_staff",
             "created_at",
             "updated_at",
+            "booking_reference",
         )
 
     def get_qr_payload(self, obj):
         return build_booking_qr_payload(obj)
+
+    def get_booking_reference(self, obj):
+        try:
+            from django.utils import timezone
+            date_str = timezone.localtime(obj.created_at).strftime("%y%m%d")
+            return f"BKG{date_str}{obj.id:04d}"
+        except Exception:
+            return f"BKG{obj.id:06d}"
 
 
 class MessBookingCancelSerializer(serializers.Serializer):

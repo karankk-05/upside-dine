@@ -25,7 +25,7 @@ export default function MessLiveDensity({ messId, messName, onClick }) {
         </div>
         <div className="crowd-empty" style={{ padding: '12px 0' }}>
           <span style={{ fontSize: 20 }}>📡</span>
-          <p style={{ fontSize: 12, marginTop: 4 }}>No live data available</p>
+          <p style={{ fontSize: 12, marginTop: 4 }}>No data available</p>
         </div>
       </div>
     );

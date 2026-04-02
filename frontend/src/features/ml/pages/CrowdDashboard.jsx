@@ -15,6 +15,20 @@ import '../styles/crowd.css';
 export default function CrowdDashboard() {
   const navigate = useNavigate();
   const [selectedMess, setSelectedMess] = useState(null);
+  const userRole = localStorage.getItem('user_role');
+
+  const { data: profile } = useQuery({
+    queryKey: ['user', 'profile'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      if (!token) return null;
+      const { data } = await axios.get('/api/users/me/', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return data.profile;
+    },
+    enabled: userRole === 'student',
+  });
 
   // Fetch mess list to iterate density cards
   const { data: messes = [], isLoading } = useQuery({
@@ -29,9 +43,13 @@ export default function CrowdDashboard() {
     staleTime: 300000,
   });
 
-  const filteredMesses = selectedMess
+  let filteredMesses = selectedMess
     ? messes.filter((m) => m.id === selectedMess)
     : messes;
+
+  if (userRole === 'student' && profile) {
+    filteredMesses = messes.filter(m => m.hall_name?.toLowerCase() === profile.hostel_name?.toLowerCase());
+  }
 
   return (
     <div className="crowd-dashboard">
@@ -53,9 +71,11 @@ export default function CrowdDashboard() {
 
       <div className="crowd-dashboard__content">
         {/* Mess Selector */}
-        <div className="crowd-section">
-          <MessSelector value={selectedMess} onChange={setSelectedMess} />
-        </div>
+        {userRole !== 'student' && (
+          <div className="crowd-section">
+            <MessSelector value={selectedMess} onChange={setSelectedMess} />
+          </div>
+        )}
 
         {/* Density Cards */}
         <div className="crowd-section">

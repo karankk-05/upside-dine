@@ -21,7 +21,7 @@ function ManagerDensityCard({ messId, messName }) {
       <div className="density-card">
         <div className="density-card__name">{messName}</div>
         <div className="crowd-empty" style={{ padding: '8px 0' }}>
-          <span style={{ fontSize: 14, color: 'var(--st-text-dim)' }}>No live data</span>
+          <span style={{ fontSize: 14, color: 'var(--st-text-dim)' }}>No data available</span>
         </div>
       </div>
     );
@@ -80,6 +80,10 @@ function ManagerDensityCard({ messId, messName }) {
  */
 export default function ManagerCrowdOverview() {
   const navigate = useNavigate();
+  const userRole = localStorage.getItem('user_role');
+  const [feedUrl, setFeedUrl] = React.useState('');
+  const [selectedFeedMess, setSelectedFeedMess] = React.useState('');
+  const [submittingFeed, setSubmittingFeed] = React.useState(false);
 
   const { data: messes = [], isLoading } = useQuery({
     queryKey: ['mess', 'list'],
@@ -155,12 +159,67 @@ export default function ManagerCrowdOverview() {
           )}
         </div>
 
-        {/* Camera Feed Status */}
         <div className="crowd-section">
           <div className="crowd-section__title">
             📹 Camera Feeds
           </div>
           <CameraFeedStatus />
+
+          {/* Add Camera Feed Form */}
+          {userRole === 'mess_manager' && messes.length > 0 && (
+            <div style={{ marginTop: 20, padding: 16, background: 'var(--st-light-gray)', borderRadius: 12, border: '1px solid var(--st-border)' }}>
+              <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Add Video Feed Link</h3>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                setSubmittingFeed(true);
+                try {
+                  const token = localStorage.getItem('access_token');
+                  const messIdToUse = selectedFeedMess || messes[0].id;
+                  await axios.post('/api/crowd/feeds/', {
+                    mess_id: messIdToUse,
+                    camera_url: feedUrl,
+                    location_description: 'Added via Manager Dashboard'
+                  }, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+                  alert('Video feed link has been configured!');
+                  setFeedUrl('');
+                  window.location.reload();
+                } catch (err) {
+                  alert(err.response?.data?.detail || 'Failed to add video feed. Ensure it is a valid URL.');
+                } finally {
+                  setSubmittingFeed(false);
+                }
+              }} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {messes.length > 1 && (
+                  <select
+                    value={selectedFeedMess}
+                    onChange={(e) => setSelectedFeedMess(e.target.value)}
+                    style={{ padding: 10, background: '#111', border: '1px solid #333', color: '#fff', borderRadius: 8 }}
+                    required
+                  >
+                    <option value="">-- Select Mess --</option>
+                    {messes.map(m => (
+                      <option key={m.id} value={m.id}>{m.name || `Mess ${m.id}`}</option>
+                    ))}
+                  </select>
+                )}
+                <input 
+                  type="url" 
+                  value={feedUrl} 
+                  onChange={(e) => setFeedUrl(e.target.value)} 
+                  placeholder="Enter RTSP or HTTP stream URL..." 
+                  style={{ padding: 10, background: '#111', border: '1px solid #333', color: '#fff', borderRadius: 8 }}
+                  required 
+                />
+                <button 
+                  type="submit" 
+                  disabled={submittingFeed}
+                  style={{ padding: '10px', background: 'var(--st-accent)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, cursor: submittingFeed ? 'not-allowed' : 'pointer' }}
+                >
+                  {submittingFeed ? 'Saving...' : 'Save Feed URL'}
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       </div>
     </div>

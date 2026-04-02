@@ -7,14 +7,14 @@ export const useManagerMenu = () => {
   const query = useQuery({
     queryKey: ["manager-menu"],
     queryFn: async () => {
-      const res = await api.get("/manager/menu/");
+      const res = await api.get("/canteen-manager/menu/");
       return Array.isArray(res.data) ? res.data : res.data.results || [];
     },
   });
 
   const addMutation = useMutation({
     mutationFn: async (data) => {
-      const res = await api.post("/manager/menu/", data);
+      const res = await api.post("/canteen-manager/menu/", data);
       return res.data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["manager-menu"] }),
@@ -22,7 +22,7 @@ export const useManagerMenu = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...data }) => {
-      const res = await api.patch(`/manager/menu/${id}/`, data);
+      const res = await api.patch(`/canteen-manager/menu/${id}/`, data);
       return res.data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["manager-menu"] }),
@@ -30,7 +30,7 @@ export const useManagerMenu = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      await api.delete(`/manager/menu/${id}/`);
+      await api.delete(`/canteen-manager/menu/${id}/`);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["manager-menu"] }),
   });

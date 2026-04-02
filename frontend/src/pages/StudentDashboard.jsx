@@ -145,7 +145,7 @@ const StudentDashboard = () => {
 
               {/* Crowd Density Option */}
               <div
-                onClick={() => alert('Crowd monitor coming soon!')}
+                onClick={() => navigate('/crowd')}
                 style={{
                   background: '#1a1a1a', border: '1px solid #333', borderRadius: 16,
                   padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',

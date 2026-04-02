@@ -73,8 +73,8 @@ const LoginForm = ({ selectedRole }) => {
 
       // Navigate based on actual role
       const roleRoutes = {
-        student: '/crowd',
-        mess_manager: '/manager/crowd',
+        student: '/dashboard',
+        mess_manager: '/manager/mess',
         mess_worker: '/worker/scan',
         canteen_manager: '/manager/canteen',
         delivery_person: '/delivery',

@@ -124,7 +124,7 @@ export default function CameraFeedStatus({ filterMessId }) {
               </div>
             ) : (
               <div className="camera-feed-card__location" style={{ wordBreak: 'break-all' }}>
-                Mess {feed.mess_id}
+                {feed.mess_name || `Mess ${feed.mess_id}`}
                 {feed.location_description ? ` — ${feed.location_description}` : ''}
                 <br/>
                 <span style={{ fontSize: 10, color: '#777' }}>{feed.camera_url}</span>

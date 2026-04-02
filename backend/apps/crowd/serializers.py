@@ -4,9 +4,11 @@ from .models import CameraFeed, CrowdMetric
 
 
 class CameraFeedSerializer(serializers.ModelSerializer):
+    mess_name = serializers.CharField(source="mess.name", read_only=True)
+
     class Meta:
         model = CameraFeed
-        fields = ["id", "mess_id", "camera_url", "is_active", "location_description", "created_at"]
+        fields = ["id", "mess_id", "mess_name", "camera_url", "is_active", "location_description", "created_at"]
         read_only_fields = ["id", "created_at"]
 
 

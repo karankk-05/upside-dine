@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Upside Dine</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="dashboard">
+            <!-- Header -->
+            <div class="header" style="padding-top: 40px;">
+                <div class="header-top">
+                    <div>
+                        <h1 class="header-title neon-text-subtle">Hey, Karan!</h1>
+                        <p style="color: var(--st-text-dim); font-size: 13px; margin-top: 4px;">What would you like to
+                            eat today?</p>
+                    </div>
+                    <div class="profile-icon">
+                        <span style="font-size: 20px;">👤</span>
+                    </div>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="search-bar">
+                    <input type="text" class="search-input" placeholder="Search for food, canteens...">
+                    <span class="search-icon">🔍</span>
+                </div>
+            </div>
+
+            <!-- Top Items Section -->
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Top Items</h2>
+                    <a href="#" class="see-all">See All</a>
+                </div>
+                <div class="top-items">
+                    <div class="top-item-card">
+                        <div class="top-item-image">🍕</div>
+                        <div class="top-item-info">
+                            <h3 class="top-item-name">Cheese Pizza</h3>
+                            <p class="top-item-location">Mama Mio</p>
+                            <span class="top-item-price">₹120</span>
+                        </div>
+                    </div>
+                    <div class="top-item-card">
+                        <div class="top-item-image">🍔</div>
+                        <div class="top-item-info">
+                            <h3 class="top-item-name">Chicken Burger</h3>
+                            <p class="top-item-location">Hall 10 Canteen</p>
+                            <span class="top-item-price">₹90</span>
+                        </div>
+                    </div>
+                    <div class="top-item-card">
+                        <div class="top-item-image">🍜</div>
+                        <div class="top-item-info">
+                            <h3 class="top-item-name">Hakka Noodles</h3>
+                            <p class="top-item-location">MT Canteen</p>
+                            <span class="top-item-price">₹80</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Canteens & Mess Section -->
+            <div class="section" style="padding-bottom: 100px;">
+                <div class="section-header">
+                    <h2 class="section-title">Canteens & Mess</h2>
+                </div>
+                <div class="canteen-grid">
+                    <!-- Mess (Always at top) -->
+                    <div class="canteen-card mess">
+                        <div class="canteen-icon">🍽️</div>
+                        <div class="canteen-info">
+                            <h3 class="canteen-name">Hall 12 Mess</h3>
+                            <span class="canteen-badge">Your Mess</span>
+                            <div class="canteen-status">
+                                <span class="status-dot"></span>
+                                Open Now • 15 min wait
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Canteens -->
+                    <div class="canteen-card">
+                        <div class="canteen-icon">🍕</div>
+                        <div class="canteen-info">
+                            <h3 class="canteen-name">Mama Mio</h3>
+                            <div class="canteen-status">
+                                <span class="status-dot"></span>
+                                Open Now
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="canteen-card">
+                        <div class="canteen-icon">🍔</div>
+                        <div class="canteen-info">
+                            <h3 class="canteen-name">Hall 10 Canteen</h3>
+                            <div class="canteen-status">
+                                <span class="status-dot"></span>
+                                Open Now
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="canteen-card">
+                        <div class="canteen-icon">🥡</div>
+                        <div class="canteen-info">
+                            <h3 class="canteen-name">MT Canteen</h3>
+                            <div class="canteen-status">
+                                <span class="status-dot"></span>
+                                Open Now
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="canteen-card">
+                        <div class="canteen-icon">☕</div>
+                        <div class="canteen-info">
+                            <h3 class="canteen-name">KC Canteen</h3>
+                            <div class="canteen-status">
+                                <span class="status-dot"></span>
+                                Open Now
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="canteen-card">
+                        <div class="canteen-icon">☕</div>
+                        <div class="canteen-info">
+                            <h3 class="canteen-name">Nescafe</h3>
+                            <div class="canteen-status">
+                                <span class="status-dot"
+                                    style="background: #ff9900; box-shadow: 0 0 8px #ff9900;"></span>
+                                Closes at 8 PM
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <a href="dashboard.html" class="nav-item active">
+                    <span class="nav-icon">🏠</span>
+                    Home
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">📦</span>
+                    Orders
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">❤️</span>
+                    Favorites
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">👤</span>
+                    Profile
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Check authentication
+        if (!Navigation.requireRole('student')) {
+            // Will redirect if not authenticated
+        } else {
+            // Personalize greeting
+            const headerTitle = document.querySelector('.header-title');
+            if (headerTitle && AppState.user) {
+                headerTitle.textContent = `Hey, ${AppState.user.name}!`;
+            }
+
+            // Search functionality
+            const searchInput = document.querySelector('.search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const query = e.target.value.toLowerCase();
+                    const canteenCards = document.querySelectorAll('.canteen-card');
+
+                    canteenCards.forEach(card => {
+                        const name = card.querySelector('.canteen-name').textContent.toLowerCase();
+                        if (name.includes(query)) {
+                            card.style.display = 'flex';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            }
+
+            // Make canteen cards clickable
+            const canteenCards = document.querySelectorAll('.canteen-card');
+            canteenCards.forEach(card => {
+                card.style.cursor = 'pointer';
+                card.addEventListener('click', () => {
+                    const canteenName = card.querySelector('.canteen-name').textContent;
+
+                    if (canteenName.includes('Mess')) {
+                        Navigation.goTo('mess.html');
+                    } else {
+                        // Store selected canteen for the canteen page
+                        localStorage.setItem('selected_canteen', canteenName);
+                        Navigation.goTo('canteen.html');
+                    }
+                });
+            });
+
+            // Profile icon click
+            const profileIcon = document.querySelector('.profile-icon');
+            if (profileIcon) {
+                profileIcon.style.cursor = 'pointer';
+                profileIcon.addEventListener('click', () => {
+                    if (confirm('Do you want to logout?')) {
+                        AppState.logout();
+                        Navigation.goTo('login.html');
+                    }
+                });
+            }
+
+            // Bottom nav
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    const text = item.textContent.trim();
+                    if (text === 'Orders') {
+                        e.preventDefault();
+                        if (AppState.orders.length > 0) {
+                            Navigation.goTo('order-status.html');
+                        } else {
+                            UI.showError('No orders yet!');
+                        }
+                    } else if (text === 'Favorites' || text === 'Profile') {
+                        e.preventDefault();
+                        UI.showError('Coming soon!');
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+
+</html>

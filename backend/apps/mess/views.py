@@ -277,9 +277,22 @@ class StudentBookingCancelView(generics.GenericAPIView):
 
 
 class StudentBookingQRCodeView(APIView):
-    permission_classes = [IsStudent]
+    permission_classes = []
+    authentication_classes = []
 
     def get(self, request, booking_id, *args, **kwargs):
+        token = request.query_params.get("token")
+        if not token:
+            raise PermissionDenied("Authentication token is required as a query parameter for image loading.")
+            
+        from rest_framework_simplejwt.authentication import JWTAuthentication
+        try:
+            jwt_auth = JWTAuthentication()
+            validated_token = jwt_auth.get_validated_token(token)
+            request.user = jwt_auth.get_user(validated_token)
+        except Exception as e:
+            raise PermissionDenied(f"Invalid or expired token: {str(e)}")
+            
         student = _get_student_from_request(request)
         booking = get_object_or_404(
             MessBooking.objects.select_related("menu_item", "menu_item__mess"),

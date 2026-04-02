@@ -8,7 +8,9 @@ from django.utils import timezone
 # ── Hall names are now dynamic and not constrained to a predefined list ──
 
 def default_qr_expiry():
-    return timezone.now() + timedelta(hours=3)
+    # Valid until end of current day (11:59:59 PM local time)
+    now = timezone.localtime(timezone.now())
+    return now.replace(hour=23, minute=59, second=59, microsecond=999999)
 
 
 class Mess(models.Model):

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hall 12 Canteen - Upside Dine</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="dashboard">
+            <!-- Page Header -->
+            <div class="page-header">
+                <div class="back-btn">←</div>
+                <h1 class="page-title neon-text-subtle">Hall 12 Canteen</h1>
+            </div>
+
+            <!-- Canteen Info -->
+            <div style="padding: 20px; background: linear-gradient(180deg, var(--st-darker) 0%, var(--st-dark) 100%);">
+                <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 20px;">
+                    <div
+                        style="width: 80px; height: 80px; background: var(--st-light-gray); border-radius: 16px; border: 2px solid var(--st-accent); display: flex; align-items: center; justify-content: center; font-size: 40px; box-shadow: 0 0 15px var(--st-subtle-glow);">
+                        ☕
+                    </div>
+                    <div style="flex: 1;">
+                        <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 4px;">Hall 12 Canteen</h2>
+                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                            <span
+                                style="width: 8px; height: 8px; background: #00ff00; border-radius: 50%; box-shadow: 0 0 8px #00ff00;"></span>
+                            <span style="font-size: 12px; color: var(--st-text-dim);">Open Now • 8 AM - 10 PM</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--st-text-dim);">
+                            ⭐ 4.5 • 2.3k orders
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Type Selector -->
+                <div style="display: flex; gap: 12px;">
+                    <button class="role-btn active" style="flex: 1;">Pickup</button>
+                    <button class="role-btn" style="flex: 1;">Delivery</button>
+                </div>
+            </div>
+
+            <!-- Menu -->
+            <div class="menu-items">
+                <h3 style="font-size: 14px; color: var(--st-text-dim); margin-bottom: 16px; padding: 0 4px;">
+                    Popular Items
+                </h3>
+
+                <div class="menu-item">
+                    <div class="menu-item-info">
+                        <h3>Samosa (2 pcs)</h3>
+                        <p class="menu-item-desc">Crispy with tamarind chutney</p>
+                        <span class="menu-item-price">₹20</span>
+                    </div>
+                    <button class="btn-book">Add</button>
+                </div>
+
+                <div class="menu-item">
+                    <div class="menu-item-info">
+                        <h3>Chai</h3>
+                        <p class="menu-item-desc">Hot masala tea</p>
+                        <span class="menu-item-price">₹10</span>
+                    </div>
+                    <button class="btn-book">Add</button>
+                </div>
+
+                <div class="menu-item">
+                    <div class="menu-item-info">
+                        <h3>Maggi</h3>
+                        <p class="menu-item-desc">Classic masala noodles</p>
+                        <span class="menu-item-price">₹30</span>
+                    </div>
+                    <button class="btn-book">Add</button>
+                </div>
+
+                <div class="menu-item">
+                    <div class="menu-item-info">
+                        <h3>Bread Omelette</h3>
+                        <p class="menu-item-desc">Double egg with toast</p>
+                        <span class="menu-item-price">₹40</span>
+                    </div>
+                    <button class="btn-book">Add</button>
+                </div>
+
+                <div class="menu-item">
+                    <div class="menu-item-info">
+                        <h3>Paratha (Aloo)</h3>
+                        <p class="menu-item-desc">Stuffed with curd</p>
+                        <span class="menu-item-price">₹35</span>
+                    </div>
+                    <button class="btn-book">Add</button>
+                </div>
+
+                <div class="menu-item">
+                    <div class="menu-item-info">
+                        <h3>Cold Drink</h3>
+                        <p class="menu-item-desc">Pepsi / Coca Cola / Sprite</p>
+                        <span class="menu-item-price">₹40</span>
+                    </div>
+                    <button class="btn-book">Add</button>
+                </div>
+            </div>
+
+            <!-- Cart Button (Fixed) -->
+            <div
+                style="position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); max-width: 388px; width: calc(100% - 40px); z-index: 50;">
+                <button class="btn-primary" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>View Cart</span>
+                    <span>2 items • ₹50</span>
+                </button>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <span class="nav-icon">🏠</span>
+                    Home
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">📦</span>
+                    Orders
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">❤️</span>
+                    Favorites
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">👤</span>
+                    Profile
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        Navigation.requireRole('student');
+
+        // Get canteen name
+        const canteenName = localStorage.getItem('selected_canteen') || 'Hall 10 Canteen';
+        document.querySelector('.page-title').textContent = canteenName;
+        document.querySelector('h2').textContent = canteenName;
+
+        // Update cart display
+        function updateCartDisplay() {
+            const count = AppState.getCartCount();
+            const total = AppState.getCartTotal();
+            const cartButton = document.querySelector('.btn-primary');
+
+            if (count > 0) {
+                cartButton.querySelector('span:first-child').textContent = 'View Cart';
+                cartButton.querySelector('span:last-child').textContent = `${count} items • ₹${total}`;
+                cartButton.style.display = 'flex';
+            } else {
+                cartButton.style.display = 'none';
+            }
+        }
+
+        // Back button
+        document.querySelector('.back-btn').addEventListener('click', () => {
+            Navigation.goTo('dashboard.html');
+        });
+
+        // Order type toggle
+        let orderType = 'pickup';
+        const typeBtns = document.querySelectorAll('.role-btn');
+        typeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                typeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                orderType = btn.textContent.toLowerCase();
+            });
+        });
+
+        // Add to cart buttons
+        document.querySelectorAll('.btn-book').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const menuItem = btn.closest('.menu-item');
+                const name = menuItem.querySelector('h3').textContent;
+                const desc = menuItem.querySelector('.menu-item-desc').textContent;
+                const priceText = menuItem.querySelector('.menu-item-price').textContent;
+                const price = parseInt(priceText.replace('₹', ''));
+                const id = name.toLowerCase().replace(/\s+/g, '-');
+
+                AppState.addToCart({ id, name, desc, price });
+                updateCartDisplay();
+
+                // Visual feedback
+                btn.textContent = 'Added!';
+                setTimeout(() => { btn.textContent = 'Add'; }, 1000);
+            });
+        });
+
+        // Cart button
+        document.querySelector('.btn-primary').addEventListener('click', () => {
+            if (AppState.getCartCount() > 0) {
+                // Create order
+                const order = AppState.createOrder(canteenName, orderType);
+                localStorage.setItem('current_order', order.id);
+                Navigation.goTo('order-status.html');
+            }
+        });
+
+        updateCartDisplay();
+    </script>
+</body>
+
+</html>

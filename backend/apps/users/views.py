@@ -546,3 +546,112 @@ class AvailableHallsView(GenericAPIView):
     def get(self, request):
         halls = Mess.objects.filter(is_active=True).values_list('hall_name', flat=True).distinct()
         return Response(list(halls))
+
+
+class PublicCanteensView(GenericAPIView):
+    """Public endpoint to list all active canteens for the student dashboard."""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from apps.canteen.models import Canteen
+        canteens = Canteen.objects.filter(is_active=True).order_by('name').values('id', 'name', 'location')
+        return Response(list(canteens))
+
+
+class MessWorkerManagementView(GenericAPIView):
+    """View for mess managers to list and create mess workers"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """List all mess workers assigned to the same mess as this manager"""
+        if not hasattr(request.user, 'role') or request.user.role.role_name != 'mess_manager':
+            return Response({"detail": "Only mess managers can access this."}, status=status.HTTP_403_FORBIDDEN)
+
+        from apps.mess.models import MessStaffAssignment
+        # Find this manager's mess
+        manager_assignment = MessStaffAssignment.objects.filter(
+            staff=request.user.staff_profile, assignment_role='manager', is_active=True
+        ).first()
+        if not manager_assignment:
+            return Response({"detail": "You are not assigned to any mess."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Get all workers in the same mess
+        worker_assignments = MessStaffAssignment.objects.filter(
+            mess=manager_assignment.mess, assignment_role='worker'
+        ).select_related('staff__user')
+
+        worker_user_ids = [a.staff.user_id for a in worker_assignments]
+        workers = User.objects.filter(id__in=worker_user_ids).select_related('staff_profile')
+
+        from .serializers import MessWorkerSerializer
+        return Response(MessWorkerSerializer(workers, many=True).data)
+
+    def post(self, request):
+        """Create a new mess worker"""
+        if not hasattr(request.user, 'role') or request.user.role.role_name != 'mess_manager':
+            return Response({"detail": "Only mess managers can create mess workers."}, status=status.HTTP_403_FORBIDDEN)
+
+        from .serializers import CreateMessWorkerSerializer
+        serializer = CreateMessWorkerSerializer(data=request.data, context={'mess_manager': request.user})
+        serializer.is_valid(raise_exception=True)
+        result = serializer.save()
+
+        return Response({
+            "detail": "Mess worker created successfully.",
+            "email": result['user'].email,
+            "temp_password": result['temp_password'],
+            "employee_code": result['employee_code'],
+        }, status=status.HTTP_201_CREATED)
+
+
+class ToggleMessWorkerStatusView(GenericAPIView):
+    """View for mess managers to toggle or delete mess workers"""
+    permission_classes = [IsAuthenticated]
+
+    def _get_worker(self, request, user_id):
+        """Helper to validate manager and find the worker"""
+        if not hasattr(request.user, 'role') or request.user.role.role_name != 'mess_manager':
+            return None, Response({"detail": "Only mess managers can manage workers."}, status=status.HTTP_403_FORBIDDEN)
+
+        from apps.mess.models import MessStaffAssignment
+        manager_assignment = MessStaffAssignment.objects.filter(
+            staff=request.user.staff_profile, assignment_role='manager', is_active=True
+        ).first()
+        if not manager_assignment:
+            return None, Response({"detail": "You are not assigned to any mess."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Ensure the worker belongs to the same mess
+        worker_assignment = MessStaffAssignment.objects.filter(
+            mess=manager_assignment.mess, assignment_role='worker', staff__user_id=user_id
+        ).select_related('staff__user').first()
+
+        if not worker_assignment:
+            return None, Response({"detail": "Worker not found in your mess."}, status=status.HTTP_404_NOT_FOUND)
+
+        return worker_assignment.staff.user, None
+
+    def patch(self, request, user_id):
+        """Toggle worker active status (freeze/unfreeze)"""
+        worker, error = self._get_worker(request, user_id)
+        if error:
+            return error
+
+        worker.is_active = not worker.is_active
+        worker.save(update_fields=['is_active'])
+
+        status_text = "activated" if worker.is_active else "frozen"
+        return Response({
+            "detail": f"Worker {status_text} successfully.",
+            "is_active": worker.is_active
+        })
+
+    def delete(self, request, user_id):
+        """Delete a mess worker account"""
+        worker, error = self._get_worker(request, user_id)
+        if error:
+            return error
+
+        worker_email = worker.email
+        worker.delete()
+        return Response({"detail": f"Worker {worker_email} deleted successfully."})
+

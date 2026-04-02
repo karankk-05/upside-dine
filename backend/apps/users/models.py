@@ -104,3 +104,27 @@ class UserToken(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.created_at}"
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=Staff)
+def auto_assign_mess_manager(sender, instance, created, **kwargs):
+    if created and instance.user.role and instance.user.role.role_name == "mess_manager":
+        from apps.mess.models import Mess, MessStaffAssignment
+        
+        # Give each new manager their own dedicated mess to avoid collisions
+        mess, _ = Mess.objects.get_or_create(
+            name=f"Mess of {instance.full_name}", 
+            defaults={
+                "location": "Main Campus", 
+                "hall_name": f"Hall {instance.employee_code}", 
+                "is_active": True
+            }
+        )
+        MessStaffAssignment.objects.get_or_create(
+            staff=instance,
+            mess=mess,
+            assignment_role="manager",
+            defaults={"is_active": True}
+        )

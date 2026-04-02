@@ -28,7 +28,7 @@ const CanteenManagerDashboard = () => {
       });
       setDeliveryPersonnel(response.data);
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to load delivery personnel' });
+      setMessage({ type: 'error', text: 'Delivery personnel currently not available' });
     } finally {
       setLoading(false);
     }
@@ -55,7 +55,7 @@ const CanteenManagerDashboard = () => {
     } catch (error) {
       setMessage({ 
         type: 'error', 
-        text: error.response?.data?.email?.[0] || 'Failed to create delivery person' 
+        text: error.response?.data?.email?.[0] || 'Unable to create delivery person' 
       });
     } finally {
       setLoading(false);
@@ -74,7 +74,7 @@ const CanteenManagerDashboard = () => {
         text: `Delivery person ${currentStatus ? 'deactivated' : 'activated'} successfully` 
       });
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to update status' });
+      setMessage({ type: 'error', text: 'Unable to update status' });
     }
   };
 

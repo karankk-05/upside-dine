@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mess Coordinator - QR Scanner</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="dashboard">
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1 class="page-title neon-text-subtle">QR Scanner</h1>
+                <div class="profile-icon">
+                    <span style="font-size: 20px;">👷</span>
+                </div>
+            </div>
+
+            <!-- Scanner Interface -->
+            <div style="padding: 20px; padding-bottom: 100px;">
+                <div
+                    style="background: var(--st-gray); border: 2px solid var(--st-accent); border-radius: 20px; padding: 32px; text-align: center; margin-bottom: 24px; box-shadow: 0 0 20px var(--st-subtle-glow);">
+                    <div
+                        style="width: 120px; height: 120px; margin: 0 auto; background: linear-gradient(135deg, var(--st-light-gray), var(--st-gray)); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; position: relative;">
+                        <span style="font-size: 32px;">📷</span>
+                        <!-- Scanning frame -->
+                        <div
+                            style="position: absolute; inset: 12px; border: 2px solid var(--st-accent); border-radius: 8px; box-shadow: 0 0 15px var(--st-red-glow);">
+                        </div>
+                    </div>
+                    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">Scan QR Code</h3>
+                    <p style="font-size: 13px; color: var(--st-text-dim);">Position the QR code within the frame</p>
+                </div>
+
+                <!-- Manual Entry Option -->
+                <div style="margin-bottom: 24px;">
+                    <p style="text-align: center; color: var(--st-text-dim); font-size: 13px; margin-bottom: 12px;">OR
+                    </p>
+                    <div class="input-group">
+                        <label class="input-label">Booking ID (Manual Entry)</label>
+                        <input type="text" class="input-field" placeholder="Enter booking ID (e.g., MB20240048)">
+                    </div>
+                    <button class="btn-primary" style="margin-top: 12px;">Verify Booking</button>
+                </div>
+
+                <!-- Recent Scans -->
+                <div>
+                    <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">Recent Scans</h3>
+
+                    <div class="order-card">
+                        <div class="order-header">
+                            <span class="order-id">#MB20240047</span>
+                            <span class="order-badge" style="background: #00ff00;">✓ Valid</span>
+                        </div>
+                        <p class="order-details">Chicken Curry • ₹50</p>
+                        <p class="order-details">Student: Priya Sharma</p>
+                        <p class="order-details" style="color: #00ff00;">Redeemed at: 1:15 PM</p>
+                    </div>
+
+                    <div class="order-card">
+                        <div class="order-header">
+                            <span class="order-id">#MB20240045</span>
+                            <span class="order-badge" style="background: #00ff00;">✓ Valid</span>
+                        </div>
+                        <p class="order-details">Veg Biryani • ₹45</p>
+                        <p class="order-details">Student: Amit Kumar</p>
+                        <p class="order-details" style="color: #00ff00;">Redeemed at: 1:10 PM</p>
+                    </div>
+
+                    <div class="order-card">
+                        <div class="order-header">
+                            <span class="order-id">#MB20240043</span>
+                            <span class="order-badge" style="background: #ff3333;">✗ Invalid</span>
+                        </div>
+                        <p class="order-details">Paneer Butter Masala • ₹40</p>
+                        <p class="order-details">Reason: Already Redeemed</p>
+                        <p class="order-details" style="color: #ff3333;">Attempted at: 1:05 PM</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <a href="#" class="nav-item active">
+                    <span class="nav-icon">📷</span>
+                    Scanner
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">📋</span>
+                    History
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">📊</span>
+                    Stats
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">⚙️</span>
+                    Settings
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        Navigation.requireRole('admin');
+        document.querySelector('.back-btn').addEventListener('click', () => Navigation.goTo('admin-mess-manager.html'));
+        document.querySelectorAll('.btn-primary, .btn-book').forEach(btn => {
+            btn.addEventListener('click', () => UI.showError('Scanner feature coming soon!'));
+        });
+    </script>
+</body>
+
+</html>

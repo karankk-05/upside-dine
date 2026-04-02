@@ -26,7 +26,13 @@ class CrowdDetector:
         if not self.is_loaded():
             self.load_model()
 
-        results = self.model(frame, conf=YOLO_CONFIDENCE, verbose=False)
+        results = self.model(
+            frame, 
+            conf=YOLO_CONFIDENCE, 
+            iou=0.45,  # optimized NMS for overlapping crowds
+            classes=[PERSON_CLASS_ID], 
+            verbose=False
+        )
 
         # Count only 'person' class detections
         person_count = 0

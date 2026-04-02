@@ -187,7 +187,7 @@ export default function ManagerCrowdOverview() {
           <div className="crowd-section__title">
             Camera Feeds
           </div>
-          <CameraFeedStatus filterMessId={userRole === 'mess_manager' ? managerStats?.mess_id : null} />
+          <CameraFeedStatus filterMessId={userRole === 'mess_manager' ? managerStats?.mess_id : null} messesList={messes} />
 
           {/* Add Camera Feed Form */}
           {userRole === 'mess_manager' && managerStats?.mess_id && (

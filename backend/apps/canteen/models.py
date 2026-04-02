@@ -6,8 +6,6 @@ class Canteen(models.Model):
     name = models.CharField(max_length=120, unique=True)
     location = models.CharField(max_length=200)
     contact_phone = models.CharField(max_length=20, blank=True)
-    opening_time = models.TimeField()
-    closing_time = models.TimeField()
     is_delivery_available = models.BooleanField(default=True)
     min_order_amount = models.DecimalField(
         max_digits=10,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -48,13 +48,29 @@ const SignupForm = ({ selectedRole }) => {
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [availableHalls, setAvailableHalls] = useState([]);
+
+  // Fetch available halls for student registration
+  useEffect(() => {
+    if (selectedRole === 'student') {
+      const fetchHalls = async () => {
+        try {
+          const response = await axios.get('/api/public/halls/');
+          // response.data is an array of strings e.g. ["Hall 1", "Hall 2"]
+          setAvailableHalls(response.data);
+        } catch (err) {
+          console.error("Halls currently not available", err);
+        }
+      };
+      fetchHalls();
+    }
+  }, [selectedRole]);
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
-    setError('');
   };
 
   const handleRegister = async (e) => {
@@ -250,15 +266,18 @@ const SignupForm = ({ selectedRole }) => {
           </div>
 
           <div className="input-group">
-            <label className="input-label">Hostel Name</label>
-            <input
-              type="text"
+            <label className="input-label">Hostel / Hall</label>
+            <select
               name="hostel_name"
               className="input-field"
-              placeholder="Enter your hostel name"
               value={formData.hostel_name}
               onChange={handleChange}
-            />
+            >
+              <option value="">Select your hostel</option>
+              {availableHalls.map((hall) => (
+                <option key={hall} value={hall}>{hall}</option>
+              ))}
+            </select>
           </div>
 
           <div className="input-group">
@@ -273,21 +292,6 @@ const SignupForm = ({ selectedRole }) => {
             />
           </div>
         </>
-      )}
-
-      {selectedRole !== 'student' && (
-        <div className="input-group">
-          <label className="input-label">Employee Code</label>
-          <input
-            type="text"
-            name="employee_code"
-            className="input-field"
-            placeholder="Enter your employee code"
-            value={formData.employee_code}
-            onChange={handleChange}
-            required
-          />
-        </div>
       )}
 
       <div className="input-group">

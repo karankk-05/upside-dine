@@ -5,20 +5,29 @@ from django.db.models import Q
 from django.utils import timezone
 
 
+# ── Hall names are now dynamic and not constrained to a predefined list ──
+
 def default_qr_expiry():
-    return timezone.now() + timedelta(hours=3)
+    # Valid until end of current day (11:59:59 PM local time)
+    now = timezone.localtime(timezone.now())
+    return now.replace(hour=23, minute=59, second=59, microsecond=999999)
 
 
 class Mess(models.Model):
     name = models.CharField(max_length=120)
-    location = models.CharField(max_length=255)
-    hall_name = models.CharField(max_length=120)
+    location = models.CharField(max_length=255, blank=True)
+    hall_name = models.CharField(max_length=120, unique=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["name"]
+
+    def save(self, *args, **kwargs):
+        # Auto-derive mess name from hall name
+        self.name = f"{self.hall_name} Mess"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.name} ({self.hall_name})"

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { ArrowLeft, BarChart3, TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -80,6 +80,7 @@ function ManagerDensityCard({ messId, messName }) {
  */
 export default function ManagerCrowdOverview() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const userRole = localStorage.getItem('user_role');
   const [feedUrl, setFeedUrl] = React.useState('');
   const [selectedFeedMess, setSelectedFeedMess] = React.useState('');
@@ -96,6 +97,25 @@ export default function ManagerCrowdOverview() {
     },
     staleTime: 300000,
   });
+
+  const { data: managerStats } = useQuery({
+    queryKey: ['manager', 'stats'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token');
+      if (!token) return null;
+      const { data } = await axios.get('/api/mess/manager/stats/', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return data;
+    },
+    enabled: userRole === 'mess_manager',
+    retry: false,
+  });
+
+  let filteredMesses = messes;
+  if (userRole === 'mess_manager' && managerStats?.mess_id) {
+    filteredMesses = messes.filter(m => m.id === managerStats.mess_id);
+  }
 
   return (
     <div className="manager-overview">
@@ -148,7 +168,7 @@ export default function ManagerCrowdOverview() {
             </div>
           ) : (
             <div className="density-cards-grid">
-              {messes.map((mess) => (
+              {filteredMesses.map((mess) => (
                 <ManagerDensityCard
                   key={mess.id}
                   messId={mess.id}
@@ -163,10 +183,10 @@ export default function ManagerCrowdOverview() {
           <div className="crowd-section__title">
             📹 Camera Feeds
           </div>
-          <CameraFeedStatus />
+          <CameraFeedStatus filterMessId={userRole === 'mess_manager' ? managerStats?.mess_id : null} />
 
           {/* Add Camera Feed Form */}
-          {userRole === 'mess_manager' && messes.length > 0 && (
+          {userRole === 'mess_manager' && filteredMesses.length > 0 && (
             <div style={{ marginTop: 20, padding: 16, background: 'var(--st-light-gray)', borderRadius: 12, border: '1px solid var(--st-border)' }}>
               <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Add Video Feed Link</h3>
               <form onSubmit={async (e) => {
@@ -174,7 +194,7 @@ export default function ManagerCrowdOverview() {
                 setSubmittingFeed(true);
                 try {
                   const token = localStorage.getItem('access_token');
-                  const messIdToUse = selectedFeedMess || messes[0].id;
+                  const messIdToUse = selectedFeedMess || filteredMesses[0].id;
                   await axios.post('/api/crowd/feeds/', {
                     mess_id: messIdToUse,
                     camera_url: feedUrl,
@@ -182,14 +202,14 @@ export default function ManagerCrowdOverview() {
                   }, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
                   alert('Video feed link has been configured!');
                   setFeedUrl('');
-                  window.location.reload();
+                  queryClient.invalidateQueries({ queryKey: ['crowd', 'feeds'] });
                 } catch (err) {
                   alert(err.response?.data?.detail || 'Failed to add video feed. Ensure it is a valid URL.');
                 } finally {
                   setSubmittingFeed(false);
                 }
               }} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {messes.length > 1 && (
+                {filteredMesses.length > 1 && (
                   <select
                     value={selectedFeedMess}
                     onChange={(e) => setSelectedFeedMess(e.target.value)}
@@ -197,7 +217,7 @@ export default function ManagerCrowdOverview() {
                     required
                   >
                     <option value="">-- Select Mess --</option>
-                    {messes.map(m => (
+                    {filteredMesses.map(m => (
                       <option key={m.id} value={m.id}>{m.name || `Mess ${m.id}`}</option>
                     ))}
                   </select>

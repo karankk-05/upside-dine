@@ -10,8 +10,8 @@ import '../styles/crowd.css';
  * Status cards for camera feeds — shows active/offline badge and last update time.
  * Fetches from GET /api/crowd/feeds/
  */
-export default function CameraFeedStatus() {
-  const { data: feeds = [], isLoading } = useQuery({
+export default function CameraFeedStatus({ filterMessId }) {
+  const { data: allFeeds = [], isLoading } = useQuery({
     queryKey: ['crowd', 'feeds'],
     queryFn: async () => {
       const token = localStorage.getItem('access_token');
@@ -33,6 +33,8 @@ export default function CameraFeedStatus() {
       </div>
     );
   }
+
+  const feeds = filterMessId ? allFeeds.filter(f => f.mess_id === Number(filterMessId)) : allFeeds;
 
   if (!feeds.length) {
     return (

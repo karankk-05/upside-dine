@@ -19,8 +19,11 @@ export function useLiveCrowdDensity(messId, options = {}) {
       return data;
     },
     enabled: !!messId,
-    refetchInterval: 5000,
-    retry: 1,
+    refetchInterval: (query) => {
+      return (query?.state?.error || query?.error) ? 60000 : 5000;
+    },
+    refetchIntervalInBackground: false,
+    retry: false,
     staleTime: 3000,
     ...options,
   });

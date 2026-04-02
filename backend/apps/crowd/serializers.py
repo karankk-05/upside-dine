@@ -4,7 +4,14 @@ from .models import CameraFeed, CrowdMetric
 
 
 class CameraFeedSerializer(serializers.ModelSerializer):
-    mess_name = serializers.CharField(source="mess.name", read_only=True)
+    mess_name = serializers.SerializerMethodField()
+
+    def get_mess_name(self, obj):
+        from apps.mess.models import Mess
+        try:
+            return Mess.objects.get(pk=obj.mess_id).name
+        except Mess.DoesNotExist:
+            return f"Mess {obj.mess_id}"
 
     class Meta:
         model = CameraFeed

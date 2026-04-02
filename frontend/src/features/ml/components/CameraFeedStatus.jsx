@@ -1,8 +1,8 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import { Clock } from 'lucide-react';
+import { Clock, Edit2, Trash2, Check, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import '../styles/crowd.css';
 
@@ -11,6 +11,32 @@ import '../styles/crowd.css';
  * Fetches from GET /api/crowd/feeds/
  */
 export default function CameraFeedStatus({ filterMessId }) {
+  const queryClient = useQueryClient();
+  const [editingId, setEditingId] = React.useState(null);
+  const [editUrl, setEditUrl] = React.useState('');
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this camera feed?')) return;
+    try {
+      const token = localStorage.getItem('access_token');
+      await axios.delete(`/api/crowd/feeds/${id}/`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      queryClient.invalidateQueries({ queryKey: ['crowd', 'feeds'] });
+    } catch (e) {
+      alert('Failed to delete feed.');
+    }
+  };
+
+  const handleUpdate = async (id) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      await axios.patch(`/api/crowd/feeds/${id}/`, { camera_url: editUrl }, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      setEditingId(null);
+      queryClient.invalidateQueries({ queryKey: ['crowd', 'feeds'] });
+    } catch (e) {
+      alert('Failed to update feed.');
+    }
+  };
+
   const { data: allFeeds = [], isLoading } = useQuery({
     queryKey: ['crowd', 'feeds'],
     queryFn: async () => {
@@ -59,7 +85,23 @@ export default function CameraFeedStatus({ filterMessId }) {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: idx * 0.08 }}
+            style={{ position: 'relative' }}
           >
+            {filterMessId && (
+              <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: 6 }}>
+                {editingId === feed.id ? (
+                  <>
+                    <button onClick={() => handleUpdate(feed.id)} title="Save" style={{ background: '#33aa33', border: 'none', color: '#fff', padding: '4px', borderRadius: 4, cursor: 'pointer', display: 'flex' }}><Check size={14} /></button>
+                    <button onClick={() => setEditingId(null)} title="Cancel" style={{ background: '#ff6b6b', border: 'none', color: '#fff', padding: '4px', borderRadius: 4, cursor: 'pointer', display: 'flex' }}><X size={14} /></button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => { setEditingId(feed.id); setEditUrl(feed.camera_url || ''); }} title="Edit URL" style={{ background: 'transparent', border: 'none', color: '#aaa', padding: '4px', cursor: 'pointer', display: 'flex' }}><Edit2 size={14} /></button>
+                    <button onClick={() => handleDelete(feed.id)} title="Delete" style={{ background: 'transparent', border: 'none', color: '#ff6b6b', padding: '4px', cursor: 'pointer', display: 'flex' }}><Trash2 size={14} /></button>
+                  </>
+                )}
+              </div>
+            )}
             <div className="camera-feed-card__header">
               <div
                 className={`camera-feed-card__status ${
@@ -71,10 +113,23 @@ export default function CameraFeedStatus({ filterMessId }) {
               </div>
             </div>
             <div className="camera-feed-card__title">Feed #{feed.id}</div>
-            <div className="camera-feed-card__location">
-              Mess {feed.mess_id}
-              {feed.location_description ? ` — ${feed.location_description}` : ''}
-            </div>
+            {editingId === feed.id ? (
+              <div style={{ marginTop: 8, marginBottom: 8 }}>
+                <input 
+                  type="text" 
+                  value={editUrl} 
+                  onChange={(e) => setEditUrl(e.target.value)}
+                  style={{ width: '100%', padding: '6px', fontSize: 12, background: '#111', border: '1px solid #333', color: '#fff', borderRadius: 4, boxSizing: 'border-box' }}
+                />
+              </div>
+            ) : (
+              <div className="camera-feed-card__location" style={{ wordBreak: 'break-all' }}>
+                Mess {feed.mess_id}
+                {feed.location_description ? ` — ${feed.location_description}` : ''}
+                <br/>
+                <span style={{ fontSize: 10, color: '#777' }}>{feed.camera_url}</span>
+              </div>
+            )}
             <div className="camera-feed-card__updated">
               <Clock size={10} />
               {updatedAt}

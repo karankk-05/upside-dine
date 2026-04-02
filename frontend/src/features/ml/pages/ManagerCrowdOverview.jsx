@@ -123,7 +123,11 @@ export default function ManagerCrowdOverview() {
         <div className="crowd-dashboard__header-row">
           <button
             className="crowd-dashboard__back-btn"
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              if (userRole === 'mess_manager') navigate('/manager/mess');
+              else if (userRole === 'admin') navigate('/admin/managers');
+              else navigate(-1);
+            }}
             aria-label="Go back"
           >
             <ArrowLeft size={18} />

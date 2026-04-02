@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import { Camera, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import '../styles/crowd.css';
 
@@ -39,7 +39,6 @@ export default function CameraFeedStatus({ filterMessId }) {
   if (!feeds.length) {
     return (
       <div className="crowd-empty">
-        <div className="crowd-empty__icon"><Camera size={32} /></div>
         <p>No camera feeds registered</p>
       </div>
     );
@@ -62,7 +61,6 @@ export default function CameraFeedStatus({ filterMessId }) {
             transition={{ duration: 0.3, delay: idx * 0.08 }}
           >
             <div className="camera-feed-card__header">
-              <Camera size={18} className="camera-feed-card__icon" />
               <div
                 className={`camera-feed-card__status ${
                   isActive ? 'camera-feed-card__status--active' : 'camera-feed-card__status--offline'

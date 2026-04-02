@@ -132,7 +132,7 @@ export default function CrowdAnalytics() {
         <div className="crowd-dashboard__header-row">
           <button
             className="crowd-dashboard__back-btn"
-            onClick={() => navigate('/manager/crowd')}
+            onClick={() => navigate(-1)}
             aria-label="Back to overview"
           >
             <ArrowLeft size={18} />

@@ -181,7 +181,7 @@ export default function ManagerCrowdOverview() {
 
         <div className="crowd-section">
           <div className="crowd-section__title">
-            📹 Camera Feeds
+            Camera Feeds
           </div>
           <CameraFeedStatus filterMessId={userRole === 'mess_manager' ? managerStats?.mess_id : null} />
 

@@ -140,7 +140,7 @@ export default function ManagerCrowdOverview() {
         <div className="crowd-section">
           <div className="crowd-section__title">
             <BarChart3 size={16} color="var(--st-accent)" />
-            All Messes — Live
+            {userRole === 'mess_manager' ? 'Your Mess — Live' : 'All Messes — Live'}
             <button
               onClick={() => navigate('/manager/crowd/analytics')}
               style={{
@@ -160,7 +160,7 @@ export default function ManagerCrowdOverview() {
             </button>
           </div>
 
-          {isLoading ? (
+          {isLoading || (userRole === 'mess_manager' && !managerStats) ? (
             <div className="density-cards-grid">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="skeleton skeleton-card" />
@@ -186,7 +186,7 @@ export default function ManagerCrowdOverview() {
           <CameraFeedStatus filterMessId={userRole === 'mess_manager' ? managerStats?.mess_id : null} />
 
           {/* Add Camera Feed Form */}
-          {userRole === 'mess_manager' && filteredMesses.length > 0 && (
+          {userRole === 'mess_manager' && managerStats?.mess_id && (
             <div style={{ marginTop: 20, padding: 16, background: 'var(--st-light-gray)', borderRadius: 12, border: '1px solid var(--st-border)' }}>
               <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Add Video Feed Link</h3>
               <form onSubmit={async (e) => {
@@ -194,7 +194,7 @@ export default function ManagerCrowdOverview() {
                 setSubmittingFeed(true);
                 try {
                   const token = localStorage.getItem('access_token');
-                  const messIdToUse = selectedFeedMess || filteredMesses[0].id;
+                  const messIdToUse = selectedFeedMess || managerStats.mess_id;
                   await axios.post('/api/crowd/feeds/', {
                     mess_id: messIdToUse,
                     camera_url: feedUrl,

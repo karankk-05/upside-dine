@@ -45,8 +45,6 @@ class CanteenListSerializer(serializers.ModelSerializer):
             "name",
             "location",
             "contact_phone",
-            "opening_time",
-            "closing_time",
             "is_delivery_available",
             "min_order_amount",
             "delivery_fee",

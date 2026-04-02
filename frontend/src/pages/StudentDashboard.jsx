@@ -162,15 +162,19 @@ const StudentDashboard = () => {
 
         {/* Canteens Section */}
         <div style={{ padding: '24px 20px 120px 20px' }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Canteens</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700 }}>Canteens</h2>
+            <a onClick={(e) => { e.preventDefault(); navigate('/canteens'); }}
+              href="#" style={{ color: '#d55555', fontSize: 13, fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}>
+              See All
+            </a>
+          </div>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
             {filteredCanteens.map((canteen, idx) => (
               <div
                 key={canteen.id}
-                onClick={() => {
-                  localStorage.setItem('selected_canteen', canteen.name);
-                }}
+                onClick={() => navigate(`/canteens/${canteen.id}`)}
                 style={{
                   background: '#1a1a1a', border: '1px solid #333', borderRadius: 16,
                   padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
@@ -207,10 +211,15 @@ const StudentDashboard = () => {
             id="nav-home">
             <span style={{ fontSize: 24 }}>🏠</span>Home
           </a>
-          <a onClick={(e) => { e.preventDefault(); navigate('/mess/bookings'); }}
+          <a onClick={(e) => { e.preventDefault(); navigate('/orders'); }}
             href="#" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: '#999', textDecoration: 'none', fontSize: 11, padding: '8px 20px', cursor: 'pointer' }}
             id="nav-orders">
             <span style={{ fontSize: 24 }}>📦</span>Orders
+          </a>
+          <a onClick={(e) => { e.preventDefault(); navigate('/mess/bookings'); }}
+            href="#" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: '#999', textDecoration: 'none', fontSize: 11, padding: '8px 20px', cursor: 'pointer' }}
+            id="nav-bookings">
+            <span style={{ fontSize: 24 }}>🍽️</span>Mess
           </a>
           <a href="#" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: '#999', textDecoration: 'none', fontSize: 11, padding: '8px 20px', cursor: 'pointer' }}
             onClick={(e) => { e.preventDefault(); navigate('/profile'); }}

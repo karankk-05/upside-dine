@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../../../api/axios";
+import api from "../../../lib/api";
 
 export const useCanteenDetail = (id) => {
   return useQuery({

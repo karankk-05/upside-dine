@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { api } from "../../../api/axios";
+import api from "../../../lib/api";
 
 export const usePlaceOrder = () => {
   return useMutation({

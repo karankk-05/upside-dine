@@ -17,4 +17,4 @@ class RateLimitMiddleware:
         key = f"ratelimit:api:{ip}"
         count = cache.get(key, 0) + 1
         cache.set(key, count, timeout=60)
-        return count > 120
+        return count > 2000

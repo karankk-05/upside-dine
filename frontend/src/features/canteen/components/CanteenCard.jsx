@@ -1,118 +1,70 @@
-import { Star } from "lucide-react";
+import { motion } from 'framer-motion';
 
-export default function CanteenCard({ canteen }) {
+export default function CanteenCard({ canteen, index = 0, onClick }) {
   const getTimeInfo = () => {
     if (!canteen.opening_time || !canteen.closing_time) {
-      return { isOpen: true, text: "" };
+      return { isOpen: true, text: '' };
     }
-
     const now = new Date();
+    const [openH, openM] = canteen.opening_time.split(':').map(Number);
+    const [closeH, closeM] = canteen.closing_time.split(':').map(Number);
+    const open = new Date(); open.setHours(openH, openM, 0, 0);
+    const close = new Date(); close.setHours(closeH, closeM, 0, 0);
+    const isOpen = close > open ? (now >= open && now <= close) : (now >= open || now <= close);
 
-    const [openH, openM] = canteen.opening_time.split(":").map(Number);
-    const [closeH, closeM] = canteen.closing_time.split(":").map(Number);
-
-    const open = new Date();
-    open.setHours(openH, openM, 0, 0);
-
-    const close = new Date();
-    close.setHours(closeH, closeM, 0, 0);
-
-    let isOpen;
-
-    if (close > open) {
-      isOpen = now >= open && now <= close;
-    } else {
-      isOpen = now >= open || now <= close;
-    }
-
-    let text = "";
-
+    let text = '';
     if (isOpen) {
-      let closeTime = new Date(close);
-
-      if (close < open && now >= open) {
-        closeTime.setDate(closeTime.getDate() + 1);
-      }
-
-      const diffMs = closeTime - now;
+      const diffMs = (close > now ? close : new Date(close.getTime() + 86400000)) - now;
       const diffMin = Math.max(0, Math.floor(diffMs / 60000));
-
-      if (diffMin <= 60) {
-        text = `Closes in ${diffMin} min`;
-      } else {
-        text = `Closes at ${canteen.closing_time.slice(0, 5)}`;
-      }
+      text = diffMin <= 60 ? `Closes in ${diffMin} min` : `Closes at ${canteen.closing_time.slice(0, 5)}`;
     } else {
       text = `Opens at ${canteen.opening_time.slice(0, 5)}`;
     }
-
     return { isOpen, text };
   };
 
   const { isOpen, text } = getTimeInfo();
+  const emojis = ['🍕', '🍔', '🥡', '☕', '🍜', '🧁', '🥪', '🍩'];
+  const emoji = emojis[index % emojis.length];
 
   return (
-    <div
-      className={`bg-gray-900 rounded-xl overflow-hidden border border-gray-800 transition cursor-pointer ${
-        !isOpen ? "opacity-60" : "hover:border-red-500"
-      }`}
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.06 }}
+      onClick={onClick}
+      style={{
+        background: '#1a1a1a', border: '1px solid #333', borderRadius: 16,
+        padding: 16, display: 'flex', gap: 12, cursor: 'pointer',
+        transition: 'all 0.3s ease', opacity: isOpen ? 1 : 0.6,
+      }}
     >
-      {/* Header */}
-      <div className="p-3">
-        <div className="flex justify-between items-start">
-          <h3 className="text-sm font-semibold text-white">
-            {canteen.name}
-          </h3>
-
-          <span
-            className={`text-xs px-2 py-1 rounded-full font-medium ${
-              isOpen
-                ? "bg-green-500 text-black"
-                : "bg-red-500 text-white"
-            }`}
-          >
-            {isOpen ? "Open" : "Closed"}
+      <div style={{
+        width: 64, height: 64, background: '#2a2a2a', borderRadius: 12,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 32, flexShrink: 0,
+      }}>
+        {emoji}
+      </div>
+      <div style={{ flex: 1 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{canteen.name}</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <span style={{
+            fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
+            background: isOpen ? '#112211' : '#331111',
+            color: isOpen ? '#33aa33' : '#ff6b6b',
+            border: `1px solid ${isOpen ? '#33aa33' : '#ff6b6b'}`,
+            textTransform: 'uppercase',
+          }}>
+            {isOpen ? 'Open' : 'Closed'}
           </span>
+          <span style={{ fontSize: 12, color: '#999' }}>{text}</span>
         </div>
-
-        {/* Rating + delivery */}
-        <div className="flex items-center gap-2 text-xs text-gray-400 mt-2">
-          <div className="flex items-center gap-1">
-            <Star
-              size={14}
-              className="text-yellow-400 fill-yellow-400"
-            />
-            <span>{canteen.rating || "4.0"}</span>
-          </div>
-
-          <span>•</span>
-
-          {canteen.is_delivery_available ? (
-            <span>₹{canteen.delivery_fee} delivery</span>
-          ) : (
-            <span>No delivery</span>
-          )}
-
-          <span>•</span>
-
-          <span>₹{canteen.min_order_amount} min</span>
-        </div>
-
-        {/* Location */}
-        {canteen.location && (
-          <div className="text-xs text-gray-500 mt-1">
-            {canteen.location}
-          </div>
-        )}
-
-        {/* Time info */}
-        <div className="mt-2 text-xs">
-          <span className={isOpen ? "text-green-400" : "text-red-400"}>
-            {isOpen ? "Open" : "Closed"}
-          </span>
-          <span className="text-gray-400 ml-2">{text}</span>
+        <div style={{ fontSize: 12, color: '#999', display: 'flex', gap: 8 }}>
+          {canteen.is_delivery_available && <span>🚴 ₹{canteen.delivery_fee} delivery</span>}
+          {canteen.min_order_amount && <span>• Min ₹{canteen.min_order_amount}</span>}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -1,56 +1,54 @@
-import { useNavigate } from "react-router-dom";
-import { useState } from "react";
-
-import { useCanteenList } from "../hooks/useCanteenList";
-import CanteenCard from "../components/CanteenCard";
-import MenuSearch from "../components/MenuSearch";
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { Search, ArrowLeft } from 'lucide-react';
+import CanteenCard from '../components/CanteenCard';
+import '../canteen.css';
 
 export default function CanteenListPage() {
   const navigate = useNavigate();
+  const [search, setSearch] = useState('');
 
-  const { data: canteens = [], isLoading } = useCanteenList();
+  const { data: canteens = [], isLoading } = useQuery({
+    queryKey: ['canteen', 'list'],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/public/canteens/');
+      return Array.isArray(data) ? data : data.results || [];
+    },
+    staleTime: 300000,
+  });
 
-  const [search, setSearch] = useState("");
-
-  const filteredCanteens = canteens.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
+  const filtered = canteens.filter(
+    (c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.location?.toLowerCase().includes(search.toLowerCase())
   );
 
-  if (isLoading) {
-    return (
-      <div className="bg-black text-white min-h-screen flex items-center justify-center">
-        Loading canteens...
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-black text-white min-h-screen p-4">
-      <h1 className="text-xl font-semibold mb-4">Canteens</h1>
-
-      <div className="mb-4">
-        <MenuSearch value={search} onChange={setSearch} />
+    <div className="canteen-page">
+      <div className="canteen-page-header">
+        <button className="canteen-back-btn" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+        <h1 className="canteen-page-title">All Canteens</h1>
       </div>
 
-      {filteredCanteens.length === 0 ? (
-        <div className="text-center text-gray-400 mt-10">
-          No canteens found
+      <div style={{ padding: 20 }}>
+        <div className="canteen-search">
+          <input className="canteen-search__input" placeholder="Search canteens..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <span className="canteen-search__icon"><Search size={18} /></span>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4">
-          {filteredCanteens.map((canteen) => (
-            <div
-              key={canteen.id}
-              onClick={() =>
-                navigate(`/canteen/${canteen.id}`)
-              }
-              className="cursor-pointer"
-            >
-              <CanteenCard canteen={canteen} />
-            </div>
-          ))}
-        </div>
-      )}
+
+        {isLoading ? (
+          <div className="canteen-loading"><div className="canteen-loading-spinner" /><span style={{ color: '#999' }}>Loading...</span></div>
+        ) : filtered.length === 0 ? (
+          <div className="canteen-empty"><div className="canteen-empty__icon">🍽️</div><p className="canteen-empty__text">No canteens found</p></div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {filtered.map((c, i) => (
+              <CanteenCard key={c.id} canteen={c} index={i} onClick={() => navigate(`/canteens/${c.id}`)} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

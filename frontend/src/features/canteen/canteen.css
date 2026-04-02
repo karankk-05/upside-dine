@@ -1,0 +1,857 @@
+/* ═══════════════════════════════════════════════
+   Canteen Feature Styles — Stranger Things Theme
+   Uses CSS variables from the global design system
+   ═══════════════════════════════════════════════ */
+
+/* ── Canteen Detail Page ── */
+.canteen-detail-header {
+  padding: 20px;
+  background: linear-gradient(180deg, #000 0%, #0a0a0a 100%);
+}
+
+.canteen-detail-hero {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.canteen-detail-icon {
+  width: 80px;
+  height: 80px;
+  background: #2a2a2a;
+  border-radius: 16px;
+  border: 2px solid #d45555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  box-shadow: 0 0 15px rgba(232, 85, 85, 0.12);
+  flex-shrink: 0;
+}
+
+.canteen-detail-meta {
+  flex: 1;
+}
+
+.canteen-detail-name {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.canteen-detail-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #999;
+}
+
+.canteen-detail-rating {
+  font-size: 12px;
+  color: #999;
+}
+
+/* ── Order Type Toggle ── */
+.canteen-order-type {
+  display: flex;
+  gap: 12px;
+}
+
+.canteen-order-type-btn {
+  flex: 1;
+  padding: 12px;
+  background: #1a1a1a;
+  border: 2px solid #333;
+  color: #999;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.canteen-order-type-btn.active {
+  background: #2a2a2a;
+  border-color: #d45555;
+  color: #d45555;
+  box-shadow: 0 0 20px rgba(232, 85, 85, 0.12);
+}
+
+/* ── Menu Section ── */
+.canteen-menu {
+  padding: 20px;
+  padding-bottom: 140px;
+}
+
+.canteen-menu-section-title {
+  font-size: 14px;
+  color: #999;
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.canteen-menu-item {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: border-color 0.2s;
+}
+
+.canteen-menu-item:hover {
+  border-color: #444;
+}
+
+.canteen-menu-item--unavailable {
+  opacity: 0.5;
+}
+
+.canteen-menu-item__info {
+  flex: 1;
+  padding-right: 12px;
+}
+
+.canteen-menu-item__name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.canteen-menu-item__veg-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.canteen-menu-item__veg-dot--veg { background: #33aa33; }
+.canteen-menu-item__veg-dot--nonveg { background: #d45555; }
+
+.canteen-menu-item__name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.canteen-menu-item__desc {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.canteen-menu-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.canteen-menu-item__price {
+  color: #d45555;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.canteen-menu-item__prep {
+  color: #999;
+  font-size: 12px;
+}
+
+.canteen-menu-item__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.canteen-menu-item__image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #333;
+}
+
+/* ── Add / Qty Buttons ── */
+.canteen-btn-add {
+  padding: 10px 20px;
+  background: #d45555;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 10px rgba(232, 85, 85, 0.12);
+}
+
+.canteen-btn-add:hover {
+  box-shadow: 0 0 20px rgba(232, 85, 85, 0.25);
+  transform: translateY(-1px);
+}
+
+.canteen-btn-add:disabled {
+  background: #333;
+  color: #666;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.canteen-qty-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #2a2a2a;
+  border-radius: 8px;
+  padding: 4px 8px;
+  border: 1px solid #333;
+}
+
+.canteen-qty-stepper button {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #d45555;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.canteen-qty-stepper button:hover {
+  background: #333;
+}
+
+.canteen-qty-stepper span {
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* ── Fixed Cart Button ── */
+.canteen-cart-bar {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 600px;
+  width: calc(100% - 40px);
+  z-index: 50;
+}
+
+.canteen-cart-bar__btn {
+  width: 100%;
+  padding: 16px 20px;
+  background: #d45555;
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(232, 85, 85, 0.3);
+  transition: all 0.3s ease;
+}
+
+.canteen-cart-bar__btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(232, 85, 85, 0.4);
+}
+
+/* ── Cart Drawer ── */
+.canteen-cart-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 90;
+}
+
+.canteen-cart-drawer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #111;
+  border-top: 1px solid #333;
+  border-radius: 20px 20px 0 0;
+  max-height: 70vh;
+  overflow-y: auto;
+  z-index: 100;
+  padding: 24px 20px;
+}
+
+.canteen-cart-drawer__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.canteen-cart-drawer__title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.canteen-cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #222;
+}
+
+.canteen-cart-item__name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.canteen-cart-item__price {
+  font-size: 13px;
+  color: #999;
+  margin-top: 2px;
+}
+
+.canteen-cart-summary {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #333;
+}
+
+.canteen-cart-summary__row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.canteen-cart-summary__total {
+  font-size: 16px;
+  font-weight: 700;
+  color: #d45555;
+}
+
+/* ── Order Timeline ── */
+.canteen-order-timeline {
+  padding: 20px;
+  padding-bottom: 100px;
+}
+
+.canteen-timeline-item {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.canteen-timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 19px;
+  top: 40px;
+  width: 2px;
+  height: calc(100% + 16px);
+  background: #333;
+}
+
+.canteen-timeline-item:last-child::before {
+  display: none;
+}
+
+.canteen-timeline-dot {
+  width: 40px;
+  height: 40px;
+  background: #1a1a1a;
+  border: 3px solid #333;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 1;
+  font-size: 14px;
+}
+
+.canteen-timeline-item--active .canteen-timeline-dot {
+  background: #d45555;
+  border-color: #d45555;
+  box-shadow: 0 0 15px rgba(232, 85, 85, 0.12);
+  color: #fff;
+}
+
+.canteen-timeline-content {
+  flex: 1;
+  padding-top: 8px;
+}
+
+.canteen-timeline-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.canteen-timeline-time {
+  font-size: 12px;
+  color: #999;
+}
+
+/* ── Order Cards (Manager) ── */
+.canteen-order-card {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+
+.canteen-order-card:hover {
+  border-color: #444;
+}
+
+.canteen-order-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.canteen-order-card__id {
+  font-size: 14px;
+  font-weight: 700;
+  color: #d45555;
+}
+
+.canteen-order-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+  color: #000;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.canteen-order-badge--new { background: #d45555; color: #fff; }
+.canteen-order-badge--preparing { background: #ff9900; }
+.canteen-order-badge--ready { background: #00ff00; }
+.canteen-order-badge--delivered { background: #6600ff; color: #fff; }
+.canteen-order-badge--cancelled { background: #666; color: #fff; }
+
+.canteen-order-card__details {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+
+.canteen-order-card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.canteen-btn-small {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #333;
+  background: #2a2a2a;
+  color: #fff;
+  transition: all 0.2s;
+}
+
+.canteen-btn-small:hover {
+  border-color: #555;
+}
+
+.canteen-btn-small--primary {
+  background: #d45555;
+  border-color: #d45555;
+  box-shadow: 0 0 10px rgba(232, 85, 85, 0.12);
+}
+
+.canteen-btn-small--primary:hover {
+  box-shadow: 0 0 15px rgba(232, 85, 85, 0.25);
+}
+
+.canteen-btn-small--danger {
+  color: #ff6b6b;
+  border-color: #ff6b6b33;
+}
+
+/* ── Manager Stats Grid ── */
+.canteen-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.canteen-stat-card {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+
+.canteen-stat-card__value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #d45555;
+  margin-bottom: 4px;
+}
+
+.canteen-stat-card__label {
+  font-size: 11px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── Search Bar ── */
+.canteen-search {
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.canteen-search__input {
+  width: 100%;
+  padding: 14px 44px 14px 16px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 14px;
+  transition: border-color 0.3s;
+}
+
+.canteen-search__input:focus {
+  outline: none;
+  border-color: #d45555;
+  box-shadow: 0 0 15px rgba(232, 85, 85, 0.12);
+}
+
+.canteen-search__icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+}
+
+/* ── Payment Modal ── */
+.canteen-payment-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+}
+
+.canteen-payment-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.canteen-payment-sheet {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #111;
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px;
+}
+
+.canteen-payment-amount {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.canteen-payment-amount__label {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+.canteen-payment-amount__value {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+/* ── Checkout Page ── */
+.canteen-checkout {
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #fff;
+  padding: 20px;
+  padding-bottom: 100px;
+}
+
+.canteen-checkout__section {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.canteen-checkout__section-title {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 12px;
+}
+
+.canteen-checkout__input {
+  width: 100%;
+  padding: 12px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 14px;
+  transition: border-color 0.3s;
+}
+
+.canteen-checkout__input:focus {
+  outline: none;
+  border-color: #d45555;
+}
+
+.canteen-checkout__submit {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  padding: 16px;
+  background: #d45555;
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(232, 85, 85, 0.3);
+  transition: all 0.3s;
+}
+
+.canteen-checkout__submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(232, 85, 85, 0.4);
+}
+
+/* ── Filter Tabs ── */
+.canteen-filter-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.canteen-filter-tab {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #999;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.canteen-filter-tab.active {
+  background: #2a2a2a;
+  border-color: #d45555;
+  color: #d45555;
+}
+
+/* ── Empty State ── */
+.canteen-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.canteen-empty__icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.canteen-empty__text {
+  font-size: 14px;
+}
+
+/* ── Loading ── */
+.canteen-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 12px;
+}
+
+.canteen-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #333;
+  border-top-color: #d45555;
+  border-radius: 50%;
+  animation: canteen-spin 0.8s linear infinite;
+}
+
+@keyframes canteen-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Inventory Grid ── */
+.canteen-inventory-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.canteen-inventory-item {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.canteen-inventory-item__name {
+  font-size: 11px;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+.canteen-inventory-item__value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #d45555;
+}
+
+.canteen-inventory-item__value--warning {
+  color: #ffaa00;
+}
+
+/* ── Page Layout ── */
+.canteen-page {
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #fff;
+}
+
+.canteen-page-header {
+  padding: 40px 20px 20px;
+  background: #000;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #333;
+}
+
+.canteen-page-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #d45555;
+  text-shadow: 0 0 4px rgba(232, 85, 85, 0.12), 0 0 8px rgba(232, 85, 85, 0.12);
+}
+
+.canteen-back-btn {
+  width: 36px;
+  height: 36px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.canteen-back-btn:hover {
+  border-color: #d45555;
+}
+
+/* ── QR Code Card ── */
+.canteen-qr-card {
+  background: #1a1a1a;
+  border: 2px solid #d45555;
+  border-radius: 20px;
+  padding: 32px;
+  text-align: center;
+  box-shadow: 0 0 20px rgba(232, 85, 85, 0.12);
+}
+
+.canteen-qr-code {
+  width: 200px;
+  height: 200px;
+  margin: 0 auto 20px;
+  background: #fff;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Confirmation Screen ── */
+.canteen-confirmation {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.canteen-confirmation__card {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 20px;
+  padding: 32px 24px;
+  text-align: center;
+  max-width: 360px;
+  width: 100%;
+}
+
+.canteen-confirmation__icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.canteen-confirmation__title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.canteen-confirmation__subtitle {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}

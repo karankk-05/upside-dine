@@ -1,160 +1,83 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { useState } from "react";
-
-import { useOrderDetail } from "../hooks/useOrderDetail";
-import { useUpdateOrderStatus } from "../hooks/useUpdateOrderStatus";
-import { useOrderSocket } from "../hooks/useOrderSocket";
-
-import OrderStatusTracker from "../components/OrderStatusTracker";
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+import { useOrderDetail } from '../hooks/useOrderDetail';
+import { useUpdateOrderStatus } from '../hooks/useUpdateOrderStatus';
+import OrderStatusTracker from '../components/OrderStatusTracker';
+import '../canteen.css';
 
 export default function ManagerOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { data: order, isLoading, refetch } = useOrderDetail(id);
+  const { mutateAsync: updateStatus } = useUpdateOrderStatus();
 
-  const { data: order, isLoading, refetch } =
-    useOrderDetail(id);
-
-  const { mutate: updateStatus } = useUpdateOrderStatus();
-
-  const [liveStatus, setLiveStatus] = useState(null);
-
-  useOrderSocket(id, (newStatus) => {
-    setLiveStatus(newStatus);
-  });
-
-  if (isLoading) {
-    return (
-      <div className="bg-black text-white min-h-screen flex items-center justify-center">
-        Loading...
-      </div>
-    );
-  }
-
-  if (!order) {
-    return (
-      <div className="bg-black text-white min-h-screen flex items-center justify-center">
-        Order not found
-      </div>
-    );
-  }
-
-  const currentStatus = liveStatus || order.status;
-
-  const total = order.items.reduce(
-    (sum, item) =>
-      sum + item.menu_item.price * item.quantity,
-    0
-  );
-
-  const handleStatusChange = (newStatus) => {
-    updateStatus(
-      { orderId: order.id, status: newStatus },
-      {
-        onSuccess: () => refetch(),
-      }
-    );
+  const handleStatusUpdate = async (newStatus) => {
+    try {
+      await updateStatus({ id, status: newStatus });
+      refetch();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to update');
+    }
   };
 
+  if (isLoading) return <div className="canteen-page"><div className="canteen-loading"><div className="canteen-loading-spinner" /></div></div>;
+  if (!order) return <div className="canteen-page"><div className="canteen-empty"><p className="canteen-empty__text">Order not found</p></div></div>;
+
   return (
-    <div className="bg-black text-white min-h-screen p-4 pb-24">
-      <button
-        onClick={() => navigate(-1)}
-        className="text-sm text-gray-400 mb-4"
-      >
-        ← Back
-      </button>
+    <div className="canteen-page">
+      <div className="canteen-page-header">
+        <button className="canteen-back-btn" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+        <h1 className="canteen-page-title">Order #{order.id}</h1>
+      </div>
 
-      <h2 className="text-lg font-semibold mb-4">
-        Order #{order.id}
-      </h2>
-
-      {/* Status Tracker */}
-      <OrderStatusTracker status={currentStatus} />
-
-      {/* Items */}
-      <div className="bg-gray-900 rounded-xl p-4 space-y-3 mt-4">
-        {order.items.map((item) => (
-          <div
-            key={item.id}
-            className="flex justify-between text-sm"
-          >
-            <span>
-              {item.menu_item.item_name} × {item.quantity}
-            </span>
-            <span>
-              ₹{item.menu_item.price * item.quantity}
+      {/* Order Details */}
+      <div style={{ padding: 20 }}>
+        <div className="canteen-order-card" style={{ border: '2px solid #d45555', boxShadow: '0 0 15px rgba(232,85,85,0.12)' }}>
+          <div className="canteen-order-card__header">
+            <span className="canteen-order-card__id">#{order.id}</span>
+            <span className={`canteen-order-badge canteen-order-badge--${order.status === 'preparing' ? 'preparing' : order.status === 'ready' ? 'ready' : 'new'}`}>
+              {order.status?.replace(/_/g, ' ')}
             </span>
           </div>
-        ))}
 
-        <div className="border-t border-gray-800 pt-3 flex justify-between font-medium">
-          <span>Total</span>
-          <span>₹{total}</span>
+          <div style={{ background: '#111', borderRadius: 12, padding: 12, marginBottom: 12 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Items:</p>
+            {order.items?.map((item, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                <span>{item.item_name || item.name} × {item.quantity}</span>
+                <span style={{ color: '#d45555' }}>₹{(item.price || item.unit_price) * item.quantity}</span>
+              </div>
+            ))}
+            <div style={{ borderTop: '1px solid #333', marginTop: 8, paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+              <span>Total</span>
+              <span style={{ color: '#d45555' }}>₹{order.total_amount || order.total}</span>
+            </div>
+          </div>
+
+          <p className="canteen-order-card__details">Student: {order.student_name || order.user_email || 'N/A'}</p>
+          <p className="canteen-order-card__details">Type: {order.order_type || 'pickup'}</p>
+          {order.delivery_address && <p className="canteen-order-card__details">Address: {order.delivery_address}</p>}
+          {order.notes && <p className="canteen-order-card__details">Notes: {order.notes}</p>}
+
+          <div className="canteen-order-card__actions" style={{ marginTop: 16 }}>
+            {order.status === 'received' && (
+              <>
+                <button className="canteen-btn-small canteen-btn-small--primary" onClick={() => handleStatusUpdate('preparing')}>Accept & Prepare</button>
+                <button className="canteen-btn-small canteen-btn-small--danger" onClick={() => handleStatusUpdate('cancelled')}>Reject</button>
+              </>
+            )}
+            {order.status === 'preparing' && (
+              <button className="canteen-btn-small canteen-btn-small--primary" onClick={() => handleStatusUpdate('ready')}>Mark Ready</button>
+            )}
+            {order.status === 'ready' && order.order_type === 'delivery' && (
+              <button className="canteen-btn-small canteen-btn-small--primary" onClick={() => handleStatusUpdate('out_for_delivery')}>Assign Delivery</button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Customer Info */}
-      {order.user && (
-        <div className="bg-gray-900 rounded-xl p-4 mt-4">
-          <h3 className="text-sm font-semibold mb-2">
-            Customer
-          </h3>
-          <p className="text-xs text-gray-400">
-            {order.user.username}
-          </p>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="mt-4 space-y-2">
-        {currentStatus === "pending" && (
-          <button
-            onClick={() => handleStatusChange("confirmed")}
-            className="w-full bg-blue-500 py-2 rounded"
-          >
-            Confirm Order
-          </button>
-        )}
-
-        {currentStatus === "confirmed" && (
-          <button
-            onClick={() => handleStatusChange("preparing")}
-            className="w-full bg-purple-500 py-2 rounded"
-          >
-            Start Preparing
-          </button>
-        )}
-
-        {currentStatus === "preparing" && (
-          <button
-            onClick={() => handleStatusChange("ready")}
-            className="w-full bg-green-500 py-2 rounded"
-          >
-            Mark as Ready
-          </button>
-        )}
-
-        {currentStatus === "ready" && (
-          <button
-            onClick={() => handleStatusChange("picked_up")}
-            className="w-full bg-gray-500 py-2 rounded"
-          >
-            Mark as Picked Up
-          </button>
-        )}
-
-        {currentStatus !== "picked_up" &&
-          currentStatus !== "cancelled" && (
-            <button
-              onClick={() =>
-                handleStatusChange("cancelled")
-              }
-              className="w-full bg-red-500 py-2 rounded"
-            >
-              Cancel Order
-            </button>
-          )}
-      </div>
+      {/* Timeline */}
+      <OrderStatusTracker status={order.status} orderType={order.order_type} />
     </div>
   );
 }

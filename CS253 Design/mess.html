@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Mess - Upside Dine</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="dashboard">
+            <!-- Page Header -->
+            <div class="page-header">
+                <div class="back-btn">←</div>
+                <h1 class="page-title neon-text-subtle">Student Mess</h1>
+            </div>
+
+            <!-- Mess Features -->
+            <div class="feature-cards">
+                <div class="feature-card">
+                    <div class="feature-header">
+                        <div class="feature-icon">📋</div>
+                        <h2 class="feature-title">Book Extras</h2>
+                    </div>
+                    <p class="feature-description">
+                        Pre-book your meal and get a QR code for quick pickup. No queues, no hassle.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-header">
+                        <div class="feature-icon">📹</div>
+                        <h2 class="feature-title">Live Crowd Monitor</h2>
+                    </div>
+                    <p class="feature-description">
+                        Check real-time mess density and estimated wait time before you go.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-header">
+                        <div class="feature-icon">💰</div>
+                        <h2 class="feature-title">Monthly Account</h2>
+                    </div>
+                    <p class="feature-description">
+                        Current Balance: <span style="color: var(--st-accent); font-weight: 700;">₹2,450</span><br>
+                        View your monthly spending and transaction history.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <span class="nav-icon">🏠</span>
+                    Home
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">📦</span>
+                    Orders
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">❤️</span>
+                    Favorites
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">👤</span>
+                    Profile
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        Navigation.requireRole('student');
+
+        // Back button
+        document.querySelector('.back-btn').addEventListener('click', () => {
+            Navigation.goTo('dashboard.html');
+        });
+
+        // Make feature cards clickable
+        const featureCards = document.querySelectorAll('.feature-card');
+        featureCards[0].style.cursor = 'pointer';
+        featureCards[0].addEventListener('click', () => {
+            Navigation.goTo('mess-booking.html');
+        });
+
+        featureCards[1].style.cursor = 'pointer';
+        featureCards[1].addEventListener('click', () => {
+            Navigation.goTo('mess-crowd.html');
+        });
+
+        featureCards[2].style.cursor = 'pointer';
+        featureCards[2].addEventListener('click', () => {
+            UI.showError('Account details coming soon!');
+        });
+    </script>
+</body>
+
+</html>

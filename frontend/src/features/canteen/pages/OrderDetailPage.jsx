@@ -1,164 +1,80 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-
-import { useOrderDetail } from "../hooks/useOrderDetail";
-import { useOrderSocket } from "../hooks/useOrderSocket";
-
-import OrderStatusTracker from "../components/OrderStatusTracker";
-import PickupQRCode from "../components/PickupQRCode";
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+import { useOrderDetail } from '../hooks/useOrderDetail';
+import { useCancelOrder } from '../hooks/useCancelOrder';
+import OrderStatusTracker from '../components/OrderStatusTracker';
+import PickupQRCode from '../components/PickupQRCode';
+import '../canteen.css';
 
 export default function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-
   const { data: order, isLoading } = useOrderDetail(id);
+  const { mutateAsync: cancelOrder } = useCancelOrder();
 
-  const [liveStatus, setLiveStatus] = useState(null);
-
-  useOrderSocket(id, (newStatus) => {
-    setLiveStatus(newStatus);
-  });
-
-  if (isLoading) {
-    return (
-      <div className="bg-black text-white min-h-screen flex items-center justify-center">
-        Loading...
-      </div>
-    );
-  }
-
-  if (!order) {
-    return (
-      <div className="bg-black text-white min-h-screen flex items-center justify-center">
-        Order not found
-      </div>
-    );
-  }
-
-  const currentStatus = liveStatus || order.status;
-
-  const formatTime = (time) => {
-    if (!time) return "—";
-    return new Date(time).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const handleCancel = async () => {
+    if (!window.confirm('Cancel this order?')) return;
+    try {
+      await cancelOrder(id);
+      navigate('/orders');
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Cannot cancel this order');
+    }
   };
 
-  const formatDate = (time) => {
-    if (!time) return "—";
-    return new Date(time).toLocaleString();
-  };
+  if (isLoading) return <div className="canteen-page"><div className="canteen-loading"><div className="canteen-loading-spinner" /></div></div>;
+  if (!order) return <div className="canteen-page"><div className="canteen-empty"><p className="canteen-empty__text">Order not found</p></div></div>;
 
   return (
-    <div className="bg-black text-white min-h-screen p-4 pb-24">
-      {/* Back */}
-      <button
-        onClick={() => navigate(-1)}
-        className="text-sm text-gray-400 mb-4"
-      >
-        ← Back
-      </button>
+    <div className="canteen-page">
+      <div className="canteen-page-header">
+        <button className="canteen-back-btn" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+        <h1 className="canteen-page-title">Order Status</h1>
+      </div>
 
-      {/* Header */}
-      <h2 className="text-lg font-semibold mb-2">
-        Order #{order.order_number}
-      </h2>
-
-      <p className="text-xs text-gray-400 mb-4">
-        Placed at {formatDate(order.created_at)}
-      </p>
-
-      {/* Status Tracker */}
-      <OrderStatusTracker status={currentStatus} />
-
-      {/* Estimated Ready Time */}
-      {order.estimated_ready_time && (
-        <div className="bg-gray-900 rounded-xl p-3 mt-4 text-sm">
-          <span className="text-gray-400">
-            Estimated Ready Time:
-          </span>
-          <span className="ml-2 text-white">
-            {formatTime(order.estimated_ready_time)}
+      {/* Order Info */}
+      <div style={{ padding: 20, background: '#000', borderBottom: '1px solid #333' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div>
+            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Order #{order.id}</h2>
+            <p style={{ fontSize: 12, color: '#999' }}>{order.order_type || 'Pickup'}</p>
+          </div>
+          <span className={`canteen-order-badge canteen-order-badge--${order.status === 'preparing' ? 'preparing' : order.status === 'ready' ? 'ready' : 'new'}`}>
+            {order.status?.replace(/_/g, ' ')}
           </span>
         </div>
-      )}
 
-      {/* Items */}
-      <div className="bg-gray-900 rounded-xl p-4 space-y-3 mt-4">
-        {order.items.map((item) => (
-          <div
-            key={item.id}
-            className="flex justify-between text-sm"
-          >
-            <span>
-              {item.menu_item.item_name} × {item.quantity}
-            </span>
-            <span>
-              ₹{item.menu_item.price * item.quantity}
-            </span>
-          </div>
-        ))}
-
-        <div className="border-t border-gray-800 pt-3 flex justify-between font-medium">
-          <span>Total</span>
-          <span>₹{order.total_amount}</span>
+        <div style={{ background: '#1a1a1a', borderRadius: 12, padding: 12, marginTop: 12 }}>
+          <p style={{ fontSize: 13, marginBottom: 4 }}>
+            <strong>Items:</strong> {order.items?.map(i => i.item_name || i.name).join(', ')}
+          </p>
+          <p style={{ fontSize: 13, color: '#999' }}>
+            <strong>Total:</strong> <span style={{ color: '#d45555', fontWeight: 700 }}>₹{order.total_amount || order.total}</span>
+          </p>
         </div>
       </div>
 
-      {/* Notes */}
-      {order.notes && (
-        <div className="bg-gray-900 rounded-xl p-4 mt-4">
-          <p className="text-xs text-gray-400 mb-1">
-            Notes
-          </p>
-          <p className="text-sm">{order.notes}</p>
+      {/* Timeline */}
+      <OrderStatusTracker status={order.status} orderType={order.order_type} />
+
+      {/* QR Code for pickup */}
+      {order.order_type === 'pickup' && (order.status === 'ready' || order.status === 'confirmed') && (
+        <div style={{ padding: '0 20px 20px' }}>
+          <PickupQRCode orderId={order.id} qrData={order.qr_code} />
         </div>
       )}
 
-      {/* Pickup Section */}
-      {currentStatus === "ready" && (
-        <div className="mt-4 space-y-3">
-          <PickupQRCode
-            orderId={order.id}
-            qrValue={order.pickup_qr_code}
-          />
-
-          {order.pickup_otp && (
-            <div className="bg-gray-900 rounded-xl p-3 text-center">
-              <p className="text-xs text-gray-400">
-                Pickup OTP
-              </p>
-              <p className="text-lg font-semibold tracking-widest">
-                {order.pickup_otp}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Status Timeline */}
-      {order.status_timeline?.length > 0 && (
-        <div className="bg-gray-900 rounded-xl p-4 mt-4">
-          <h3 className="text-sm font-semibold mb-2">
-            Status Timeline
-          </h3>
-
-          <div className="space-y-2 text-xs text-gray-400">
-            {order.status_timeline.map((entry, index) => (
-              <div
-                key={index}
-                className="flex justify-between"
-              >
-                <span className="capitalize">
-                  {entry.status}
-                </span>
-                <span>{formatTime(entry.timestamp)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Actions */}
+      <div style={{ padding: '0 20px 100px', display: 'flex', gap: 12 }}>
+        <button className="canteen-btn-small canteen-btn-small--primary" style={{ flex: 1, padding: 14 }}>
+          Contact Canteen
+        </button>
+        {['received', 'confirmed'].includes(order.status) && (
+          <button className="canteen-btn-small canteen-btn-small--danger" onClick={handleCancel} style={{ flex: 1, padding: 14 }}>
+            Cancel Order
+          </button>
+        )}
+      </div>
     </div>
   );
 }

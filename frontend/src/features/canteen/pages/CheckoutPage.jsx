@@ -1,92 +1,73 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-
-import { useCartStore } from "../../../stores/cartStore";
-import { usePlaceOrder } from "../hooks/usePlaceOrder";
-
-import PaymentModal from "../components/PaymentModal";
-import OrderConfirmation from "../components/OrderConfirmation";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+import { useCartStore } from '../../../stores/cartStore';
+import { usePlaceOrder } from '../hooks/usePlaceOrder';
+import PaymentModal from '../components/PaymentModal';
+import OrderConfirmation from '../components/OrderConfirmation';
+import '../canteen.css';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
-
-  const { cart, clearCart } = useCartStore();
+  const { cart, clearCart, getTotal } = useCartStore();
   const { mutateAsync: placeOrder } = usePlaceOrder();
-
-  const [orderType, setOrderType] = useState("pickup");
-  const [address, setAddress] = useState("");
-  const [scheduledTime, setScheduledTime] = useState("");
-  const [notes, setNotes] = useState("");
-
+  const [orderType, setOrderType] = useState('pickup');
+  const [address, setAddress] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
+  const [notes, setNotes] = useState('');
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderData, setOrderData] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const localSubtotal = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  const total = getTotal();
 
   const handlePlaceOrder = async () => {
+    setSubmitting(true);
     try {
       const payload = {
-        items: cart.map((item) => ({
-          menu_item: item.id,
-          quantity: item.quantity,
-        })),
+        items: cart.map((item) => ({ menu_item: item.id, quantity: item.quantity })),
         order_type: orderType,
-        delivery_address:
-          orderType === "delivery" ? address : null,
-        scheduled_time:
-          orderType === "prebook" ? scheduledTime : null,
+        delivery_address: orderType === 'delivery' ? address : null,
+        scheduled_time: orderType === 'prebook' ? scheduledTime : null,
         notes,
       };
-
       const order = await placeOrder(payload);
-
       setOrderData(order);
       setPaymentOpen(true);
     } catch (err) {
-      console.error("Order creation failed", err);
+      alert(err.response?.data?.detail || 'Failed to place order');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   if (cart.length === 0 && !orderPlaced) {
     return (
-      <div className="bg-black text-white min-h-screen flex items-center justify-center">
-        Cart is empty
+      <div className="canteen-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="canteen-empty">
+          <div className="canteen-empty__icon">🛒</div>
+          <p className="canteen-empty__text">Cart is empty</p>
+          <button className="canteen-btn-small canteen-btn-small--primary" onClick={() => navigate(-1)} style={{ marginTop: 16 }}>Browse Menu</button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-black text-white min-h-screen p-4 pb-28">
-      {/* Back */}
-      <button
-        onClick={() => navigate(-1)}
-        className="text-sm text-gray-400 mb-4"
-      >
-        ← Back
+    <div className="canteen-checkout">
+      <button onClick={() => navigate(-1)} style={{ background: 'transparent', border: 'none', color: '#999', fontSize: 14, cursor: 'pointer', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <ArrowLeft size={16} /> Back
       </button>
 
-      <h2 className="text-lg font-semibold mb-4">
-        Checkout
-      </h2>
+      <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Checkout</h2>
 
       {/* Order Type */}
-      <div className="bg-gray-900 p-4 rounded-xl mb-4">
-        <p className="text-sm mb-2">Order Type</p>
-        <div className="flex gap-2">
-          {["pickup", "delivery", "prebook"].map((type) => (
-            <button
-              key={type}
-              onClick={() => setOrderType(type)}
-              className={`px-3 py-1 rounded-full text-sm capitalize ${
-                orderType === type
-                  ? "bg-red-500 text-white"
-                  : "bg-gray-800 text-gray-400"
-              }`}
-            >
+      <div className="canteen-checkout__section">
+        <p className="canteen-checkout__section-title">Order Type</p>
+        <div className="canteen-filter-tabs">
+          {['pickup', 'delivery', 'prebook'].map((type) => (
+            <button key={type} className={`canteen-filter-tab ${orderType === type ? 'active' : ''}`} onClick={() => setOrderType(type)} style={{ textTransform: 'capitalize' }}>
               {type}
             </button>
           ))}
@@ -94,92 +75,55 @@ export default function CheckoutPage() {
       </div>
 
       {/* Delivery Address */}
-      {orderType === "delivery" && (
-        <div className="bg-gray-900 p-4 rounded-xl mb-4">
-          <p className="text-sm mb-2">Delivery Address</p>
-          <input
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="Enter address"
-            className="w-full bg-gray-800 p-2 rounded outline-none text-sm"
-          />
+      {orderType === 'delivery' && (
+        <div className="canteen-checkout__section">
+          <p className="canteen-checkout__section-title">Delivery Address</p>
+          <input className="canteen-checkout__input" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Room no, Hall name..." />
         </div>
       )}
 
       {/* Scheduled Time */}
-      {orderType === "prebook" && (
-        <div className="bg-gray-900 p-4 rounded-xl mb-4">
-          <p className="text-sm mb-2">Schedule Time</p>
-          <input
-            type="datetime-local"
-            value={scheduledTime}
-            onChange={(e) =>
-              setScheduledTime(e.target.value)
-            }
-            className="w-full bg-gray-800 p-2 rounded outline-none text-sm"
-          />
+      {orderType === 'prebook' && (
+        <div className="canteen-checkout__section">
+          <p className="canteen-checkout__section-title">Schedule Time</p>
+          <input className="canteen-checkout__input" type="datetime-local" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} />
         </div>
       )}
 
       {/* Notes */}
-      <div className="bg-gray-900 p-4 rounded-xl mb-4">
-        <p className="text-sm mb-2">Notes</p>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="e.g. less spicy"
-          className="w-full bg-gray-800 p-2 rounded outline-none text-sm"
-        />
+      <div className="canteen-checkout__section">
+        <p className="canteen-checkout__section-title">Special Instructions</p>
+        <textarea className="canteen-checkout__input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. less spicy, no onions..." rows={2} style={{ resize: 'none' }} />
       </div>
 
       {/* Order Summary */}
-      <div className="bg-gray-900 rounded-xl p-4 space-y-3">
+      <div className="canteen-checkout__section">
+        <p className="canteen-checkout__section-title">Order Summary</p>
         {cart.map((item) => (
-          <div
-            key={item.id}
-            className="flex justify-between text-sm"
-          >
-            <span>
-              {item.name} × {item.quantity}
-            </span>
-            <span>₹{item.price * item.quantity}</span>
+          <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 8, color: '#ccc' }}>
+            <span>{item.name} × {item.quantity}</span>
+            <span style={{ color: '#d45555' }}>₹{item.price * item.quantity}</span>
           </div>
         ))}
-
-        <div className="border-t border-gray-800 pt-3 flex justify-between">
-          <span>Subtotal</span>
-          <span>₹{localSubtotal}</span>
+        <div style={{ borderTop: '1px solid #333', marginTop: 12, paddingTop: 12, display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 16 }}>
+          <span>Total</span>
+          <span style={{ color: '#d45555' }}>₹{total}</span>
         </div>
       </div>
 
-      {/* Continue */}
-      <button
-        onClick={handlePlaceOrder}
-        className="fixed bottom-4 left-4 right-4 bg-red-500 py-3 rounded-xl font-medium"
-      >
-        Continue to Payment
+      {/* Submit */}
+      <button className="canteen-checkout__submit" onClick={handlePlaceOrder} disabled={submitting} style={{ opacity: submitting ? 0.6 : 1 }}>
+        {submitting ? 'Placing Order...' : `Continue to Payment • ₹${total}`}
       </button>
 
       {/* Payment Modal */}
       {paymentOpen && orderData && (
-        <PaymentModal
-          amount={orderData.total_amount}
-          orderId={orderData.id}
-          onSuccess={() => {
-            setPaymentOpen(false);
-            setOrderPlaced(true);
-            clearCart();
-          }}
-          onClose={() => setPaymentOpen(false)}
-        />
+        <PaymentModal amount={orderData.total_amount} orderId={orderData.id} onSuccess={() => { setPaymentOpen(false); setOrderPlaced(true); clearCart(); }} onClose={() => setPaymentOpen(false)} />
       )}
 
-      {/* Order Confirmation */}
+      {/* Confirmation */}
       {orderPlaced && orderData && (
-        <OrderConfirmation
-          order={orderData}
-          onClose={() => navigate("/canteen/orders")}
-        />
+        <OrderConfirmation order={orderData} onClose={() => navigate(`/orders/${orderData.id}`)} />
       )}
     </div>
   );

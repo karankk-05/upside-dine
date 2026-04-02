@@ -1,36 +1,50 @@
-import { Search, X } from "lucide-react";
+import { useState } from 'react';
+import { Search } from 'lucide-react';
+import { useMenuSearch } from '../hooks/useMenuSearch';
+import '../canteen.css';
 
-export default function MenuSearch({
-  value,
-  onChange,
-  placeholder = "Search...",
-}) {
+export default function MenuSearch({ onSelectItem }) {
+  const [query, setQuery] = useState('');
+  const { data: results = [], isLoading } = useMenuSearch(query);
+
   return (
-    <div className="relative">
-      {/* Search Icon */}
-      <Search
-        size={16}
-        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-      />
+    <div style={{ padding: 20 }}>
+      <div className="canteen-search">
+        <input
+          className="canteen-search__input"
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search for food, canteen..."
+        />
+        <span className="canteen-search__icon"><Search size={18} /></span>
+      </div>
 
-      {/* Input */}
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full bg-gray-900 text-white pl-9 pr-9 py-2 rounded-xl outline-none text-sm border border-gray-800 focus:border-red-500"
-      />
+      {isLoading && <div className="canteen-loading"><div className="canteen-loading-spinner" /><span style={{ color: '#999' }}>Searching...</span></div>}
 
-      {/* Clear Button */}
-      {value && (
-        <button
-          onClick={() => onChange("")}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-        >
-          <X size={16} />
-        </button>
+      {!isLoading && query && results.length === 0 && (
+        <div className="canteen-empty">
+          <div className="canteen-empty__icon">🔍</div>
+          <p className="canteen-empty__text">No items found for "{query}"</p>
+        </div>
       )}
+
+      {results.map((item) => (
+        <div
+          key={item.id}
+          className="canteen-menu-item"
+          onClick={() => onSelectItem?.(item)}
+          style={{ cursor: 'pointer' }}
+        >
+          <div className="canteen-menu-item__info">
+            <div className="canteen-menu-item__name-row">
+              <span className="canteen-menu-item__name">{item.item_name}</span>
+            </div>
+            {item.canteen_name && <p className="canteen-menu-item__desc">from {item.canteen_name}</p>}
+            <span className="canteen-menu-item__price">₹{item.price}</span>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

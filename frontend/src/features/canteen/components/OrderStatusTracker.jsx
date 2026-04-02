@@ -1,86 +1,51 @@
-import { CheckCircle, Circle } from "lucide-react";
+import '../canteen.css';
 
-const STATUS_STEPS = [
-  "pending",
-  "confirmed",
-  "preparing",
-  "ready",
-  "picked_up",
+const STEPS = [
+  { key: 'placed', label: 'Order Placed', icon: '✓' },
+  { key: 'confirmed', label: 'Confirmed', icon: '✓' },
+  { key: 'preparing', label: 'Preparing', icon: '🍳' },
+  { key: 'ready', label: 'Ready for Pickup', icon: '📦' },
+  { key: 'out_for_delivery', label: 'Out for Delivery', icon: '🚴' },
+  { key: 'delivered', label: 'Delivered', icon: '✓' },
+  { key: 'completed', label: 'Completed', icon: '✓' },
 ];
 
-const STATUS_LABELS = {
-  pending: "Order Placed",
-  confirmed: "Order Confirmed",
-  preparing: "Preparing",
-  ready: "Ready for Pickup",
-  picked_up: "Completed",
-};
+export default function OrderStatusTracker({ status, orderType = 'pickup' }) {
+  // Filter out delivery steps for pickup orders
+  const steps = STEPS.filter((s) => {
+    if (orderType !== 'delivery' && s.key === 'out_for_delivery') return false;
+    if (orderType === 'delivery' && s.key === 'completed') return false;
+    return true;
+  });
 
-export default function OrderStatusTracker({ status }) {
-  if (status === "cancelled") {
-    return (
-      <div className="bg-gray-900 rounded-xl p-4 text-red-500">
-        Order Cancelled
-      </div>
-    );
-  }
-
-  const currentIndex = STATUS_STEPS.indexOf(status);
+  const statusOrder = steps.map((s) => s.key);
+  const currentIdx = statusOrder.indexOf(status);
 
   return (
-    <div className="bg-gray-900 rounded-xl p-4">
-      <h3 className="text-sm font-semibold mb-4 text-white">
-        Order Status
-      </h3>
+    <div className="canteen-order-timeline">
+      {steps.map((step, idx) => {
+        const isActive = idx <= currentIdx;
+        const isCurrent = idx === currentIdx;
 
-      <div className="flex flex-col gap-4">
-        {STATUS_STEPS.map((step, index) => {
-          const isCompleted = index < currentIndex;
-          const isActive = index === currentIndex;
-
-          return (
-            <div key={step} className="flex items-start gap-3">
-              <div className="flex flex-col items-center">
-                {isCompleted ? (
-                  <CheckCircle size={18} className="text-green-500" />
-                ) : isActive ? (
-                  <CheckCircle size={18} className="text-red-500" />
-                ) : (
-                  <Circle size={18} className="text-gray-600" />
-                )}
-
-                {index !== STATUS_STEPS.length - 1 && (
-                  <div
-                    className={`w-[2px] h-6 ${
-                      index < currentIndex
-                        ? "bg-green-500"
-                        : "bg-gray-700"
-                    }`}
-                  />
-                )}
-              </div>
-
-              <div>
-                <p
-                  className={`text-sm ${
-                    isActive
-                      ? "text-white font-medium"
-                      : "text-gray-400"
-                  }`}
-                >
-                  {STATUS_LABELS[step]}
-                </p>
-
-                {isActive && (
-                  <p className="text-xs text-gray-500">
-                    In progress...
-                  </p>
-                )}
-              </div>
+        return (
+          <div
+            key={step.key}
+            className={`canteen-timeline-item ${isActive ? 'canteen-timeline-item--active' : ''}`}
+          >
+            <div className="canteen-timeline-dot" style={isCurrent ? { animation: 'canteen-spin 2s linear infinite' } : {}}>
+              {step.icon}
             </div>
-          );
-        })}
-      </div>
+            <div className="canteen-timeline-content">
+              <h3 className="canteen-timeline-title" style={{ color: isActive ? '#fff' : '#666' }}>
+                {step.label}
+              </h3>
+              <p className="canteen-timeline-time">
+                {isCurrent ? 'In Progress' : isActive ? 'Completed' : 'Pending'}
+              </p>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

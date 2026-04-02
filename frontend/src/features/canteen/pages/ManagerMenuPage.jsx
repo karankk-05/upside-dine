@@ -1,123 +1,114 @@
-import { useManagerMenu } from "../hooks/useManagerMenu";
-import { useUpdateMenuItem } from "../hooks/useUpdateMenuItem";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Plus, Edit2, Trash2, Save, X } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useManagerMenu } from '../hooks/useManagerMenu';
+import '../canteen.css';
 
 export default function ManagerMenuPage() {
-  const { data: menu = [], isLoading, refetch } =
-    useManagerMenu();
+  const navigate = useNavigate();
+  const { menuItems = [], isLoading, addItem, updateItem, deleteItem } = useManagerMenu();
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [formData, setFormData] = useState({ item_name: '', description: '', price: '', category: 'snacks', is_veg: true, preparation_time_mins: 10, is_available: true });
 
-  const { mutate: updateMenuItem } = useUpdateMenuItem();
-
-  const groupedMenu = menu.reduce((acc, item) => {
-    const category = item.category_name || "Other";
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(item);
-    return acc;
-  }, {});
-
-  const handleToggleAvailability = (item) => {
-    updateMenuItem(
-      {
-        id: item.id,
-        is_available: !item.is_available,
-      },
-      {
-        onSuccess: () => refetch(),
+  const handleSubmit = async () => {
+    try {
+      if (editing) {
+        await updateItem({ id: editing, ...formData, price: Number(formData.price) });
+      } else {
+        await addItem({ ...formData, price: Number(formData.price) });
       }
-    );
+      setShowForm(false);
+      setEditing(null);
+      setFormData({ item_name: '', description: '', price: '', category: 'snacks', is_veg: true, preparation_time_mins: 10, is_available: true });
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to save item');
+    }
   };
 
-  if (isLoading) {
-    return (
-      <div className="bg-black text-white min-h-screen flex items-center justify-center">
-        Loading menu...
-      </div>
-    );
-  }
+  const startEdit = (item) => {
+    setEditing(item.id);
+    setFormData({ item_name: item.item_name, description: item.description || '', price: String(item.price), category: item.category || 'snacks', is_veg: item.is_veg, preparation_time_mins: item.preparation_time_mins || 10, is_available: item.is_available });
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this item?')) return;
+    try { await deleteItem(id); } catch { alert('Failed to delete'); }
+  };
 
   return (
-    <div className="bg-black text-white min-h-screen p-4">
-      <h1 className="text-xl font-semibold mb-4">
-        Manage Menu
-      </h1>
+    <div className="canteen-page">
+      <div className="canteen-page-header">
+        <button className="canteen-back-btn" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+        <h1 className="canteen-page-title">Manage Menu</h1>
+      </div>
 
-      {Object.keys(groupedMenu).length === 0 ? (
-        <div className="text-gray-400 text-center mt-10">
-          No menu items found
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {Object.entries(groupedMenu).map(
-            ([category, items]) => (
-              <div key={category}>
-                <h2 className="text-sm font-semibold mb-2 text-gray-300">
-                  {category}
-                </h2>
+      <div style={{ padding: 20, paddingBottom: 100 }}>
+        {/* Add Button */}
+        <button className="canteen-btn-small canteen-btn-small--primary" onClick={() => { setShowForm(!showForm); setEditing(null); }} style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px' }}>
+          {showForm ? <X size={14} /> : <Plus size={14} />} {showForm ? 'Cancel' : 'Add Item'}
+        </button>
 
-                <div className="space-y-3">
-                  {items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="bg-gray-900 rounded-xl p-4 border border-gray-800 flex justify-between items-center"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`w-3 h-3 rounded-full ${
-                              item.is_veg
-                                ? "bg-green-500"
-                                : "bg-red-500"
-                            }`}
-                          />
-
-                          <p className="text-sm font-medium">
-                            {item.item_name}
-                          </p>
-                        </div>
-
-                        <p className="text-xs text-gray-400 mt-1">
-                          ₹{item.price} •{" "}
-                          {item.preparation_time_mins} min
-                        </p>
-
-                        {!item.is_available && (
-                          <p className="text-xs text-red-400 mt-1">
-                            Currently unavailable
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="flex flex-col items-end gap-2">
-                        {item.image_url && (
-                          <img
-                            src={item.image_url}
-                            alt={item.item_name}
-                            className="w-16 h-16 object-cover rounded-lg"
-                          />
-                        )}
-
-                        <button
-                          onClick={() =>
-                            handleToggleAvailability(item)
-                          }
-                          className={`text-xs px-3 py-1 rounded ${
-                            item.is_available
-                              ? "bg-green-500 text-black"
-                              : "bg-gray-700 text-white"
-                          }`}
-                        >
-                          {item.is_available
-                            ? "Available"
-                            : "Unavailable"}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+        {/* Add/Edit Form */}
+        {showForm && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="canteen-checkout__section" style={{ marginBottom: 20 }}>
+            <p className="canteen-checkout__section-title">{editing ? 'Edit Item' : 'New Item'}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <input className="canteen-checkout__input" placeholder="Item name" value={formData.item_name} onChange={(e) => setFormData({ ...formData, item_name: e.target.value })} />
+              <textarea className="canteen-checkout__input" placeholder="Description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={2} style={{ resize: 'none' }} />
+              <div style={{ display: 'flex', gap: 12 }}>
+                <input className="canteen-checkout__input" type="number" placeholder="Price" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} style={{ flex: 1 }} />
+                <select className="canteen-checkout__input" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} style={{ flex: 1 }}>
+                  <option value="snacks">Snacks</option>
+                  <option value="beverages">Beverages</option>
+                  <option value="meals">Meals</option>
+                  <option value="desserts">Desserts</option>
+                </select>
               </div>
-            )
-          )}
-        </div>
-      )}
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={formData.is_veg} onChange={(e) => setFormData({ ...formData, is_veg: e.target.checked })} />
+                  <span style={{ color: formData.is_veg ? '#33aa33' : '#d45555' }}>{formData.is_veg ? '🟢 Veg' : '🔴 Non-Veg'}</span>
+                </label>
+                <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={formData.is_available} onChange={(e) => setFormData({ ...formData, is_available: e.target.checked })} /> Available
+                </label>
+              </div>
+              <button className="canteen-btn-small canteen-btn-small--primary" onClick={handleSubmit} style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', padding: 12 }}>
+                <Save size={14} /> {editing ? 'Update Item' : 'Add Item'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Menu List */}
+        {isLoading ? (
+          <div className="canteen-loading"><div className="canteen-loading-spinner" /></div>
+        ) : menuItems.length === 0 ? (
+          <div className="canteen-empty"><div className="canteen-empty__icon">📋</div><p className="canteen-empty__text">No menu items yet</p></div>
+        ) : (
+          menuItems.map((item, idx) => (
+            <motion.div key={item.id} className="canteen-menu-item" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
+              style={{ opacity: item.is_available ? 1 : 0.5 }}>
+              <div className="canteen-menu-item__info">
+                <div className="canteen-menu-item__name-row">
+                  <span className={`canteen-menu-item__veg-dot ${item.is_veg ? 'canteen-menu-item__veg-dot--veg' : 'canteen-menu-item__veg-dot--nonveg'}`} />
+                  <span className="canteen-menu-item__name">{item.item_name}</span>
+                </div>
+                {item.description && <p className="canteen-menu-item__desc">{item.description}</p>}
+                <span className="canteen-menu-item__price">₹{item.price}</span>
+                {!item.is_available && <span style={{ fontSize: 11, color: '#ff6b6b', marginLeft: 8 }}>Unavailable</span>}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="canteen-btn-small" onClick={() => startEdit(item)} style={{ padding: '6px 10px' }}><Edit2 size={14} /></button>
+                <button className="canteen-btn-small canteen-btn-small--danger" onClick={() => handleDelete(item.id)} style={{ padding: '6px 10px' }}><Trash2 size={14} /></button>
+              </div>
+            </motion.div>
+          ))
+        )}
+      </div>
     </div>
   );
 }

@@ -1,36 +1,22 @@
-import { Search, X } from "lucide-react";
+import '../canteen.css';
 
-export default function MenuSearch({
-  value,
-  onChange,
-  placeholder = "Search...",
-}) {
+export default function PickupQRCode({ orderId, qrData }) {
   return (
-    <div className="relative">
-      {/* Search Icon */}
-      <Search
-        size={16}
-        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-      />
-
-      {/* Input */}
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full bg-gray-900 text-white pl-9 pr-9 py-2 rounded-xl outline-none text-sm border border-gray-800 focus:border-red-500"
-      />
-
-      {/* Clear Button */}
-      {value && (
-        <button
-          onClick={() => onChange("")}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-        >
-          <X size={16} />
-        </button>
-      )}
+    <div className="canteen-qr-card">
+      <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Pickup QR Code</h3>
+      <div className="canteen-qr-code">
+        {qrData ? (
+          <img src={qrData} alt="QR Code" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+        ) : (
+          <span style={{ fontSize: 14, color: '#666' }}>QR: {orderId}</span>
+        )}
+      </div>
+      <p style={{ fontSize: 13, color: '#999', marginBottom: 4 }}>
+        Show this QR code at the canteen counter
+      </p>
+      <p style={{ fontSize: 12, color: '#d45555', fontWeight: 600 }}>
+        Order #{orderId}
+      </p>
     </div>
   );
 }

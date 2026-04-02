@@ -1,120 +1,75 @@
-import { useCartStore } from "../../../stores/cartStore";
-import { X, Plus, Minus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { X, Minus, Plus, Trash2 } from 'lucide-react';
+import { useCartStore } from '../../../stores/cartStore';
+import '../canteen.css';
 
-export default function CartDrawer({ open, onClose }) {
-  const navigate = useNavigate();
-
-  const { cart, addItem, updateQuantity, clearCart } = useCartStore();
-
-  const total = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+export default function CartDrawer({ open, onClose, onCheckout }) {
+  const { cart, updateQuantity, removeItem, clearCart, getTotal } = useCartStore();
+  const total = getTotal();
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50">
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-      />
-
-      <div className="absolute bottom-0 left-0 right-0 bg-gray-900 rounded-t-2xl p-4 max-h-[80vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-white">
-            Your Cart
-          </h2>
-          <button onClick={onClose}>
-            <X />
+    <>
+      <div className="canteen-cart-overlay" onClick={onClose} />
+      <div className="canteen-cart-drawer">
+        <div className="canteen-cart-drawer__header">
+          <h2 className="canteen-cart-drawer__title">Your Cart</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}>
+            <X size={20} />
           </button>
         </div>
 
         {cart.length === 0 ? (
-          <div className="text-center text-gray-400 py-10">
-            Cart is empty
+          <div className="canteen-empty">
+            <div className="canteen-empty__icon">🛒</div>
+            <p className="canteen-empty__text">Your cart is empty</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <>
             {cart.map((item) => (
-              <div
-                key={item.id}
-                className="flex justify-between items-center border-b border-gray-800 pb-3"
-              >
+              <div key={item.id} className="canteen-cart-item">
                 <div>
-                  <p className="text-sm font-medium text-white">
-                    {item.name}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    ₹{item.price}
-                  </p>
+                  <div className="canteen-cart-item__name">{item.name}</div>
+                  <div className="canteen-cart-item__price">₹{item.price} each</div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      if (item.quantity === 1) {
-                        updateQuantity(item.id, 0);
-                      } else {
-                        updateQuantity(
-                          item.id,
-                          item.quantity - 1
-                        );
-                      }
-                    }}
-                    className="bg-gray-800 p-1 rounded"
-                  >
-                    <Minus size={14} />
-                  </button>
-
-                  <span className="text-sm text-white">
-                    {item.quantity}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="canteen-qty-stepper">
+                    <button onClick={() => updateQuantity(item.id, Math.max(0, item.quantity - 1))}>
+                      <Minus size={14} />
+                    </button>
+                    <span>{item.quantity}</span>
+                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)}>
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 600, minWidth: 50, textAlign: 'right' }}>
+                    ₹{item.price * item.quantity}
                   </span>
-
-                  <button
-                    onClick={() => addItem(item)}
-                    className="bg-gray-800 p-1 rounded"
-                  >
-                    <Plus size={14} />
+                  <button onClick={() => removeItem(item.id)} style={{
+                    background: 'transparent', border: 'none', color: '#ff6b6b', cursor: 'pointer', padding: 4,
+                  }}>
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>
             ))}
-          </div>
-        )}
 
-        {cart.length > 0 && (
-          <div className="mt-6">
-            <div className="flex justify-between text-sm text-gray-300 mb-2">
-              <span>Total</span>
-              <span>₹{total}</span>
+            <div className="canteen-cart-summary">
+              <div className="canteen-cart-summary__row">
+                <span style={{ color: '#999' }}>Subtotal</span>
+                <span className="canteen-cart-summary__total">₹{total}</span>
+              </div>
             </div>
 
-            <button
-              onClick={() => {
-                onClose();
-                navigate(
-                  `/canteen/${cart[0]?.canteen_id}/checkout`
-                );
-              }}
-              className="w-full bg-red-500 text-white py-3 rounded-xl font-medium"
-            >
-              Proceed to Checkout
-            </button>
-
-            <button
-              onClick={() => {
-                clearCart();
-                onClose();
-              }}
-              className="w-full mt-2 text-sm text-gray-400"
-            >
-              Clear Cart
-            </button>
-          </div>
+            <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
+              <button className="canteen-btn-small" onClick={clearCart} style={{ flex: 1 }}>Clear Cart</button>
+              <button className="canteen-btn-small canteen-btn-small--primary" onClick={onCheckout} style={{ flex: 2 }}>
+                Checkout • ₹{total}
+              </button>
+            </div>
+          </>
         )}
       </div>
-    </div>
+    </>
   );
 }

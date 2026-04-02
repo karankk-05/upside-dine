@@ -1,126 +1,66 @@
-import { useManagerStats } from "../hooks/useManagerStats";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-} from "recharts";
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useManagerStats } from '../hooks/useManagerStats';
+import '../canteen.css';
 
 export default function ManagerStatsPage() {
+  const navigate = useNavigate();
   const { data: stats, isLoading } = useManagerStats();
 
-  if (isLoading) {
-    return (
-      <div className="bg-black text-white min-h-screen flex items-center justify-center">
-        Loading stats...
-      </div>
-    );
-  }
-
-  if (!stats) {
-    return (
-      <div className="bg-black text-white min-h-screen flex items-center justify-center">
-        No data available
-      </div>
-    );
-  }
-
-  const pieData = [
-    { name: "Pending", value: stats.pending_orders },
-    { name: "Preparing", value: stats.preparing_orders },
-    { name: "Ready", value: stats.ready_orders },
-    { name: "Completed", value: stats.completed_orders },
+  const statCards = [
+    { label: 'Total Orders', value: stats?.total_orders || 0 },
+    { label: 'Revenue', value: `₹${stats?.revenue || 0}` },
+    { label: 'Active Orders', value: stats?.active_orders || 0 },
+    { label: 'Avg Rating', value: stats?.avg_rating || '—' },
+    { label: 'Pickup Orders', value: stats?.pickup_orders || 0 },
+    { label: 'Delivery Orders', value: stats?.delivery_orders || 0 },
   ];
-
-  const barData = [
-    { name: "Pending", orders: stats.pending_orders },
-    { name: "Preparing", orders: stats.preparing_orders },
-    { name: "Ready", orders: stats.ready_orders },
-    { name: "Completed", orders: stats.completed_orders },
-  ];
-
-  const COLORS = ["#facc15", "#60a5fa", "#4ade80", "#9ca3af"];
 
   return (
-    <div className="bg-black text-white min-h-screen p-4">
-      <h1 className="text-xl font-semibold mb-1">
-        {stats.canteen_name}
-      </h1>
-      <p className="text-xs text-gray-400 mb-4">
-        Dashboard
-      </p>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="bg-gray-900 p-4 rounded-xl border border-gray-800">
-          <p className="text-xs text-gray-400">
-            Total Orders
-          </p>
-          <p className="text-lg font-semibold">
-            {stats.total_orders}
-          </p>
-        </div>
-
-        <div className="bg-gray-900 p-4 rounded-xl border border-gray-800">
-          <p className="text-xs text-gray-400">
-            Revenue
-          </p>
-          <p className="text-lg font-semibold">
-            ₹{Number(stats.total_revenue).toFixed(2)}
-          </p>
-        </div>
+    <div className="canteen-page">
+      <div className="canteen-page-header">
+        <button className="canteen-back-btn" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+        <h1 className="canteen-page-title">Statistics</h1>
       </div>
 
-      {/* Pie Chart */}
-      <div className="bg-gray-900 p-4 rounded-xl border border-gray-800 mb-6">
-        <h2 className="text-sm font-semibold mb-3">
-          Order Distribution
-        </h2>
+      <div style={{ padding: 20, paddingBottom: 100 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Today's Overview</h3>
 
-        <div className="w-full h-60">
-          <ResponsiveContainer>
-            <PieChart>
-              <Pie
-                data={pieData}
-                dataKey="value"
-                outerRadius={80}
-                label
+        {isLoading ? (
+          <div className="canteen-loading"><div className="canteen-loading-spinner" /></div>
+        ) : (
+          <div className="canteen-stat-grid">
+            {statCards.map((card, idx) => (
+              <motion.div
+                key={card.label}
+                className="canteen-stat-card"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: idx * 0.08 }}
               >
-                {pieData.map((_, index) => (
-                  <Cell key={index} fill={COLORS[index]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+                <div className="canteen-stat-card__value">{card.value}</div>
+                <div className="canteen-stat-card__label">{card.label}</div>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
-      {/* Bar Chart */}
-      <div className="bg-gray-900 p-4 rounded-xl border border-gray-800">
-        <h2 className="text-sm font-semibold mb-3">
-          Orders by Status
-        </h2>
-
-        <div className="w-full h-60">
-          <ResponsiveContainer>
-            <BarChart data={barData}>
-              <XAxis dataKey="name" stroke="#aaa" />
-              <YAxis stroke="#aaa" />
-              <Tooltip />
-              <Bar dataKey="orders">
-                {barData.map((_, index) => (
-                  <Cell key={index} fill={COLORS[index]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {/* Popular Items */}
+        {stats?.popular_items?.length > 0 && (
+          <div style={{ marginTop: 24 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Popular Items</h3>
+            {stats.popular_items.map((item, idx) => (
+              <div key={idx} className="canteen-menu-item" style={{ marginBottom: 8 }}>
+                <div className="canteen-menu-item__info">
+                  <span className="canteen-menu-item__name">{item.name}</span>
+                  <p className="canteen-menu-item__desc">{item.orders_count} orders</p>
+                </div>
+                <span className="canteen-menu-item__price">₹{item.revenue}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.generics import GenericAPIView, ListCreateAPIView, DestroyAPIView
+from rest_framework.generics import GenericAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from drf_spectacular.utils import extend_schema, OpenApiTypes
 
 from .models import CameraFeed, CrowdMetric
@@ -66,12 +66,16 @@ class CameraFeedListCreateView(ListCreateAPIView):
         _sync_feeds_to_redis()
 
 
-class CameraFeedDeleteView(DestroyAPIView):
-    """Delete a camera feed.
+class CameraFeedDetailView(RetrieveUpdateDestroyAPIView):
+    """Retrieve, update, or delete a camera feed.
     Only superadmin, mess managers, and canteen managers can access."""
     permission_classes = [FeedManagePermission]
     serializer_class = CameraFeedSerializer
     queryset = CameraFeed.objects.all()
+
+    def perform_update(self, serializer):
+        serializer.save()
+        _sync_feeds_to_redis()
 
     def perform_destroy(self, instance):
         instance.delete()

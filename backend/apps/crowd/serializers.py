@@ -4,9 +4,18 @@ from .models import CameraFeed, CrowdMetric
 
 
 class CameraFeedSerializer(serializers.ModelSerializer):
+    mess_name = serializers.SerializerMethodField()
+
+    def get_mess_name(self, obj):
+        from apps.mess.models import Mess
+        try:
+            return Mess.objects.get(pk=obj.mess_id).name
+        except Mess.DoesNotExist:
+            return f"Mess {obj.mess_id}"
+
     class Meta:
         model = CameraFeed
-        fields = ["id", "mess_id", "camera_url", "is_active", "location_description", "created_at"]
+        fields = ["id", "mess_id", "mess_name", "camera_url", "is_active", "location_description", "created_at"]
         read_only_fields = ["id", "created_at"]
 
 

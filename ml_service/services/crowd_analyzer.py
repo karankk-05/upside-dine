@@ -57,6 +57,9 @@ def push_to_redis(mess_id: int, metrics: dict):
     r.set(key, json.dumps(metrics), ex=120)  # TTL 2 minutes
 
 
+_feed_failures: dict[str, datetime] = {}
+FEED_BACKOFF_SECONDS = 60
+
 async def _poll_loop():
     """Background loop: read feeds from Redis, analyze, push results."""
     logger.info(f"Starting crowd polling loop (interval={POLL_INTERVAL_SECONDS}s)")
@@ -75,19 +78,30 @@ async def _poll_loop():
             for feed in feeds:
                 if not feed.get("is_active", True):
                     continue
+                
+                feed_url = feed["feed_url"]
+                
+                # Apply backoff mechanism if feed was recently broken
+                last_fail = _feed_failures.get(feed_url)
+                if last_fail and (datetime.now() - last_fail).total_seconds() < FEED_BACKOFF_SECONDS:
+                    continue  # Skip checking this dead stream temporarily
+
                 try:
                     metrics = await asyncio.to_thread(
-                        analyze_feed, feed["feed_url"], feed["mess_id"]
+                        analyze_feed, feed_url, feed["mess_id"]
                     )
                     if metrics:
+                        _feed_failures.pop(feed_url, None)  # Reset on success
                         await asyncio.to_thread(push_to_redis, feed["mess_id"], metrics)
                         logger.info(
                             f"Mess {feed['mess_id']}: {metrics['person_count']} people "
                             f"({metrics['density_level']})"
                         )
                     else:
-                        logger.warning(f"Failed to analyze feed {feed.get('id')} ({feed['feed_url']})")
+                        _feed_failures[feed_url] = datetime.now()
+                        logger.warning(f"Failed to analyze feed {feed.get('id')} ({feed_url}). Backing off for {FEED_BACKOFF_SECONDS}s.")
                 except Exception as e:
+                    _feed_failures[feed_url] = datetime.now()
                     logger.error(f"Error polling feed {feed.get('id')}: {e}")
 
         await asyncio.sleep(POLL_INTERVAL_SECONDS)

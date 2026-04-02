@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Person - Upside Dine</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="dashboard">
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1 class="page-title neon-text-subtle">Delivery Dashboard</h1>
+                <div class="profile-icon">
+                    <span style="font-size: 20px;">🚴</span>
+                </div>
+            </div>
+
+            <!-- Admin Dashboard -->
+            <div class="admin-dashboard">
+                <!-- Stats Overview -->
+                <div
+                    style="background: var(--st-gray); border: 2px solid var(--st-accent); border-radius: 16px; padding: 20px; margin-bottom: 24px; box-shadow: 0 0 15px var(--st-subtle-glow);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <div>
+                            <p style="font-size: 13px; color: var(--st-text-dim); margin-bottom: 4px;">Status</p>
+                            <h2 style="font-size: 20px; font-weight: 700; color: #00ff00;">Active</h2>
+                        </div>
+                        <button class="role-btn active" style="padding: 8px 16px; font-size: 13px;">Go Offline</button>
+                    </div>
+                    <div class="stat-grid" style="margin: 0;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 24px; font-weight: 700; color: var(--st-accent);">8</div>
+                            <div style="font-size: 11px; color: var(--st-text-dim); margin-top: 4px;">Today's Deliveries
+                            </div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 24px; font-weight: 700; color: var(--st-accent);">₹640</div>
+                            <div style="font-size: 11px; color: var(--st-text-dim); margin-top: 4px;">Today's Earnings
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Delivery -->
+                <div style="margin-bottom: 24px;">
+                    <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">Current Delivery</h3>
+
+                    <div class="order-card"
+                        style="border: 2px solid var(--st-accent); box-shadow: 0 0 15px var(--st-subtle-glow);">
+                        <div class="order-header">
+                            <span class="order-id">#CN48389</span>
+                            <span class="order-badge" style="background: #6600ff;">In Progress</span>
+                        </div>
+                        <p class="order-details" style="font-size: 15px; font-weight: 600; margin-bottom: 12px;">Dosa,
+                            Tea</p>
+
+                        <!-- Pickup & Delivery Info -->
+                        <div
+                            style="background: var(--st-dark); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                            <div style="margin-bottom: 12px;">
+                                <p style="font-size: 12px; color: var(--st-text-dim); margin-bottom: 4px;">📍 Pickup
+                                    from:</p>
+                                <p style="font-size: 13px; font-weight: 600;">Hall 12 Canteen</p>
+                            </div>
+                            <div>
+                                <p style="font-size: 12px; color: var(--st-text-dim); margin-bottom: 4px;">🏠 Deliver
+                                    to:</p>
+                                <p style="font-size: 13px; font-weight: 600;">Indranil Saha</p>
+                                <p style="font-size: 12px; color: var(--st-text-dim);">RM 408</p>
+                                <p style="font-size: 12px; color: var(--st-text-dim);">Phone: +91 98765 43210</p>
+                            </div>
+                        </div>
+
+                        <div class="order-actions">
+                            <button class="btn-small primary">Mark Delivered</button>
+                            <button class="btn-small">Call Customer</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Available Orders -->
+                <div class="order-list">
+                    <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">Available Orders</h3>
+
+                    <div class="order-card">
+                        <div class="order-header">
+                            <span class="order-id">#CN48394</span>
+                            <span class="order-badge" style="background: #00ff00;">Ready</span>
+                        </div>
+                        <p class="order-details">Samosa, Chai</p>
+                        <p class="order-details">📍 MT Canteen → Hall 12</p>
+                        <p class="order-details">💰 Delivery Fee: ₹20</p>
+                        <p class="order-details" style="font-size: 11px; color: var(--st-text-dim);">Distance: 0.8 km •
+                            Est. 5 mins</p>
+                        <div class="order-actions">
+                            <button class="btn-small primary">Accept Order</button>
+                        </div>
+                    </div>
+
+                    <div class="order-card">
+                        <div class="order-header">
+                            <span class="order-id">#CN48395</span>
+                            <span class="order-badge" style="background: #00ff00;">Ready</span>
+                        </div>
+                        <p class="order-details">Maggi, Bread Omelette</p>
+                        <p class="order-details">📍 KC Canteen → RM214, Hall 9</p>
+                        <p class="order-details">💰 Delivery Fee: ₹25</p>
+                        <p class="order-details" style="font-size: 11px; color: var(--st-text-dim);">Distance: 1.2 km •
+                            Est. 8 mins</p>
+                        <div class="order-actions">
+                            <button class="btn-small primary">Accept Order</button>
+                        </div>
+                    </div>
+
+                    <div class="order-card">
+                        <div class="order-header">
+                            <span class="order-id">#CN48396</span>
+                            <span class="order-badge" style="background: #ff9900;">Preparing</span>
+                        </div>
+                        <p class="order-details">Paratha, Chai</p>
+                        <p class="order-details">📍 Nescafe → Rohan Kumar (RM112, Hall 12)</p>
+                        <p class="order-details">💰 Delivery Fee: ₹15</p>
+                        <p class="order-details" style="font-size: 11px; color: var(--st-text-dim);">Distance: 0.5 km •
+                            Ready in ~5 mins</p>
+                    </div>
+                </div>
+
+                <!-- Delivery History (Collapsed) -->
+                <div style="margin-top: 32px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="font-size: 16px; font-weight: 700;">Today's History (8)</h3>
+                        <a href="#"
+                            style="color: var(--st-accent); font-size: 13px; font-weight: 600; text-decoration: none;">View
+                            All →</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <a href="#" class="nav-item active">
+                    <span class="nav-icon">🏠</span>
+                    Home
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">📦</span>
+                    Orders
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">💰</span>
+                    Earnings
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">👤</span>
+                    Profile
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        Navigation.requireRole('admin');
+        document.querySelector('.back-btn').addEventListener('click', () => Navigation.goTo('admin-canteen-manager.html'));
+        document.querySelectorAll('.btn-primary, .btn-complete').forEach(btn => {
+            btn.addEventListener('click', () => UI.showSuccess('Delivery feature coming soon!'));
+        });
+    </script>
+</body>
+
+</html>

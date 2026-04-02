@@ -2,7 +2,7 @@ from django.urls import path
 
 from .views import (
     CameraFeedListCreateView,
-    CameraFeedDeleteView,
+    CameraFeedDetailView,
     LiveCrowdView,
     CrowdHistoryView,
     CrowdRecommendationView,
@@ -12,7 +12,7 @@ from .views import (
 urlpatterns = [
     # Feed management (superadmin, mess_manager, canteen_manager only)
     path("crowd/feeds/", CameraFeedListCreateView.as_view(), name="crowd-feeds-list"),
-    path("crowd/feeds/<int:pk>/", CameraFeedDeleteView.as_view(), name="crowd-feeds-delete"),
+    path("crowd/feeds/<int:pk>/", CameraFeedDetailView.as_view(), name="crowd-feeds-detail"),
 
     # Crowd data (any authenticated user)
     path("crowd/mess/<int:mess_id>/live/", LiveCrowdView.as_view(), name="crowd-live"),

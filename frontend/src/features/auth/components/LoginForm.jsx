@@ -56,15 +56,22 @@ const LoginForm = ({ selectedRole }) => {
         password: formData.password,
       });
 
+      // Use actual role from backend if available, fallback to selectedRole
+      const rawRole = response.data.user?.role || selectedRole;
+      const actualRole = typeof rawRole === 'string' ? rawRole.toLowerCase().replace(/\s+/g, '_') : 'student';
+
+      console.log('--- DEBUG LOGIN ROUTING ---');
+      console.log('1. Backend User Response:', response.data.user);
+      console.log('2. Selected Role (UI):', selectedRole);
+      console.log('3. Raw Role Evaluated:', rawRole);
+      console.log('4. Normalized Actual Role:', actualRole);
+
       // Store tokens
       localStorage.setItem('access_token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
-      
-      // Get actual role from backend response
-      const userRole = response.data.user?.role;
-      localStorage.setItem('user_role', userRole);
+      localStorage.setItem('user_role', actualRole);
 
-      // Navigate based on actual user role from backend
+      // Navigate based on actual role
       const roleRoutes = {
         student: '/dashboard',
         mess_manager: '/manager/mess',
@@ -75,7 +82,11 @@ const LoginForm = ({ selectedRole }) => {
         superadmin: '/admin',
       };
 
-      navigate(roleRoutes[userRole] || '/dashboard');
+      const finalRoute = roleRoutes[actualRole] || '/dashboard';
+      console.log('5. Final Computed Route:', finalRoute);
+      console.log('---------------------------');
+
+      navigate(finalRoute);
     } catch (err) {
       setError(
         err.response?.data?.message ||

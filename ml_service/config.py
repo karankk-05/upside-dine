@@ -12,7 +12,7 @@ REDIS_URL = os.getenv("REDIS_URL", f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB
 
 # YOLO Model
 YOLO_MODEL = os.getenv("YOLO_MODEL", "yolov8n.pt")  # auto-downloads on first run
-YOLO_CONFIDENCE = float(os.getenv("YOLO_CONFIDENCE", 0.4))
+YOLO_CONFIDENCE = float(os.getenv("YOLO_CONFIDENCE", 0.25))
 PERSON_CLASS_ID = 0  # COCO class ID for 'person'
 
 # Feed polling

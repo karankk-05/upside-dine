@@ -12,6 +12,7 @@ class Role(models.Model):
         ("mess_worker", "Mess Worker"),
         ("canteen_manager", "Canteen Manager"),
         ("delivery_person", "Delivery Person"),
+        ("admin_manager", "Admin Manager"),
     ]
 
     role_name = models.CharField(max_length=50, unique=True, choices=ROLE_CHOICES)
@@ -19,6 +20,26 @@ class Role(models.Model):
 
     def __str__(self):
         return self.role_name
+
+
+class EmployeeCode(models.Model):
+    """Pre-generated employee codes for manager verification"""
+    code = models.CharField(max_length=50, unique=True)
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name="employee_codes")
+    is_claimed = models.BooleanField(default=False)
+    claimed_by = models.ForeignKey(
+        "User", null=True, blank=True, on_delete=models.SET_NULL, related_name="claimed_code"
+    )
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.code} - {self.role.role_name} ({'Claimed' if self.is_claimed else 'Available'})"
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["code", "is_claimed"]),
+        ]
 
 
 class User(AbstractBaseUser, PermissionsMixin):
@@ -54,7 +75,9 @@ class Staff(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="staff_profile")
     full_name = models.CharField(max_length=100)
     employee_code = models.CharField(max_length=50, unique=True)
-    canteen_id = models.IntegerField(null=True, blank=True)
+    canteen = models.ForeignKey(
+        "canteen.Canteen", null=True, blank=True, on_delete=models.SET_NULL, related_name="staff_members"
+    )
     is_mess_staff = models.BooleanField(default=False)
 
     def __str__(self):

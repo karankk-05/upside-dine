@@ -1,366 +1,306 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { Store, ClipboardList, Package, Users, Settings, Plus, Trash2, ToggleLeft, ToggleRight, LogOut, X, User, BarChart } from 'lucide-react';
+import '../features/canteen/canteen.css';
 
 const CanteenManagerDashboard = () => {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [deliveryPersonnel, setDeliveryPersonnel] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    full_name: '',
-    phone: '',
-  });
-  const [message, setMessage] = useState({ type: '', text: '' });
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('canteen');
 
-  useEffect(() => {
-    if (activeTab === 'delivery') {
-      fetchDeliveryPersonnel();
-    }
-  }, [activeTab]);
+  // Delivery personnel management state
+  const [deliveryPersonnel, setDeliveryPersonnel] = useState([]);
+  const [loadingDelivery, setLoadingDelivery] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addForm, setAddForm] = useState({ full_name: '', email: '', phone: '' });
+  const [addResult, setAddResult] = useState(null);
+  const [addError, setAddError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const token = localStorage.getItem('access_token');
+  const headers = { Authorization: `Bearer ${token}` };
 
   const fetchDeliveryPersonnel = async () => {
-    setLoading(true);
+    setLoadingDelivery(true);
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.get('/api/manager/delivery-personnel/', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setDeliveryPersonnel(response.data);
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Delivery personnel currently not available' });
+      const res = await axios.get('/api/manager/delivery-personnel/', { headers });
+      setDeliveryPersonnel(res.data || []);
+    } catch (err) {
+      console.error('Delivery personnel currently not available:', err);
     } finally {
-      setLoading(false);
+      setLoadingDelivery(false);
     }
   };
+
+  useEffect(() => {
+    if (activeTab === 'delivery') fetchDeliveryPersonnel();
+  }, [activeTab]);
 
   const handleAddDeliveryPerson = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setMessage({ type: '', text: '' });
-
+    setSubmitting(true);
+    setAddError('');
+    setAddResult(null);
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.post('/api/manager/delivery-personnel/', formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setMessage({ 
-        type: 'success', 
-        text: `Delivery person created! Temp password: ${response.data.temp_password}` 
-      });
-      setFormData({ email: '', full_name: '', phone: '' });
-      setShowAddForm(false);
+      const res = await axios.post('/api/manager/delivery-personnel/', addForm, { headers });
+      setAddResult(res.data);
+      setAddForm({ full_name: '', email: '', phone: '' });
       fetchDeliveryPersonnel();
-    } catch (error) {
-      setMessage({ 
-        type: 'error', 
-        text: error.response?.data?.email?.[0] || 'Unable to create delivery person' 
-      });
+    } catch (err) {
+      setAddError(err.response?.data?.detail || err.response?.data?.email?.[0] || 'Unable to create delivery person.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const handleToggleStatus = async (userId, currentStatus) => {
+  const handleToggle = async (userId) => {
     try {
-      const token = localStorage.getItem('access_token');
-      await axios.patch(`/api/manager/delivery-personnel/${userId}/toggle/`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.patch(`/api/manager/delivery-personnel/${userId}/toggle/`, {}, { headers });
       fetchDeliveryPersonnel();
-      setMessage({ 
-        type: 'success', 
-        text: `Delivery person ${currentStatus ? 'deactivated' : 'activated'} successfully` 
-      });
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Unable to update status' });
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Unable to toggle status.');
     }
   };
+
+  const handleDelete = async (userId, email) => {
+    if (!window.confirm(`Delete delivery person ${email}?`)) return;
+    try {
+      // NOTE: backend may not have DELETE toggle, so this mimics the mess worker pattern
+      await axios.delete(`/api/manager/delivery-personnel/${userId}/toggle/`, { headers });
+      fetchDeliveryPersonnel();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Unable to delete delivery person.');
+    }
+  };
+
+  const handleLogout = () => {
+    if (window.confirm('Log out?')) {
+      localStorage.clear();
+      navigate('/auth');
+    }
+  };
+
+  const canteenCards = [
+    { icon: <Store size={22} />, title: 'Manage Menu', desc: 'Add, update, or remove canteen items.', route: '/manager/canteen/menu' },
+    { icon: <ClipboardList size={22} />, title: "Active Orders", desc: "View and manage incoming student orders.", route: '/manager/canteen/orders' },
+    { icon: <BarChart size={22} />, title: "Statistics", desc: "View gross revenue and popular items.", route: '/manager/canteen/stats' },
+  ];
+
+  const navItems = [
+    { id: 'canteen', icon: <Settings size={20} />, label: 'Manage Canteen' },
+    { id: 'delivery', icon: <Users size={20} />, label: 'Delivery Staff' },
+    { id: 'profile', icon: <User size={20} />, label: 'Profile' },
+  ];
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff', padding: '10px' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <h1 style={{ color: '#d63434', marginBottom: '20px', fontSize: 'clamp(1.5rem, 5vw, 2rem)' }}>Canteen Manager Dashboard</h1>
+    <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff', display: 'flex' }}>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '5px', marginBottom: '20px', borderBottom: '2px solid #333', overflowX: 'auto' }}>
-          <button
-            onClick={() => setActiveTab('overview')}
-            style={{
-              padding: '10px 15px',
-              background: activeTab === 'overview' ? '#d63434' : 'transparent',
-              color: '#fff',
-              border: 'none',
-              cursor: 'pointer',
-              borderBottom: activeTab === 'overview' ? '3px solid #d63434' : 'none',
-              whiteSpace: 'nowrap',
-              fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-            }}
-          >
-            Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('delivery')}
-            style={{
-              padding: '10px 15px',
-              background: activeTab === 'delivery' ? '#d63434' : 'transparent',
-              color: '#fff',
-              border: 'none',
-              cursor: 'pointer',
-              borderBottom: activeTab === 'delivery' ? '3px solid #d63434' : 'none',
-              whiteSpace: 'nowrap',
-              fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-            }}
-          >
-            Delivery Personnel
-          </button>
-        </div>
+      {/* Desktop Sidebar (≥768px) */}
+      <aside style={{
+        width: 240, background: '#111', borderRight: '1px solid #333', padding: '24px 0',
+        display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, height: '100vh', zIndex: 50,
+      }} className="mgr-sidebar">
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#d45555', padding: '0 20px', marginBottom: 32 }}>Canteen Manager</h2>
+        <nav style={{ flex: 1 }}>
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              style={{
+                width: '100%', padding: '14px 20px', background: activeTab === item.id ? '#1a1a1a' : 'transparent',
+                border: 'none', borderLeft: activeTab === item.id ? '3px solid #d45555' : '3px solid transparent',
+                color: activeTab === item.id ? '#fff' : '#999', display: 'flex', alignItems: 'center', gap: 12,
+                cursor: 'pointer', fontSize: 14, fontWeight: activeTab === item.id ? 600 : 400, transition: 'all 0.2s',
+              }}
+            >
+              {item.icon} {item.label}
+            </button>
+          ))}
+        </nav>
+        <button onClick={handleLogout} style={{
+          margin: '0 20px', padding: '12px 0', background: 'transparent', border: '1px solid #333',
+          borderRadius: 10, color: '#d45555', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 14,
+        }}>
+          <LogOut size={16} /> Log Out
+        </button>
+      </aside>
 
-        {/* Message */}
-        {message.text && (
-          <div style={{
-            padding: '15px',
-            marginBottom: '20px',
-            background: message.type === 'success' ? '#1a4d1a' : '#4d1a1a',
-            border: `1px solid ${message.type === 'success' ? '#2d7a2d' : '#7a2d2d'}`,
-            borderRadius: '5px',
-            fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-            wordBreak: 'break-word'
-          }}>
-            {message.text}
-          </div>
-        )}
+      {/* Main Content */}
+      <main style={{ flex: 1, padding: '32px 24px 100px', marginLeft: 240 }} className="mgr-main">
 
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
+        {/* ── Manage Canteen Tab ── */}
+        {activeTab === 'canteen' && (
           <div>
-            <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)' }}>Welcome to Canteen Manager Dashboard</h2>
-            <p style={{ fontSize: 'clamp(0.875rem, 2vw, 1rem)' }}>Manage your canteen operations and delivery personnel from here.</p>
+            <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24 }}>Manage Canteen</h1>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
+              {canteenCards.map((card) => (
+                <div key={card.route} className="canteen-feature-card" onClick={() => navigate(card.route)}
+                  style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 16, padding: 20, cursor: 'pointer', transition: 'border-color 0.2s' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                    <div style={{ width: 40, height: 40, background: '#2a2a2a', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d45555' }}>
+                      {card.icon}
+                    </div>
+                    <h2 style={{ fontSize: 16, fontWeight: 600 }}>{card.title}</h2>
+                  </div>
+                  <p style={{ fontSize: 13, color: '#999', lineHeight: 1.4 }}>{card.desc}</p>
+                </div>
+              ))}
+            </div>
+            
+            {/* Embedded styles for hover effects */}
+            <style>{`
+              .canteen-feature-card:hover {
+                border-color: #d45555 !important;
+                box-shadow: 0 0 15px rgba(232,85,85,0.12);
+              }
+            `}</style>
           </div>
         )}
 
-        {/* Delivery Personnel Tab */}
+        {/* ── Delivery Personnel Tab ── */}
         {activeTab === 'delivery' && (
           <div>
-            <div style={{ display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', justifyContent: 'space-between', alignItems: window.innerWidth < 768 ? 'stretch' : 'center', marginBottom: '20px', gap: '10px' }}>
-              <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', margin: 0 }}>Delivery Personnel Management</h2>
-              <button
-                onClick={() => setShowAddForm(!showAddForm)}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h1 style={{ fontSize: 24, fontWeight: 700 }}>Delivery Personnel</h1>
+              <button onClick={() => { setShowAddForm(!showAddForm); setAddResult(null); setAddError(''); }}
                 style={{
-                  padding: '10px 20px',
-                  background: '#d63434',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                }}
-              >
-                {showAddForm ? 'Cancel' : '+ Add Delivery Person'}
+                  padding: '10px 20px', background: showAddForm ? '#333' : '#d45555', border: 'none', borderRadius: 10,
+                  color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600,
+                }}>
+                {showAddForm ? <><X size={16} /> Cancel</> : <><Plus size={16} /> Add Personnel</>}
               </button>
             </div>
 
-            {/* Add Form */}
+            {/* Add Delivery Form */}
             {showAddForm && (
-              <form onSubmit={handleAddDeliveryPerson} style={{
-                background: '#1a1a1a',
-                padding: '15px',
-                borderRadius: '8px',
-                marginBottom: '20px'
-              }}>
-                <h3 style={{ marginBottom: '15px', fontSize: 'clamp(1rem, 3vw, 1.25rem)' }}>Add New Delivery Person</h3>
-                <div style={{ display: 'grid', gap: '15px' }}>
-                  <input
-                    type="text"
-                    placeholder="Full Name"
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    required
-                    style={{
-                      padding: '10px',
-                      background: '#0a0a0a',
-                      border: '1px solid #333',
-                      color: '#fff',
-                      borderRadius: '5px',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                    }}
-                  />
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                    style={{
-                      padding: '10px',
-                      background: '#0a0a0a',
-                      border: '1px solid #333',
-                      color: '#fff',
-                      borderRadius: '5px',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                    }}
-                  />
-                  <input
-                    type="tel"
-                    placeholder="Phone Number"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    required
-                    style={{
-                      padding: '10px',
-                      background: '#0a0a0a',
-                      border: '1px solid #333',
-                      color: '#fff',
-                      borderRadius: '5px',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                      padding: '10px',
-                      background: '#d63434',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '5px',
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                    }}
-                  >
-                    {loading ? 'Creating...' : 'Create Delivery Person'}
+              <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 16, padding: 24, marginBottom: 24 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>New Delivery Person</h3>
+                <form onSubmit={handleAddDeliveryPerson} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <input placeholder="Full Name" value={addForm.full_name} required
+                    onChange={(e) => setAddForm({ ...addForm, full_name: e.target.value })}
+                    style={{ padding: 12, background: '#2a2a2a', border: '1px solid #444', borderRadius: 10, color: '#fff', fontSize: 14 }} />
+                  <input placeholder="Email" type="email" value={addForm.email} required
+                    onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
+                    style={{ padding: 12, background: '#2a2a2a', border: '1px solid #444', borderRadius: 10, color: '#fff', fontSize: 14 }} />
+                  <input placeholder="Phone" value={addForm.phone} required
+                    onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })}
+                    style={{ padding: 12, background: '#2a2a2a', border: '1px solid #444', borderRadius: 10, color: '#fff', fontSize: 14 }} />
+                  <button type="submit" disabled={submitting}
+                    style={{ padding: 14, background: '#d45555', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, cursor: 'pointer', opacity: submitting ? 0.6 : 1 }}>
+                    {submitting ? 'Creating...' : 'Create Delivery Person'}
                   </button>
-                </div>
-              </form>
+                </form>
+
+                {addError && <div style={{ marginTop: 12, padding: 12, background: '#331111', border: '1px solid #d45555', borderRadius: 10, color: '#ff6b6b', fontSize: 13 }}>{addError}</div>}
+
+                {addResult && (
+                  <div style={{ marginTop: 12, padding: 16, background: '#112211', border: '1px solid #33aa33', borderRadius: 10, fontSize: 13 }}>
+                    <p style={{ fontWeight: 700, color: '#33aa33', marginBottom: 8 }}>✅ Delivery Person created!</p>
+                    <p><strong>Email:</strong> {addResult.email}</p>
+                    <p><strong>Employee Code:</strong> <code style={{ background: '#2a2a2a', padding: '2px 6px', borderRadius: 4 }}>{addResult.employee_code}</code></p>
+                    <p><strong>Temp Password:</strong> <code style={{ background: '#2a2a2a', padding: '2px 6px', borderRadius: 4 }}>{addResult.temp_password}</code></p>
+                    <p style={{ color: '#999', marginTop: 8, fontSize: 12 }}>Credentials have also been sent via email.</p>
+                  </div>
+                )}
+              </div>
             )}
 
-            {/* Delivery Personnel List */}
-            {loading && !showAddForm ? (
-              <p>Loading...</p>
+            {/* Personnel List */}
+            {loadingDelivery ? (
+              <div className="canteen-loading"><div className="canteen-loading-spinner" /><span style={{ color: '#999' }}>Loading...</span></div>
+            ) : deliveryPersonnel.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 60, color: '#666' }}>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>🚴</div>
+                <p>No delivery personnel assigned.</p>
+              </div>
             ) : (
-              <div style={{ background: '#1a1a1a', borderRadius: '8px', overflow: 'auto' }}>
-                {/* Mobile View - Cards */}
-                <div style={{ display: window.innerWidth < 768 ? 'block' : 'none' }}>
-                  {deliveryPersonnel.length === 0 ? (
-                    <p style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-                      No delivery personnel found. Add one to get started.
-                    </p>
-                  ) : (
-                    deliveryPersonnel.map((person) => (
-                      <div key={person.id} style={{
-                        padding: '15px',
-                        borderBottom: '1px solid #333',
-                        background: '#0a0a0a',
-                        margin: '10px',
-                        borderRadius: '8px'
-                      }}>
-                        <div style={{ marginBottom: '10px' }}>
-                          <strong style={{ color: '#d63434' }}>{person.full_name}</strong>
-                        </div>
-                        <div style={{ fontSize: '0.875rem', marginBottom: '5px' }}>
-                          <span style={{ color: '#888' }}>Email:</span> {person.email}
-                        </div>
-                        <div style={{ fontSize: '0.875rem', marginBottom: '5px' }}>
-                          <span style={{ color: '#888' }}>Phone:</span> {person.phone}
-                        </div>
-                        <div style={{ fontSize: '0.875rem', marginBottom: '5px' }}>
-                          <span style={{ color: '#888' }}>Code:</span> {person.employee_code}
-                        </div>
-                        <div style={{ marginBottom: '10px' }}>
-                          <span style={{
-                            padding: '5px 10px',
-                            borderRadius: '5px',
-                            background: person.is_active ? '#1a4d1a' : '#4d1a1a',
-                            color: person.is_active ? '#4ade80' : '#f87171',
-                            fontSize: '0.875rem'
-                          }}>
-                            {person.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                          <button
-                            onClick={() => handleToggleStatus(person.id, person.is_active)}
-                            style={{
-                              padding: '8px 15px',
-                              background: person.is_active ? '#7a2d2d' : '#2d7a2d',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '5px',
-                              cursor: 'pointer',
-                              fontSize: '0.875rem',
-                              flex: '1'
-                            }}
-                          >
-                            {person.is_active ? 'Deactivate' : 'Activate'}
-                          </button>
-                        </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {deliveryPersonnel.map((person) => (
+                  <div key={person.id} style={{
+                    background: '#1a1a1a', border: '1px solid #333', borderRadius: 16, padding: 16,
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <h3 style={{ fontSize: 15, fontWeight: 600 }}>{person.full_name}</h3>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
+                          background: person.is_active ? '#112211' : '#331111', color: person.is_active ? '#33aa33' : '#ff6b6b',
+                          border: `1px solid ${person.is_active ? '#33aa33' : '#ff6b6b'}`, textTransform: 'uppercase',
+                        }}>
+                          {person.is_active ? 'Active' : 'Inactive'}
+                        </span>
                       </div>
-                    ))
-                  )}
-                </div>
-
-                {/* Desktop View - Table */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', display: window.innerWidth < 768 ? 'none' : 'table' }}>
-                  <thead>
-                    <tr style={{ background: '#0a0a0a' }}>
-                      <th style={{ padding: '15px', textAlign: 'left' }}>Name</th>
-                      <th style={{ padding: '15px', textAlign: 'left' }}>Email</th>
-                      <th style={{ padding: '15px', textAlign: 'left' }}>Phone</th>
-                      <th style={{ padding: '15px', textAlign: 'left' }}>Employee Code</th>
-                      <th style={{ padding: '15px', textAlign: 'left' }}>Status</th>
-                      <th style={{ padding: '15px', textAlign: 'left' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {deliveryPersonnel.length === 0 ? (
-                      <tr>
-                        <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-                          No delivery personnel found. Add one to get started.
-                        </td>
-                      </tr>
-                    ) : (
-                      deliveryPersonnel.map((person) => (
-                        <tr key={person.id} style={{ borderTop: '1px solid #333' }}>
-                          <td style={{ padding: '15px' }}>{person.full_name}</td>
-                          <td style={{ padding: '15px' }}>{person.email}</td>
-                          <td style={{ padding: '15px' }}>{person.phone}</td>
-                          <td style={{ padding: '15px' }}>{person.employee_code}</td>
-                          <td style={{ padding: '15px' }}>
-                            <span style={{
-                              padding: '5px 10px',
-                              borderRadius: '5px',
-                              background: person.is_active ? '#1a4d1a' : '#4d1a1a',
-                              color: person.is_active ? '#4ade80' : '#f87171'
-                            }}>
-                              {person.is_active ? 'Active' : 'Inactive'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '15px' }}>
-                            <button
-                              onClick={() => handleToggleStatus(person.id, person.is_active)}
-                              style={{
-                                padding: '8px 15px',
-                                background: person.is_active ? '#7a2d2d' : '#2d7a2d',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '5px',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              {person.is_active ? 'Deactivate' : 'Activate'}
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      <p style={{ fontSize: 12, color: '#999' }}>{person.email} · {person.phone} · Code: {person.employee_code}</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => handleToggle(person.id)} title={person.is_active ? 'Deactivate' : 'Activate'}
+                        style={{ width: 36, height: 36, background: '#2a2a2a', border: '1px solid #444', borderRadius: 8, color: person.is_active ? '#33aa33' : '#ff6b6b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {person.is_active ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                      </button>
+                      <button onClick={() => handleDelete(person.id, person.email)} title="Delete"
+                        style={{ width: 36, height: 36, background: '#2a2a2a', border: '1px solid #444', borderRadius: 8, color: '#ff6b6b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
         )}
-      </div>
+
+        {/* ── Profile Tab ── */}
+        {activeTab === 'profile' && (
+          <div>
+            <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24 }}>Manager Profile</h1>
+            <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 16, padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, maxWidth: 400 }}>
+              <div style={{ width: 80, height: 80, background: '#2a2a2a', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d45555' }}>
+                <User size={40} />
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Canteen Manager Account</h2>
+                <p style={{ color: '#999', fontSize: 14, marginBottom: 8 }}>{localStorage.getItem('user_email') || window.location.hostname}</p>
+                <div style={{ display: 'inline-block', padding: '4px 10px', background: '#331111', color: '#ff6b6b', borderRadius: 8, fontSize: 12, fontWeight: 600, border: '1px solid #d45555' }}>
+                  Role: Manager
+                </div>
+              </div>
+              <button onClick={handleLogout} style={{
+                marginTop: 24, padding: '12px 24px', background: 'transparent', border: '1px solid #d45555',
+                borderRadius: 10, color: '#d45555', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 14, fontWeight: 600, width: '100%', transition: 'all 0.2s'
+              }}>
+                <LogOut size={18} /> Log Out from Manager Account
+              </button>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Mobile Bottom Bar (<768px) */}
+      <nav className="mgr-bottombar" style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, background: '#111', borderTop: '1px solid #333',
+        display: 'none', justifyContent: 'space-around', padding: '10px 0', zIndex: 100,
+      }}>
+        {navItems.map((item) => (
+          <button key={item.id} onClick={() => setActiveTab(item.id)}
+            style={{
+              background: 'transparent', border: 'none', color: activeTab === item.id ? '#d45555' : '#999',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 11,
+            }}>
+            {item.icon}
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      {/* Responsive CSS */}
+      <style>{`
+        @media (max-width: 767px) {
+          .mgr-sidebar { display: none !important; }
+          .mgr-main { margin-left: 0 !important; padding-bottom: 80px !important; }
+          .mgr-bottombar { display: flex !important; }
+        }
+      `}</style>
     </div>
   );
 };

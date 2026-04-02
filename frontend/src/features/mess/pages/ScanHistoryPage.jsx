@@ -20,14 +20,14 @@ const ScanHistoryPage = () => {
         {isLoading ? (
           <div className="mess-loading"><div className="mess-loading-spinner" /><span className="mess-loading-text">Loading scan history...</span></div>
         ) : isError ? (
-          <div className="mess-error">Failed to load scan history.</div>
+          <div className="mess-error">Scan history currently not available.</div>
         ) : (scans || []).length === 0 ? (
           <div className="mess-empty"><div className="mess-empty-icon">📷</div><div>No scans yet in this session</div></div>
         ) : (
           (scans || []).map((scan) => (
             <div key={scan.id} className="mess-booking-card" style={{ cursor: 'default' }}>
               <div className="mess-booking-header">
-                <span className="mess-booking-id">#{scan.id}</span>
+                <span className="mess-booking-id">{scan.booking_reference || `#${scan.id}`}</span>
                 <span className="mess-status-badge redeemed">✓ Valid</span>
               </div>
               <div className="mess-booking-details">{scan.menu_item?.item_name} · ₹{scan.total_price}</div>

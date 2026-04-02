@@ -34,7 +34,7 @@ const ManagerInventoryPage = () => {
         {isLoading ? (
           <div className="mess-loading"><div className="mess-loading-spinner" /><span className="mess-loading-text">Loading inventory...</span></div>
         ) : isError ? (
-          <div className="mess-error">Failed to load inventory.</div>
+          <div className="mess-error">Inventory currently not available.</div>
         ) : (items || []).length === 0 ? (
           <div className="mess-empty"><div className="mess-empty-icon">📦</div><div>No inventory items</div></div>
         ) : (
@@ -63,7 +63,7 @@ const ManagerInventoryPage = () => {
 
         {updateMutation.isError && (
           <div style={{ background: 'rgba(255,51,51,0.1)', border: '1px solid #ff3333', borderRadius: 8, padding: 12, marginTop: 16, color: '#ff3333', fontSize: 13, textAlign: 'center' }}>
-            {updateMutation.error?.response?.data?.detail || 'Failed to update inventory.'}
+            {updateMutation.error?.response?.data?.detail || 'Unable to update inventory.'}
           </div>
         )}
       </div>

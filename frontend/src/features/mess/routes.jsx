@@ -9,6 +9,7 @@ import ManagerInventoryPage from './pages/ManagerInventoryPage';
 import ManagerStatsPage from './pages/ManagerStatsPage';
 import QRScannerPage from './pages/QRScannerPage';
 import ScanHistoryPage from './pages/ScanHistoryPage';
+import WorkerProfilePage from './pages/WorkerProfilePage';
 
 const messRoutes = [
   /* Student Routes */
@@ -25,6 +26,7 @@ const messRoutes = [
 
   /* Worker Routes */
   <Route key="worker-scan" path="/worker/scan" element={<QRScannerPage />} />,
+  <Route key="worker-profile" path="/worker/profile" element={<WorkerProfilePage />} />,
   <Route key="worker-history" path="/worker/history" element={<ScanHistoryPage />} />,
 ];
 

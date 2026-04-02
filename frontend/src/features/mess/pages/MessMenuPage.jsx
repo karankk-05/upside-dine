@@ -43,10 +43,16 @@ const MessMenuPage = () => {
     navigate(`/mess/bookings/${result.id}`);
   };
 
+  const groupedItems = (menuItems || []).reduce((acc, item) => {
+    if (!acc[item.day_of_week]) acc[item.day_of_week] = [];
+    acc[item.day_of_week].push(item);
+    return acc;
+  }, {});
+
   return (
     <div className="mess-page">
       <div className="mess-page-header">
-        <button className="mess-back-btn" onClick={() => navigate('/mess')}>
+        <button className="mess-back-btn" onClick={() => navigate('/dashboard')}>
           <ArrowLeft size={18} />
         </button>
         <h1 className="mess-page-title">Book Extras</h1>
@@ -79,20 +85,40 @@ const MessMenuPage = () => {
             <span className="mess-loading-text">Loading menu...</span>
           </div>
         ) : isError ? (
-          <div className="mess-error">Failed to load menu. Please try again.</div>
+          <div className="mess-error">Menu currently not available.</div>
         ) : (menuItems || []).length === 0 ? (
           <div className="mess-empty">
             <div className="mess-empty-icon">🍽️</div>
             <div>No menu items available for this selection.</div>
           </div>
+        ) : dayOfWeek === '' ? (
+          <div>
+            {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => {
+              if (!groupedItems[day] || groupedItems[day].length === 0) return null;
+              return (
+                <div key={day} style={{ marginBottom: 32 }}>
+                  <h3 style={{ fontSize: 16, color: 'var(--st-accent)', marginBottom: 16, textTransform: 'capitalize', borderBottom: '1px solid var(--st-border)', paddingBottom: 8 }}>
+                    {day}
+                  </h3>
+                  <div className="mess-menu-grid">
+                    {groupedItems[day].map((item) => (
+                      <MenuItemCard key={item.id} item={item} onBook={setBookingItem} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
-          (menuItems || []).map((item) => (
-            <MenuItemCard key={item.id} item={item} onBook={setBookingItem} />
-          ))
+          <div className="mess-menu-grid">
+            {(menuItems || []).map((item) => (
+              <MenuItemCard key={item.id} item={item} onBook={setBookingItem} />
+            ))}
+          </div>
         )}
 
         <div className="mess-note">
-          <strong>Note:</strong> After booking, you'll receive a QR code valid for 3 hours. The amount will be deducted from your mess account.
+          <strong>Note:</strong> After booking, you'll receive a QR code valid until the end of the day. The amount will be deducted from your mess account.
         </div>
       </div>
 

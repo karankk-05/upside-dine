@@ -148,17 +148,25 @@
   box-shadow: 0 0 12px var(--st-subtle-glow);
 }
 
+.mess-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
 /* --- Menu Item Card --- */
 .mess-menu-item {
   background: var(--st-gray);
   border: 1px solid var(--st-border);
   border-radius: 16px;
   padding: 16px;
-  margin-bottom: 12px;
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   transition: all 0.3s ease;
+  height: 100%;
 }
 
 .mess-menu-item:hover {
@@ -167,7 +175,19 @@
 
 .mess-menu-item-info {
   flex: 1;
-  margin-right: 12px;
+  margin-bottom: 16px;
+  width: 100%;
+}
+
+.mess-menu-item-actions {
+  width: 100%;
+  display: flex;
+  gap: 8px;
+}
+
+.mess-menu-item-actions .mess-btn,
+.mess-menu-item-actions .mess-btn-small {
+  flex: 1;
 }
 
 .mess-menu-item-name {

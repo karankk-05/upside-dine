@@ -58,7 +58,7 @@ const QRCodeDisplay = ({ booking }) => {
 
       <div className="mess-qr-info">
         <div className="mess-qr-item-name">{booking.menu_item?.item_name}</div>
-        <div className="mess-qr-booking-id">Booking ID: #{booking.id}</div>
+        <div className="mess-qr-booking-id">Booking Ref: {booking.booking_reference || booking.id}</div>
       </div>
 
       {booking.status === 'pending' && (

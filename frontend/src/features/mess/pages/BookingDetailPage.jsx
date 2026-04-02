@@ -25,7 +25,7 @@ const BookingDetailPage = () => {
           <span className="mess-loading-text">Loading booking...</span>
         </div>
       ) : isError ? (
-        <div className="mess-error">Failed to load booking details.</div>
+        <div className="mess-error">Booking details currently not available.</div>
       ) : booking ? (
         <div className="mess-qr-container">
           <QRCodeDisplay booking={booking} />

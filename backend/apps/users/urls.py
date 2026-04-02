@@ -20,6 +20,9 @@ from .views import (
     AdminCanteenManagementView,
     AdminCanteenDetailView,
     AvailableHallsView,
+    PublicCanteensView,
+    MessWorkerManagementView,
+    ToggleMessWorkerStatusView,
 )
 
 urlpatterns = [
@@ -42,4 +45,7 @@ urlpatterns = [
     path("admin/canteens/", AdminCanteenManagementView.as_view(), name="admin-canteen-management"),
     path("admin/canteens/<int:pk>/", AdminCanteenDetailView.as_view(), name="admin-canteen-detail"),
     path("public/halls/", AvailableHallsView.as_view(), name="public-halls"),
+    path("public/canteens/", PublicCanteensView.as_view(), name="public-canteens"),
+    path("manager/mess-workers/", MessWorkerManagementView.as_view(), name="mess-worker-management"),
+    path("manager/mess-workers/<int:user_id>/toggle/", ToggleMessWorkerStatusView.as_view(), name="toggle-mess-worker-status"),
 ]

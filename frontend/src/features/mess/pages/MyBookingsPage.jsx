@@ -20,7 +20,7 @@ const MyBookingsPage = () => {
   return (
     <div className="mess-page">
       <div className="mess-page-header">
-        <button className="mess-back-btn" onClick={() => navigate('/mess')}>
+        <button className="mess-back-btn" onClick={() => navigate('/dashboard')}>
           <ArrowLeft size={18} />
         </button>
         <h1 className="mess-page-title">My Bookings</h1>
@@ -41,7 +41,7 @@ const MyBookingsPage = () => {
             <span className="mess-loading-text">Loading bookings...</span>
           </div>
         ) : isError ? (
-          <div className="mess-error">Failed to load bookings. Please try again.</div>
+          <div className="mess-error">Bookings currently not available. Please try again.</div>
         ) : (bookings || []).filter(b => !statusFilter || b.status === statusFilter).length === 0 ? (
           <div className="mess-empty">
             <div className="mess-empty-icon">📋</div>
@@ -51,7 +51,7 @@ const MyBookingsPage = () => {
           (bookings || []).filter(b => !statusFilter || b.status === statusFilter).map((booking) => (
             <div key={booking.id} className="mess-booking-card" onClick={() => navigate(`/mess/bookings/${booking.id}`)} id={`booking-card-${booking.id}`}>
               <div className="mess-booking-header">
-                <span className="mess-booking-id">#{booking.id}</span>
+                <span className="mess-booking-id">{booking.booking_reference || `#${booking.id}`}</span>
                 <span className={`mess-status-badge ${booking.status}`}>{booking.status}</span>
               </div>
               <div className="mess-booking-details">{booking.menu_item?.item_name} · ₹{booking.total_price}</div>

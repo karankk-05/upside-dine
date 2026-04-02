@@ -64,7 +64,7 @@ const AdminManagerDashboard = () => {
       });
       setManagers(response.data);
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to load managers' });
+      setMessage({ type: 'error', text: 'Managers currently not available' });
     } finally {
       setLoading(false);
     }
@@ -98,14 +98,14 @@ const AdminManagerDashboard = () => {
       
       setMessage({ 
         type: 'success', 
-        text: `Manager created! Email: ${response.data.email}, Temp password: ${response.data.temp_password}, Employee Code: ${response.data.employee_code}` 
+        text: `Manager created! Email: ${response.data.email}, Employee Code: ${response.data.employee_code}. Credentials have been sent via email.` 
       });
       setFormData({ email: '', full_name: '', phone: '', role_name: 'mess_manager', canteen_id: '', mess_id: '' });
       setShowAddForm(false);
       fetchManagers();
     } catch (error) {
       console.error('Error creating manager:', error.response?.data);
-      let errorMsg = 'Failed to create manager';
+      let errorMsg = 'Unable to create manager';
       
       if (error.response?.data) {
         const data = error.response.data;
@@ -137,7 +137,7 @@ const AdminManagerDashboard = () => {
         text: `Manager ${currentStatus ? 'frozen' : 'activated'} successfully` 
       });
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to update status' });
+      setMessage({ type: 'error', text: 'Unable to update status' });
     }
   };
 
@@ -150,7 +150,7 @@ const AdminManagerDashboard = () => {
       });
       setMesses(response.data);
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to load messes' });
+      setMessage({ type: 'error', text: 'Messes currently not available' });
     } finally {
       setLoading(false);
     }
@@ -170,7 +170,7 @@ const AdminManagerDashboard = () => {
       setShowAddMessForm(false);
       fetchMesses();
     } catch (error) {
-      const errMsg = error.response?.data?.hall_name?.[0] || error.response?.data?.detail || 'Failed to create mess';
+      const errMsg = error.response?.data?.hall_name?.[0] || error.response?.data?.detail || 'Unable to create mess';
       setMessage({ type: 'error', text: errMsg });
     } finally {
       setLoading(false);
@@ -186,7 +186,7 @@ const AdminManagerDashboard = () => {
       fetchMesses();
       setMessage({ type: 'success', text: `Mess ${currentStatus ? 'frozen' : 'activated'} successfully` });
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to update mess status' });
+      setMessage({ type: 'error', text: 'Unable to update mess status' });
     }
   };
 
@@ -200,7 +200,7 @@ const AdminManagerDashboard = () => {
       fetchMesses();
       setMessage({ type: 'success', text: 'Mess deleted successfully' });
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to delete mess' });
+      setMessage({ type: 'error', text: 'Unable to delete mess' });
     }
   };
 
@@ -213,7 +213,7 @@ const AdminManagerDashboard = () => {
       });
       setCanteens(response.data);
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to load canteens' });
+      setMessage({ type: 'error', text: 'Canteens currently not available' });
     } finally {
       setLoading(false);
     }
@@ -233,7 +233,7 @@ const AdminManagerDashboard = () => {
       setShowAddCanteenForm(false);
       fetchCanteens();
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to create canteen' });
+      setMessage({ type: 'error', text: 'Unable to create canteen' });
     } finally {
       setLoading(false);
     }
@@ -248,7 +248,7 @@ const AdminManagerDashboard = () => {
       fetchCanteens();
       setMessage({ type: 'success', text: `Canteen ${currentStatus ? 'frozen' : 'activated'} successfully` });
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to update canteen status' });
+      setMessage({ type: 'error', text: 'Unable to update canteen status' });
     }
   };
 
@@ -262,7 +262,7 @@ const AdminManagerDashboard = () => {
       fetchCanteens();
       setMessage({ type: 'success', text: 'Canteen deleted successfully' });
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to delete canteen' });
+      setMessage({ type: 'error', text: 'Unable to delete canteen' });
     }
   };
 

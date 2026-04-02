@@ -30,7 +30,7 @@ const ExtrasBookingModal = ({ item, onClose, onSuccess }) => {
       const val = error.response.data[firstKey];
       return Array.isArray(val) ? val[0] : val;
     }
-    return 'Failed to book. Please try again.';
+    return 'Unable to book. Please try again.';
   };
 
   return (
@@ -74,7 +74,7 @@ const ExtrasBookingModal = ({ item, onClose, onSuccess }) => {
         </button>
 
         <div className="mess-note">
-          <strong>Note:</strong> After booking, you'll receive a QR code valid for 3 hours. The amount will be added to your accumulated mess tab based on monthly billing.
+          <strong>Note:</strong> After booking, you'll receive a QR code valid until the end of the day. The amount will be added to your accumulated mess tab based on monthly billing.
         </div>
       </div>
     </div>

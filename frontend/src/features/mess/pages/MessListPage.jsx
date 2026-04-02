@@ -11,7 +11,7 @@ const MessListPage = () => {
   return (
     <div className="mess-page">
       <div className="mess-page-header">
-        <button className="mess-back-btn" onClick={() => navigate(-1)}>
+        <button className="mess-back-btn" onClick={() => navigate('/dashboard')}>
           <ArrowLeft size={18} />
         </button>
         <h1 className="mess-page-title">Student Mess</h1>
@@ -27,7 +27,7 @@ const MessListPage = () => {
               <span className="mess-loading-text">Loading messes...</span>
             </div>
           ) : isError ? (
-            <div className="mess-error">Failed to load mess halls. Please try again.</div>
+            <div className="mess-error">Mess halls currently not available.</div>
           ) : (
             <>
               {(messes || []).map((mess) => (

@@ -59,7 +59,7 @@ const VerificationResult = ({ result, error, onDismiss }) => {
       <div className="mess-verify-icon"><CheckCircle size={48} color="#00ff00" /></div>
       <div className="mess-verify-title" style={{ color: '#00ff00' }}>Verified ✓</div>
       <div className="mess-verify-detail"><strong>Item:</strong> {result.menu_item?.item_name}</div>
-      <div className="mess-verify-detail"><strong>Booking:</strong> #{result.id}</div>
+      <div className="mess-verify-detail"><strong>Booking:</strong> {result.booking_reference || `#${result.id}`}</div>
       <div className="mess-verify-detail"><strong>Quantity:</strong> {result.quantity}</div>
       <div className="mess-verify-detail"><strong>Amount:</strong> ₹{result.total_price}</div>
       <div className="mess-verify-detail"><strong>Meal:</strong> {result.meal_type}</div>

@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate
 from rest_framework import serializers
 
 from .models import User, Role, Student, Staff, MessAccount
-from apps.mess.models import Mess
+from apps.mess.models import Mess, MessStaffAssignment
 
 
 class RegisterSerializer(serializers.Serializer):
@@ -421,3 +421,116 @@ class CreateCanteenSerializer(serializers.ModelSerializer):
         model = Canteen
         fields = ['name', 'location', 'is_active']
         read_only_fields = ['is_active']
+
+
+class MessWorkerSerializer(serializers.ModelSerializer):
+    """Serializer for listing mess workers"""
+    full_name = serializers.CharField(source='staff_profile.full_name', read_only=True)
+    employee_code = serializers.CharField(source='staff_profile.employee_code', read_only=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'phone', 'full_name', 'employee_code', 'is_active', 'date_joined']
+        read_only_fields = fields
+
+
+class CreateMessWorkerSerializer(serializers.Serializer):
+    """Serializer for mess managers to create mess workers"""
+    full_name = serializers.CharField(max_length=150)
+    email = serializers.EmailField()
+    phone = serializers.CharField(max_length=15)
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def create(self, validated_data):
+        import secrets
+        from django.conf import settings
+        from django.core.mail import send_mail
+
+        # Get the mess manager's mess assignment
+        mess_manager = self.context['mess_manager']
+        manager_staff = mess_manager.staff_profile
+        assignment = MessStaffAssignment.objects.filter(
+            staff=manager_staff, assignment_role='manager', is_active=True
+        ).select_related('mess').first()
+
+        if not assignment:
+            raise serializers.ValidationError("You are not assigned to any mess.")
+
+        mess = assignment.mess
+
+        # Create role
+        role, _ = Role.objects.get_or_create(role_name='mess_worker')
+
+        # Generate temp password
+        temp_password = secrets.token_urlsafe(10)
+
+        # Create user
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            password=temp_password,
+            phone=validated_data['phone'],
+            role=role,
+            is_verified=True,
+            is_active=True,
+        )
+
+        # Generate employee code
+        employee_code = f"MWK{secrets.token_hex(4).upper()}"
+        while Staff.objects.filter(employee_code=employee_code).exists():
+            employee_code = f"MWK{secrets.token_hex(4).upper()}"
+
+        staff = Staff.objects.create(
+            user=user,
+            full_name=validated_data['full_name'],
+            employee_code=employee_code,
+            is_mess_staff=True,
+        )
+
+        # Create mess staff assignment as worker
+        MessStaffAssignment.objects.create(
+            staff=staff,
+            mess=mess,
+            assignment_role='worker',
+            is_active=True,
+        )
+
+        # Send email with credentials
+        try:
+            subject = 'Your Mess Worker Account - Upside Dine'
+            message = f'''Hello {validated_data['full_name']},
+
+Your Mess Worker account for {mess.name} has been created.
+
+Login Credentials:
+==================
+Email: {validated_data['email']}
+Temporary Password: {temp_password}
+Employee Code: {employee_code}
+
+Login URL: http://localhost:3000/auth
+
+IMPORTANT: Please change your password immediately after your first login.
+
+Best regards,
+Upside Dine Team'''
+
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[validated_data['email']],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Failed to send email: {e}")
+
+        return {
+            'user': user,
+            'temp_password': temp_password,
+            'employee_code': employee_code,
+        }
+

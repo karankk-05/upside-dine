@@ -59,7 +59,7 @@ const SignupForm = ({ selectedRole }) => {
           // response.data is an array of strings e.g. ["Hall 1", "Hall 2"]
           setAvailableHalls(response.data);
         } catch (err) {
-          console.error("Failed to load halls", err);
+          console.error("Halls currently not available", err);
         }
       };
       fetchHalls();

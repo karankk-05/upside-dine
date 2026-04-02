@@ -23,15 +23,17 @@ const MenuItemCard = ({ item, onBook, showQuantity = true }) => {
         </div>
       </div>
       {onBook && item.available_quantity > 0 && (
-        <button
-          className="mess-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            onBook(item);
-          }}
-        >
-          Book
-        </button>
+        <div className="mess-menu-item-actions">
+          <button
+            className="mess-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onBook(item);
+            }}
+          >
+            Book
+          </button>
+        </div>
       )}
     </div>
   );

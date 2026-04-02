@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Status - Upside Dine</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="dashboard">
+            <!-- Page Header -->
+            <div class="page-header">
+                <div class="back-btn">←</div>
+                <h1 class="page-title neon-text-subtle">Order Status</h1>
+            </div>
+
+            <!-- Order Info -->
+            <div style="padding: 20px; background: var(--st-darker); border-bottom: 1px solid var(--st-border);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div>
+                        <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 4px;">Order #CN48392</h2>
+                        <p style="font-size: 12px; color: var(--st-text-dim);">Placed at 12:30 PM</p>
+                    </div>
+                    <div class="order-badge">Preparing</div>
+                </div>
+
+                <div style="background: var(--st-gray); border-radius: 12px; padding: 12px; margin-top: 12px;">
+                    <p style="font-size: 13px; margin-bottom: 4px;"><strong>Items:</strong> Margherita Pizza, Cold
+                        Coffee</p>
+                    <p style="font-size: 13px; color: var(--st-text-dim);"><strong>Total:</strong> <span
+                            style="color: var(--st-accent); font-weight: 700;">₹170</span></p>
+                </div>
+            </div>
+
+            <!-- Order Timeline -->
+            <div class="order-timeline">
+                <div class="timeline-item active">
+                    <div class="timeline-dot">✓</div>
+                    <div class="timeline-content">
+                        <h3 class="timeline-title">Order Placed</h3>
+                        <p class="timeline-time">12:30 PM</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item active">
+                    <div class="timeline-dot">✓</div>
+                    <div class="timeline-content">
+                        <h3 class="timeline-title">Payment Confirmed</h3>
+                        <p class="timeline-time">12:31 PM</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item active">
+                    <div class="timeline-dot">🍳</div>
+                    <div class="timeline-content">
+                        <h3 class="timeline-title">Preparing Your Order</h3>
+                        <p class="timeline-time">In Progress (Est. 10 mins)</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-dot">📦</div>
+                    <div class="timeline-content">
+                        <h3 class="timeline-title">Ready for Pickup</h3>
+                        <p class="timeline-time">Pending</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-dot">✓</div>
+                    <div class="timeline-content">
+                        <h3 class="timeline-title">Order Completed</h3>
+                        <p class="timeline-time">Pending</p>
+                    </div>
+                </div>
+
+                <!-- Delivery Option (Alternate Timeline) -->
+                <div
+                    style="background: rgba(255, 0, 0, 0.05); border: 1px dashed var(--st-accent); border-radius: 12px; padding: 16px; margin-top: 20px;">
+                    <p style="font-size: 12px; color: var(--st-text-dim); line-height: 1.5;">
+                        <strong style="color: var(--st-accent);">For Delivery Orders:</strong> After "Ready for Pickup",
+                        delivery person will be assigned and you'll see delivery tracking.
+                    </p>
+                </div>
+
+                <!-- Actions -->
+                <div style="margin-top: 24px; display: flex; gap: 12px;">
+                    <button class="btn-primary" style="flex: 1;">Contact Canteen</button>
+                    <button class="btn-primary"
+                        style="flex: 1; background: var(--st-gray); box-shadow: none; border: 1px solid var(--st-border);">Cancel</button>
+                </div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <span class="nav-icon">🏠</span>
+                    Home
+                </a>
+                <a href="#" class="nav-item active">
+                    <span class="nav-icon">📦</span>
+                    Orders
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">❤️</span>
+                    Favorites
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">👤</span>
+                    Profile
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        Navigation.requireRole('student');
+
+        // Get current order
+        const orderId = localStorage.getItem('current_order');
+        const order = AppState.orders.find(o => o.id === orderId);
+
+        if (!order) {
+            UI.showError('No order found');
+            Navigation.goTo('dashboard.html');
+        } else {
+            // Update order info
+            document.querySelector('h2').textContent = `Order #${order.id}`;
+            document.querySelector('.order-badge').textContent = MockData.getStatusLabel(order.status);
+
+            const itemNames = order.items.map(i => i.name).join(', ');
+            document.querySelector('.order-timeline + div p:first-child strong').nextSibling.textContent = ' ' + itemNames;
+            document.querySelector('.order-timeline + div p:last-child span').textContent = '₹' + order.total;
+
+            // Update timeline based on status
+            function updateTimeline() {
+                const statuses = MockData.orderStatuses;
+                const currentIndex = statuses.indexOf(order.status);
+                const items = document.querySelectorAll('.timeline-item');
+
+                // First two are always active (placed, payment)
+                items.forEach((item, index) => {
+                    if (index <= currentIndex + 2) {
+                        item.classList.add('active');
+                    } else {
+                        item.classList.remove('active');
+                    }
+                });
+
+                // Update badge
+                document.querySelector('.order-badge').textContent = MockData.getStatusLabel(order.status);
+            }
+
+            updateTimeline();
+
+            // Simulate order progress (for demo)
+            let progressCounter = 0;
+            const progressInterval = setInterval(() => {
+                progressCounter++;
+
+                if (progressCounter === 10 && order.status === 'received') {
+                    AppState.updateOrderStatus(order.id, 'preparing');
+                    updateTimeline();
+                } else if (progressCounter === 20 && order.status === 'preparing') {
+                    AppState.updateOrderStatus(order.id, 'ready');
+                    updateTimeline();
+                } else if (progressCounter === 30 && order.status === 'ready') {
+                    if (order.orderType === 'delivery') {
+                        AppState.updateOrderStatus(order.id, 'out_for_delivery');
+                        updateTimeline();
+                    } else {
+                        clearInterval(progressInterval);
+                    }
+                } else if (progressCounter === 40 && order.status === 'out_for_delivery') {
+                    AppState.updateOrderStatus(order.id, 'delivered');
+                    updateTimeline();
+                    clearInterval(progressInterval);
+                }
+            }, 1000); // Update every second (speed up for demo)
+        }
+
+        // Back button
+        document.querySelector('.back-btn').addEventListener('click', () => {
+            Navigation.goTo('dashboard.html');
+        });
+
+        // Contact button
+        document.querySelector('.btn-primary').addEventListener('click', () => {
+            UI.showError('Contact feature coming soon!');
+        });
+
+        // Cancel button
+        document.querySelectorAll('.btn-primary')[1].addEventListener('click', () => {
+            if (confirm('Are you sure you want to cancel this order?')) {
+                // Remove order
+                AppState.orders = AppState.orders.filter(o => o.id !== order.id);
+                AppState.save();
+                UI.showSuccess('Order cancelled successfully');
+                Navigation.goTo('dashboard.html');
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -50,7 +50,7 @@ const ManagerBookingsPage = () => {
         {isLoading ? (
           <div className="mess-loading"><div className="mess-loading-spinner" /><span className="mess-loading-text">Loading bookings...</span></div>
         ) : isError ? (
-          <div className="mess-error">Failed to load bookings.</div>
+          <div className="mess-error">Bookings currently not available.</div>
         ) : bookings.length === 0 ? (
           <div className="mess-empty"><div className="mess-empty-icon">📋</div><div>No bookings found</div></div>
         ) : (

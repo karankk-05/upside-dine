@@ -26,7 +26,7 @@ const CancelBookingButton = ({ bookingId, onCancelled }) => {
 
           {cancelMutation.isError && (
             <div style={{ background: 'rgba(255,51,51,0.1)', border: '1px solid #ff3333', borderRadius: 8, padding: 10, marginBottom: 16, color: '#ff3333', fontSize: 13 }}>
-              {cancelMutation.error?.response?.data?.detail || 'Failed to cancel booking.'}
+              {cancelMutation.error?.response?.data?.detail || 'Unable to cancel booking.'}
             </div>
           )}
 

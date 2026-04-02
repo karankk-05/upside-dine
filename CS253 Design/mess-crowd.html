@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Crowd Monitor - Student Mess</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="dashboard">
+            <!-- Page Header -->
+            <div class="page-header">
+                <div class="back-btn">←</div>
+                <h1 class="page-title neon-text-subtle">Live Crowd Monitor</h1>
+            </div>
+
+            <!-- Crowd Data -->
+            <div class="crowd-container">
+
+                <!-- Stats -->
+                <div class="crowd-stats">
+                    <div class="stat-card">
+                        <div class="stat-value">68%</div>
+                        <div class="stat-label">Crowd Density</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">12-15</div>
+                        <div class="stat-label">Wait Time (min)</div>
+                    </div>
+                </div>
+
+                <!-- Info Card -->
+                <div
+                    style="background: var(--st-gray); border: 1px solid var(--st-border); border-radius: 12px; padding: 16px; margin-top: 20px;">
+                    <h3
+                        style="font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <span>📊</span> Crowd Analysis
+                    </h3>
+                    <div style="font-size: 13px; color: var(--st-text-dim); line-height: 1.6;">
+                        <p style="margin-bottom: 8px;">
+                            <strong style="color: var(--st-text);">Current Status:</strong> Moderately Busy
+                        </p>
+                        <p style="margin-bottom: 8px;">
+                            <strong style="color: var(--st-text);">People in Queue:</strong> ~42 students
+                        </p>
+                        <p style="margin-bottom: 8px;">
+                            <strong style="color: var(--st-text);">Best Time:</strong> Try visiting after 1:30 PM
+                        </p>
+                        <p>
+                            <strong style="color: var(--st-text);">Last Updated:</strong> Just now
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Historical Data -->
+                <div
+                    style="background: var(--st-gray); border: 1px solid var(--st-border); border-radius: 12px; padding: 16px; margin-top: 16px;">
+                    <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">
+                        Today's Crowd Pattern
+                    </h3>
+                    <div
+                        style="height: 120px; background: var(--st-light-gray); border-radius: 8px; display: flex; align-items: flex-end; padding: 12px; gap: 8px;">
+                        <!-- Simple bar chart representation -->
+                        <div
+                            style="flex: 1; background: var(--st-accent); height: 40%; border-radius: 4px 4px 0 0; opacity: 0.6;">
+                        </div>
+                        <div
+                            style="flex: 1; background: var(--st-accent); height: 75%; border-radius: 4px 4px 0 0; opacity: 0.6;">
+                        </div>
+                        <div
+                            style="flex: 1; background: var(--st-accent); height: 95%; border-radius: 4px 4px 0 0; box-shadow: 0 0 10px var(--st-subtle-glow);">
+                        </div>
+                        <div
+                            style="flex: 1; background: var(--st-accent); height: 60%; border-radius: 4px 4px 0 0; opacity: 0.6;">
+                        </div>
+                        <div
+                            style="flex: 1; background: var(--st-accent); height: 35%; border-radius: 4px 4px 0 0; opacity: 0.6;">
+                        </div>
+                    </div>
+                    <div
+                        style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: var(--st-text-dim);">
+                        <span>11AM</span>
+                        <span>12PM</span>
+                        <span>1PM</span>
+                        <span>2PM</span>
+                        <span>3PM</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <span class="nav-icon">🏠</span>
+                    Home
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">📦</span>
+                    Orders
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">❤️</span>
+                    Favorites
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">👤</span>
+                    Profile
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        Navigation.requireRole('student');
+
+        // Back button
+        document.querySelector('.back-btn').addEventListener('click', () => {
+            Navigation.goBack();
+        });
+
+        // Simulate live crowd updates
+        function updateCrowd() {
+            const percentage = Utils.simulateCrowdLevel();
+            const label = Utils.getCrowdLabel(percentage);
+            const waitTime = Math.floor(percentage / 5);
+
+            // Update stat values
+            document.querySelector('.stat-value').textContent = percentage + '%';
+            document.querySelectorAll('.stat-value')[1].textContent = waitTime + '-' + (waitTime + 3);
+
+            // Update status text
+            const statusTexts = {
+                'Low': 'Not Busy',
+                'Medium': 'Moderately Busy',
+                'High': 'Very Busy'
+            };
+            document.querySelector('p:nth-of-type(1) strong').nextSibling.textContent = ' ' + statusTexts[label];
+
+            // Update people count
+            const peopleCount = Math.floor(percentage * 0.7);
+            document.querySelector('p:nth-of-type(2) strong').nextSibling.textContent = ' ~' + peopleCount + ' students';
+        }
+
+        // Update every 5 seconds
+        updateCrowd();
+        setInterval(updateCrowd, 5000);
+    </script>
+</body>
+
+</html>

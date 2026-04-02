@@ -61,6 +61,12 @@ const ManagerMenuPage = () => {
   const isPending = createMutation.isPending || updateMutation.isPending;
   const mutationError = createMutation.error || updateMutation.error;
 
+  const groupedItems = (menuItems || []).reduce((acc, item) => {
+    if (!acc[item.day_of_week]) acc[item.day_of_week] = [];
+    acc[item.day_of_week].push(item);
+    return acc;
+  }, {});
+
   return (
     <div className="mess-page">
       <div className="mess-page-header">
@@ -87,26 +93,40 @@ const ManagerMenuPage = () => {
         {isLoading ? (
           <div className="mess-loading"><div className="mess-loading-spinner" /><span className="mess-loading-text">Loading menu...</span></div>
         ) : isError ? (
-          <div className="mess-error">Failed to load menu items.</div>
+          <div className="mess-error">Menu items currently not available.</div>
         ) : (menuItems || []).length === 0 ? (
           <div className="mess-empty"><div className="mess-empty-icon">🍽️</div><div>No menu items found</div></div>
         ) : (
-          (menuItems || []).map((item) => (
-            <div key={item.id} className="mess-menu-item">
-              <div className="mess-menu-item-info">
-                <div className="mess-menu-item-name">{item.item_name}</div>
-                <div className="mess-menu-item-desc">₹{item.price} · {item.meal_type}</div>
-                <span className={item.available_quantity > 20 ? 'mess-qty-high' : item.available_quantity > 5 ? 'mess-qty-medium' : 'mess-qty-low'}>
-                  ● {item.available_quantity} remaining
-                </span>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="mess-btn-small" onClick={() => openEdit(item)}>Edit</button>
-                <button className="mess-btn-outline" onClick={() => deleteMutation.mutate(item.id)} disabled={deleteMutation.isPending}
-                  style={{ color: '#ff3333', borderColor: '#ff3333', fontSize: 12, padding: '8px 12px' }}>✕</button>
-              </div>
-            </div>
-          ))
+          <div>
+            {DAYS.map(day => {
+              if (!groupedItems[day] || groupedItems[day].length === 0) return null;
+              return (
+                <div key={day} style={{ marginBottom: 32 }}>
+                  <h3 style={{ fontSize: 16, color: 'var(--st-accent)', marginBottom: 16, textTransform: 'capitalize', borderBottom: '1px solid var(--st-border)', paddingBottom: 8 }}>
+                    {day}
+                  </h3>
+                  <div className="mess-menu-grid">
+                    {groupedItems[day].map((item) => (
+                      <div key={item.id} className="mess-menu-item">
+                        <div className="mess-menu-item-info">
+                          <div className="mess-menu-item-name">{item.item_name}</div>
+                          <div className="mess-menu-item-desc">₹{item.price} · {item.meal_type}</div>
+                          <span className={item.available_quantity > 20 ? 'mess-qty-high' : item.available_quantity > 5 ? 'mess-qty-medium' : 'mess-qty-low'}>
+                            ● {item.available_quantity} remaining
+                          </span>
+                        </div>
+                        <div className="mess-menu-item-actions">
+                          <button className="mess-btn-small" onClick={() => openEdit(item)}>Edit</button>
+                          <button className="mess-btn-outline" onClick={() => deleteMutation.mutate(item.id)} disabled={deleteMutation.isPending}
+                            style={{ color: '#ff3333', borderColor: '#ff3333', flex: 0, minWidth: 40, padding: '8px' }}>✕</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
 
@@ -156,7 +176,7 @@ const ManagerMenuPage = () => {
               </div>
               {mutationError && (
                 <div style={{ background: 'rgba(255,51,51,0.1)', border: '1px solid #ff3333', borderRadius: 8, padding: 12, marginBottom: 16, color: '#ff3333', fontSize: 13 }}>
-                  {mutationError?.response?.data?.detail || JSON.stringify(mutationError?.response?.data) || 'Failed to save.'}
+                  {mutationError?.response?.data?.detail || JSON.stringify(mutationError?.response?.data) || 'Unable to save.'}
                 </div>
               )}
               <button className="mess-btn-primary" type="submit" disabled={isPending}>{isPending ? 'Saving...' : editItem ? 'Update Item' : 'Add Item'}</button>

@@ -36,7 +36,7 @@ const ManagerStatsPage = () => {
         {isLoading ? (
           <div className="mess-loading"><div className="mess-loading-spinner" /><span className="mess-loading-text">Loading stats...</span></div>
         ) : isError ? (
-          <div className="mess-error">Failed to load statistics.</div>
+          <div className="mess-error">Statistics currently not available.</div>
         ) : stats ? (
           <>
             <div className="mess-stat-grid">

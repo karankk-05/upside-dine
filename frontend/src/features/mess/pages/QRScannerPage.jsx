@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, History, Upload, LogOut } from 'lucide-react';
+import { Camera, History, Upload, LogOut, User } from 'lucide-react';
 import { useVerifyQR } from '../hooks/useVerifyQR';
 import VerificationResult from '../components/VerificationResult';
 import '../mess.css';
@@ -72,7 +72,6 @@ const QRScannerPage = () => {
     setScanning(false);
   };
 
-  // Handle uploaded QR image file
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -80,18 +79,42 @@ const QRScannerPage = () => {
     setLastResult(null);
     setLastError(null);
 
-    try {
-      const { Html5Qrcode } = await import('html5-qrcode');
-      const scanner = new Html5Qrcode('qr-file-reader');
-      const result = await scanner.scanFile(file, true);
-      scanner.clear().catch(() => {});
-      handleScannedData(result);
-    } catch (err) {
-      setLastError({ response: { data: { detail: 'Could not read QR code from image. Please try a clearer photo.' } } });
-    }
+    const imageUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.src = imageUrl;
 
-    // Reset file input
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    img.onload = async () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Dynamically import jsqr
+        const jsQR = (await import('jsqr')).default;
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+        if (code && code.data) {
+          handleScannedData(code.data);
+        } else {
+          setLastError({ response: { data: { detail: 'Could not read QR code from image. Please try a clearer photo.' } } });
+        }
+      } catch (err) {
+        setLastError({ response: { data: { detail: 'An error occurred while analyzing the image.' } } });
+      } finally {
+        URL.revokeObjectURL(imageUrl);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+
+    img.onerror = () => {
+      setLastError({ response: { data: { detail: 'Invalid image file provided. Could not load.' } } });
+      URL.revokeObjectURL(imageUrl);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
   };
 
   const handleScannedData = async (data) => {
@@ -177,10 +200,10 @@ const QRScannerPage = () => {
               background: 'var(--st-light-gray)', border: '2px solid var(--st-text-dim)',
               borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
-            onClick={handleLogout}
-            title="Logout"
+            onClick={() => navigate('/worker/profile')}
+            title="Profile"
           >
-            <LogOut size={16} color="var(--st-text-dim)" />
+            <User size={16} color="var(--st-text-dim)" />
           </div>
         </div>
       </div>
@@ -206,7 +229,7 @@ const QRScannerPage = () => {
             }}
           />
           {/* Hidden div for file scanning */}
-          <div id="qr-file-reader" style={{ display: 'none' }} />
+          <div id="qr-file-reader" style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', zIndex: -10 }} />
           <style>{`
             #qr-reader video { width: 100% !important; border-radius: 12px; }
             #qr-reader img[alt="Info icon"] { display: none !important; }

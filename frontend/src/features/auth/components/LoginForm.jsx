@@ -54,25 +54,28 @@ const LoginForm = ({ selectedRole }) => {
       const response = await axios.post('/api/auth/login/', {
         email: formData.email,
         password: formData.password,
-        role: selectedRole,
       });
 
       // Store tokens
       localStorage.setItem('access_token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
-      localStorage.setItem('user_role', selectedRole);
+      
+      // Get actual role from backend response
+      const userRole = response.data.user?.role;
+      localStorage.setItem('user_role', userRole);
 
-      // Navigate based on role
+      // Navigate based on actual user role from backend
       const roleRoutes = {
         student: '/dashboard',
         mess_manager: '/manager/mess',
         mess_worker: '/worker/scan',
         canteen_manager: '/manager/canteen',
         delivery_person: '/delivery',
+        admin_manager: '/admin/managers',
+        superadmin: '/admin',
       };
 
-      // Force a full page reload to clear any previous user's React Query cache / Zustand state
-      window.location.href = roleRoutes[selectedRole] || '/dashboard';
+      navigate(roleRoutes[userRole] || '/dashboard');
     } catch (err) {
       setError(
         err.response?.data?.message ||

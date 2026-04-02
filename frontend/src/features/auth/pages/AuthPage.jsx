@@ -9,13 +9,15 @@ const AuthPage = () => {
   const [selectedRole, setSelectedRole] = useState('student');
   const navigate = useNavigate();
 
-  const roles = [
-    { id: 'student', label: 'Student' },
-    { id: 'mess_manager', label: 'Mess Manager' },
-    { id: 'mess_worker', label: 'Mess Worker' },
-    { id: 'canteen_manager', label: 'Canteen Manager' },
-    { id: 'delivery_person', label: 'Delivery Person' },
-  ];
+  // Only show Student role for signup, all roles for login
+  const roles = authMode === 'signup' 
+    ? [{ id: 'student', label: 'Student' }]
+    : [
+        { id: 'student', label: 'Student' },
+        { id: 'mess_manager', label: 'Mess Manager' },
+        { id: 'canteen_manager', label: 'Canteen Manager' },
+        { id: 'delivery_person', label: 'Delivery Person' },
+      ];
 
   return (
     <div className="auth-container">
@@ -30,21 +32,10 @@ const AuthPage = () => {
           {authMode === 'login' ? 'Welcome Back' : 'Create Account'}
         </h1>
         <p className="auth-subtitle">
-          Choose your role and {authMode === 'login' ? 'sign in' : 'sign up'}
+          {authMode === 'login' ? 'Sign in to your account' : 'Sign up as a student'}
         </p>
 
-        {/* Role Selector Grid */}
-        <div className="role-selector-grid">
-          {roles.map((role) => (
-            <button
-              key={role.id}
-              className={`role-btn-large ${selectedRole === role.id ? 'active' : ''}`}
-              onClick={() => setSelectedRole(role.id)}
-            >
-              {role.label}
-            </button>
-          ))}
-        </div>
+        {/* No role selector needed - students only for signup */}
 
         {/* Auth Forms */}
         {authMode === 'login' ? (

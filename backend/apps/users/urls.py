@@ -11,6 +11,15 @@ from .views import (
     MeView,
     MessAccountView,
     DeleteAccountView,
+    DeliveryPersonnelManagementView,
+    ToggleDeliveryPersonStatusView,
+    AdminManagerManagementView,
+    ToggleManagerStatusView,
+    AdminMessManagementView,
+    AdminMessDetailView,
+    AdminCanteenManagementView,
+    AdminCanteenDetailView,
+    AvailableHallsView,
 )
 
 urlpatterns = [
@@ -24,4 +33,13 @@ urlpatterns = [
     path("users/me/", MeView.as_view(), name="users-me"),
     path("users/me/mess-account/", MessAccountView.as_view(), name="users-me-mess-account"),
     path("users/me/delete/", DeleteAccountView.as_view(), name="users-me-delete"),
+    path("manager/delivery-personnel/", DeliveryPersonnelManagementView.as_view(), name="delivery-personnel-management"),
+    path("manager/delivery-personnel/<int:user_id>/toggle/", ToggleDeliveryPersonStatusView.as_view(), name="toggle-delivery-person-status"),
+    path("admin/managers/", AdminManagerManagementView.as_view(), name="admin-manager-management"),
+    path("admin/managers/<int:user_id>/", ToggleManagerStatusView.as_view(), name="toggle-manager-status"),
+    path("admin/messes/", AdminMessManagementView.as_view(), name="admin-mess-management"),
+    path("admin/messes/<int:pk>/", AdminMessDetailView.as_view(), name="admin-mess-detail"),
+    path("admin/canteens/", AdminCanteenManagementView.as_view(), name="admin-canteen-management"),
+    path("admin/canteens/<int:pk>/", AdminCanteenDetailView.as_view(), name="admin-canteen-detail"),
+    path("public/halls/", AvailableHallsView.as_view(), name="public-halls"),
 ]

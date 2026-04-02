@@ -44,7 +44,7 @@ export default function MessCrowdDetail() {
         <div className="crowd-dashboard__header-row">
           <button
             className="crowd-dashboard__back-btn"
-            onClick={() => navigate('/crowd')}
+            onClick={() => navigate(-1)}
             aria-label="Back to dashboard"
           >
             <ArrowLeft size={18} />

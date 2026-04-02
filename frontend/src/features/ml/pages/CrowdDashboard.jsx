@@ -57,7 +57,10 @@ export default function CrowdDashboard() {
         <div className="crowd-dashboard__header-row">
           <button
             className="crowd-dashboard__back-btn"
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              if (userRole === 'student') navigate('/dashboard');
+              else navigate(-1);
+            }}
             aria-label="Go back"
           >
             <ArrowLeft size={18} />

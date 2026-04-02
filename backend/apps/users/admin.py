@@ -56,7 +56,7 @@ class StudentAdmin(admin.ModelAdmin):
 
 @admin.register(Staff)
 class StaffAdmin(admin.ModelAdmin):
-    list_display = ("full_name", "employee_code", "user", "is_mess_staff", "canteen_id")
+    list_display = ("full_name", "employee_code", "user", "is_mess_staff", "canteen")
     search_fields = ("full_name", "employee_code", "user__email")
     list_filter = ("is_mess_staff",)
 

@@ -67,7 +67,7 @@ Email: {email}
 Temporary Password: {temp_password}
 Employee Code: {employee_code}
 
-Login URL: http://localhost:3000/login
+Login URL: http://localhost:3000/auth
 
 IMPORTANT: Please change your password immediately after your first login.
 

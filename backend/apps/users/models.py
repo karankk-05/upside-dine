@@ -75,7 +75,9 @@ class Staff(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="staff_profile")
     full_name = models.CharField(max_length=100)
     employee_code = models.CharField(max_length=50, unique=True)
-    canteen_id = models.IntegerField(null=True, blank=True)
+    canteen = models.ForeignKey(
+        "canteen.Canteen", null=True, blank=True, on_delete=models.SET_NULL, related_name="staff_members"
+    )
     is_mess_staff = models.BooleanField(default=False)
 
     def __str__(self):

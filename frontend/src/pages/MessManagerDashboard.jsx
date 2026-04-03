@@ -82,6 +82,7 @@ const MessManagerDashboard = () => {
   const messCards = [
     { icon: <UtensilsCrossed size={22} />, title: 'Weekly Extras Menu', desc: 'Add, edit, or remove extras for the weekly mess menu.', route: '/manager/mess/menu' },
     { icon: <ClipboardList size={22} />, title: "Today's Bookings", desc: "View today's bookings and redemption stats.", route: '/manager/mess/bookings' },
+    { icon: <Users size={22} />, title: 'Crowd Monitoring', desc: 'View live crowd density and manage your mess camera video feed IPs.', route: '/manager/crowd' },
   ];
 
   const navItems = [

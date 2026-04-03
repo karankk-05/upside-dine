@@ -1,0 +1,12 @@
+import { useQuery } from "@tanstack/react-query";
+import api from "../../../lib/api";
+
+export const useManagerStats = () => {
+  return useQuery({
+    queryKey: ["manager-stats"],
+    queryFn: async () => {
+      const res = await api.get("/canteen-manager/stats/");
+      return res.data;
+    },
+  });
+};

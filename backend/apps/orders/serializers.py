@@ -40,6 +40,8 @@ class CanteenOrderSerializer(serializers.ModelSerializer):
     canteen = CanteenListSerializer(read_only=True)
     items = CanteenOrderItemSerializer(many=True, read_only=True)
     status_timeline = serializers.SerializerMethodField()
+    delivery_person_name = serializers.SerializerMethodField()
+    delivery_person_phone = serializers.SerializerMethodField()
 
     class Meta:
         model = CanteenOrder
@@ -62,7 +64,21 @@ class CanteenOrderSerializer(serializers.ModelSerializer):
             "updated_at",
             "items",
             "status_timeline",
+            "delivery_person_name",
+            "delivery_person_phone",
         ]
+
+    def get_delivery_person_name(self, obj):
+        if obj.delivery_person:
+            if hasattr(obj.delivery_person, "staff_profile"):
+                return obj.delivery_person.staff_profile.full_name
+            return obj.delivery_person.email
+        return None
+
+    def get_delivery_person_phone(self, obj):
+        if obj.delivery_person:
+            return getattr(obj.delivery_person, "phone_number", None) or ""
+        return None
 
     def get_status_timeline(self, obj):
         return [

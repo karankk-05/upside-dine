@@ -178,7 +178,7 @@ def create_order_for_student(student, validated_data):
         estimated_ready_time=estimated_ready_time,
         notes=validated_data.get("notes", "").strip(),
         pickup_qr_code=generate_pickup_qr_code() if order_type != CanteenOrder.ORDER_TYPE_DELIVERY else "",
-        pickup_otp=generate_pickup_otp() if order_type != CanteenOrder.ORDER_TYPE_DELIVERY else "",
+        pickup_otp=generate_pickup_otp(),
     )
 
     order_items = []

@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from .models import Canteen, CanteenMenuCategory, CanteenMenuItem
+from .models import Canteen, CanteenMenuCategory, CanteenMenuItem, CanteenPaymentConfig
 
 
 class CanteenMenuCategorySerializer(serializers.ModelSerializer):
@@ -45,8 +45,6 @@ class CanteenListSerializer(serializers.ModelSerializer):
             "name",
             "location",
             "contact_phone",
-            "opening_time",
-            "closing_time",
             "is_delivery_available",
             "min_order_amount",
             "delivery_fee",
@@ -105,3 +103,11 @@ class CanteenManagerStatsSerializer(serializers.Serializer):
     preparing_orders = serializers.IntegerField()
     ready_orders = serializers.IntegerField()
     completed_orders = serializers.IntegerField()
+
+
+class CanteenPaymentConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CanteenPaymentConfig
+        fields = ["id", "canteen", "upi_id", "qr_image_url", "payment_mode", "updated_at"]
+        read_only_fields = ["id", "canteen", "updated_at"]
+

@@ -135,6 +135,21 @@ class CanteenManagerOrderListView(ListAPIView):
         return queryset
 
 
+class CanteenManagerOrderDetailView(GenericAPIView):
+    permission_classes = [IsCanteenManagerOrAdmin]
+    serializer_class = CanteenOrderSerializer
+
+    def get(self, request, id):
+        queryset = CanteenOrder.objects.select_related("canteen", "student", "student__user").prefetch_related("items__menu_item")
+        manager_canteen_ids = _manager_canteen_ids(request.user)
+        if manager_canteen_ids is not None:
+            queryset = queryset.filter(canteen_id__in=manager_canteen_ids)
+        order = queryset.filter(id=id).first()
+        if not order:
+            return Response({"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(self.get_serializer(order).data)
+
+
 class CanteenManagerOrderAcceptView(GenericAPIView):
     permission_classes = [IsCanteenManagerOrAdmin]
     serializer_class = OrderStatusSerializer
@@ -202,12 +217,28 @@ class CanteenManagerOrderStatusUpdateView(GenericAPIView):
             validate_status_transition(order, new_status)
         except Exception as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        update_fields = ["status", "updated_at"]
         order.status = new_status
+
         if estimated_ready_time:
             order.estimated_ready_time = estimated_ready_time
-            order.save(update_fields=["status", "estimated_ready_time", "updated_at"])
-        else:
-            order.save(update_fields=["status", "updated_at"])
+            update_fields.append("estimated_ready_time")
+
+        # Assign delivery person if transitioning to out_for_delivery
+        if new_status == CanteenOrder.STATUS_OUT_FOR_DELIVERY:
+            from apps.users.models import User
+            dp_id = request.data.get("delivery_person_id")
+            if dp_id:
+                try:
+                    dp = User.objects.get(id=dp_id, role__role_name="delivery_person", is_active=True)
+                    order.delivery_person = dp
+                    order.delivery_accepted_at = timezone.now()
+                    update_fields.extend(["delivery_person", "delivery_accepted_at"])
+                except User.DoesNotExist:
+                    return Response({"detail": "Delivery person not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        order.save(update_fields=update_fields)
         return Response(OrderStatusSerializer(order).data)
 
     def _get_order(self, request, order_id):
@@ -245,3 +276,120 @@ class CanteenManagerVerifyPickupView(GenericAPIView):
         if manager_canteen_ids is not None:
             queryset = queryset.filter(canteen_id__in=manager_canteen_ids)
         return queryset.filter(id=order_id).first()
+
+
+class IsDeliveryPersonOrAdmin(BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        if user.is_superuser:
+            return True
+        return bool(user.role and user.role.role_name in ["delivery_person", "canteen_manager"])
+
+
+def _delivery_canteen_id(user):
+    if not hasattr(user, "staff_profile"):
+        return None
+    return user.staff_profile.canteen_id
+
+
+class DeliveryAvailableOrdersView(ListAPIView):
+    """Delivery orders that have no delivery person assigned (confirmed+)."""
+    permission_classes = [IsAuthenticated, IsDeliveryPersonOrAdmin]
+    serializer_class = CanteenOrderSerializer
+
+    def get_queryset(self):
+        canteen_id = _delivery_canteen_id(self.request.user)
+        qs = CanteenOrder.objects.filter(
+            order_type=CanteenOrder.ORDER_TYPE_DELIVERY,
+            status__in=[
+                CanteenOrder.STATUS_CONFIRMED,
+                CanteenOrder.STATUS_PREPARING,
+                CanteenOrder.STATUS_READY,
+            ],
+            delivery_person__isnull=True,
+        ).select_related("canteen", "student").prefetch_related("items")
+        if canteen_id:
+            qs = qs.filter(canteen_id=canteen_id)
+        return qs.order_by("-created_at")
+
+
+class DeliveryMyOrdersView(ListAPIView):
+    """Orders assigned to the logged-in delivery person."""
+    permission_classes = [IsAuthenticated, IsDeliveryPersonOrAdmin]
+    serializer_class = CanteenOrderSerializer
+
+    def get_queryset(self):
+        qs = CanteenOrder.objects.filter(
+            delivery_person=self.request.user,
+        ).select_related("canteen", "student").prefetch_related("items")
+        status_filter = self.request.query_params.get("status")
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        return qs.order_by("-updated_at")
+
+
+class DeliveryAcceptOrderView(GenericAPIView):
+    """Delivery person volunteers to deliver an order."""
+    permission_classes = [IsAuthenticated, IsDeliveryPersonOrAdmin]
+    serializer_class = OrderStatusSerializer
+
+    def post(self, request, id):
+        order = CanteenOrder.objects.filter(
+            id=id,
+            order_type=CanteenOrder.ORDER_TYPE_DELIVERY,
+            status__in=[
+                CanteenOrder.STATUS_CONFIRMED,
+                CanteenOrder.STATUS_PREPARING,
+                CanteenOrder.STATUS_READY,
+            ],
+            delivery_person__isnull=True,
+        ).first()
+        if not order:
+            return Response(
+                {"detail": "Order not found or already assigned."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        canteen_id = _delivery_canteen_id(request.user)
+        if canteen_id and order.canteen_id != canteen_id:
+            return Response(
+                {"detail": "This order is not for your canteen."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        order.delivery_person = request.user
+        order.delivery_accepted_at = timezone.now()
+        # If food is already ready, move to out_for_delivery
+        if order.status == CanteenOrder.STATUS_READY:
+            order.status = CanteenOrder.STATUS_OUT_FOR_DELIVERY
+            order.save(update_fields=["delivery_person", "delivery_accepted_at", "status", "updated_at"])
+        else:
+            order.save(update_fields=["delivery_person", "delivery_accepted_at", "updated_at"])
+        return Response(self.get_serializer(order).data)
+
+
+class DeliveryCompleteOrderView(GenericAPIView):
+    """Mark an order as delivered – requires the student's OTP."""
+    permission_classes = [IsAuthenticated, IsDeliveryPersonOrAdmin]
+    serializer_class = OrderStatusSerializer
+
+    def post(self, request, id):
+        order = CanteenOrder.objects.filter(
+            id=id,
+            delivery_person=request.user,
+            status=CanteenOrder.STATUS_OUT_FOR_DELIVERY,
+        ).first()
+        if not order:
+            return Response(
+                {"detail": "Order not found or not in delivery."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        otp = request.data.get("pickup_otp", "").strip()
+        if not otp:
+            return Response({"detail": "OTP is required to confirm delivery."}, status=status.HTTP_400_BAD_REQUEST)
+        if otp != order.pickup_otp:
+            return Response({"detail": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
+        order.status = CanteenOrder.STATUS_DELIVERED
+        order.delivered_at = timezone.now()
+        order.save(update_fields=["status", "delivered_at", "updated_at"])
+        return Response(self.get_serializer(order).data)

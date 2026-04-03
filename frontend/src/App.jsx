@@ -10,6 +10,7 @@ import { mlRoutes } from './features/ml/routes';
 import AdminManagerDashboard from './pages/AdminManagerDashboard';
 import ProfilePage from './pages/ProfilePage';
 import messRoutes from './features/mess/routes';
+import canteenRoutes from './features/canteen/routes';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -37,6 +38,8 @@ function App() {
           <Route path="/admin/managers" element={<AdminManagerDashboard />} />
           {/* Mess feature routes (student, manager, worker) */}
           {messRoutes}
+          {/* Canteen feature routes (student, manager) */}
+          {canteenRoutes}
           {/* ML routes for crowd monitoring UI */}
           {mlRoutes}
         </Routes>
@@ -46,4 +49,3 @@ function App() {
 }
 
 export default App;
-

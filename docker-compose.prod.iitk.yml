@@ -1,0 +1,60 @@
+services:
+  # ML Crowd Monitoring Service
+  ml_service:
+    build:
+      context: ./ml_service
+      dockerfile: Dockerfile
+    container_name: upside_dine_ml
+    command: uvicorn main:app --host 0.0.0.0 --port 8002
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env.prod.iitk
+    restart: always
+
+  # Celery Worker (connects to Upstash Redis + Supabase DB)
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: upside_dine_celery_worker
+    command: celery -A config worker -l info
+    env_file:
+      - .env.prod.iitk
+    restart: always
+
+  # Celery Beat Scheduler
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: upside_dine_celery_beat
+    command: celery -A config beat -l info
+    env_file:
+      - .env.prod.iitk
+    restart: always
+
+  # Django Channels (WebSocket server)
+  channels:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: upside_dine_channels
+    command: daphne -b 0.0.0.0 -p 8001 config.asgi:application
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env.prod.iitk
+    restart: always
+
+  # Nginx Load Balancer
+  nginx_lb:
+    image: nginx:alpine
+    container_name: upside_dine_lb
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - channels
+    restart: always

@@ -197,8 +197,15 @@ SPECTACULAR_SETTINGS = {
 
 
 # Celery Configuration
-CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://redis:6379/1')
-CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://redis:6379/2')
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://redis:6379/0')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://redis:6379/0')
+
+# Upstash requires database 0 only
+import re
+if "upstash.io" in CELERY_BROKER_URL:
+    CELERY_BROKER_URL = re.sub(r'/[1-9]\d*(\?|$)', r'/0\1', CELERY_BROKER_URL)
+if "upstash.io" in CELERY_RESULT_BACKEND:
+    CELERY_RESULT_BACKEND = re.sub(r'/[1-9]\d*(\?|$)', r'/0\1', CELERY_RESULT_BACKEND)
 
 import ssl
 

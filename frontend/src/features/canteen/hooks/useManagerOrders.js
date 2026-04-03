@@ -5,8 +5,8 @@ export const useManagerOrders = () => {
   return useQuery({
     queryKey: ["manager-orders"],
     queryFn: async () => {
-      const res = await api.get("/manager/orders/");
-      return res.data;
+      const res = await api.get("/canteen-manager/orders/");
+      return res.data?.results || res.data || [];
     },
   });
 };

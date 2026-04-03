@@ -49,14 +49,7 @@ export default function CanteenDetailPage() {
           </div>
         </div>
 
-        {/* Order Type Toggle */}
-        <div className="canteen-order-type">
-          {['pickup', 'delivery'].map((type) => (
-            <button key={type} className={`canteen-order-type-btn ${orderType === type ? 'active' : ''}`} onClick={() => setOrderType(type)}>
-              {type.charAt(0).toUpperCase() + type.slice(1)}
-            </button>
-          ))}
-        </div>
+
       </div>
 
       {/* Menu */}

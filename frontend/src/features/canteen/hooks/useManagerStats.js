@@ -5,7 +5,7 @@ export const useManagerStats = () => {
   return useQuery({
     queryKey: ["manager-stats"],
     queryFn: async () => {
-      const res = await api.get("/manager/stats/");
+      const res = await api.get("/canteen-manager/stats/");
       return res.data;
     },
   });

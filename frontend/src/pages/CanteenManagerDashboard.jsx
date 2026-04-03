@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Store, ClipboardList, Package, Users, Settings, Plus, Trash2, ToggleLeft, ToggleRight, LogOut, X, User, BarChart } from 'lucide-react';
+import { Store, ClipboardList, Package, Users, Settings, Plus, Trash2, ToggleLeft, ToggleRight, LogOut, X, User, BarChart, CreditCard, Upload } from 'lucide-react';
 import '../features/canteen/canteen.css';
 
 const CanteenManagerDashboard = () => {
@@ -16,6 +16,17 @@ const CanteenManagerDashboard = () => {
   const [addResult, setAddResult] = useState(null);
   const [addError, setAddError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Payment settings state
+  const [paymentSettings, setPaymentSettings] = useState({
+    upi_id: '',
+    payment_mode: 'both',
+    qr_image_url: '',
+  });
+  const [paymentSaved, setPaymentSaved] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
+  const [qrPreview, setQrPreview] = useState(null);
 
   const token = localStorage.getItem('access_token');
   const headers = { Authorization: `Bearer ${token}` };
@@ -34,7 +45,41 @@ const CanteenManagerDashboard = () => {
 
   useEffect(() => {
     if (activeTab === 'delivery') fetchDeliveryPersonnel();
+    if (activeTab === 'payment') fetchPaymentConfig();
   }, [activeTab]);
+
+  const fetchPaymentConfig = async () => {
+    setPaymentLoading(true);
+    setPaymentError('');
+    try {
+      const res = await axios.get('/api/canteen-manager/payment-config/', { headers });
+      setPaymentSettings({
+        upi_id: res.data.upi_id || '',
+        payment_mode: res.data.payment_mode || 'both',
+        qr_image_url: res.data.qr_image_url || '',
+      });
+      if (res.data.qr_image_url) setQrPreview(res.data.qr_image_url);
+    } catch (err) {
+      setPaymentError('Failed to load payment settings.');
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const savePaymentConfig = async () => {
+    setPaymentError('');
+    try {
+      await axios.put('/api/canteen-manager/payment-config/', {
+        upi_id: paymentSettings.upi_id,
+        payment_mode: paymentSettings.payment_mode,
+        qr_image_url: paymentSettings.qr_image_url,
+      }, { headers });
+      setPaymentSaved(true);
+      setTimeout(() => setPaymentSaved(false), 3000);
+    } catch (err) {
+      setPaymentError(err.response?.data?.detail || 'Failed to save payment settings.');
+    }
+  };
 
   const handleAddDeliveryPerson = async (e) => {
     e.preventDefault();
@@ -89,6 +134,7 @@ const CanteenManagerDashboard = () => {
   const navItems = [
     { id: 'canteen', icon: <Settings size={20} />, label: 'Manage Canteen' },
     { id: 'delivery', icon: <Users size={20} />, label: 'Delivery Staff' },
+    { id: 'payment', icon: <CreditCard size={20} />, label: 'Payment Settings' },
     { id: 'profile', icon: <User size={20} />, label: 'Profile' },
   ];
 
@@ -198,8 +244,7 @@ const CanteenManagerDashboard = () => {
                     <p style={{ fontWeight: 700, color: '#33aa33', marginBottom: 8 }}>✅ Delivery Person created!</p>
                     <p><strong>Email:</strong> {addResult.email}</p>
                     <p><strong>Employee Code:</strong> <code style={{ background: '#2a2a2a', padding: '2px 6px', borderRadius: 4 }}>{addResult.employee_code}</code></p>
-                    <p><strong>Temp Password:</strong> <code style={{ background: '#2a2a2a', padding: '2px 6px', borderRadius: 4 }}>{addResult.temp_password}</code></p>
-                    <p style={{ color: '#999', marginTop: 8, fontSize: 12 }}>Credentials have also been sent via email.</p>
+                    <p style={{ color: '#999', marginTop: 8, fontSize: 12 }}>Login credentials have been sent to the registered email.</p>
                   </div>
                 )}
               </div>
@@ -246,6 +291,84 @@ const CanteenManagerDashboard = () => {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Payment Settings Tab ── */}
+        {activeTab === 'payment' && (
+          <div>
+            <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24 }}>Payment Settings</h1>
+            {paymentLoading ? (
+              <div className="canteen-loading"><div className="canteen-loading-spinner" /><span style={{ color: '#999' }}>Loading...</span></div>
+            ) : (
+            <div style={{ maxWidth: 480, display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {paymentError && <div style={{ padding: 12, background: '#331111', border: '1px solid #d45555', borderRadius: 10, color: '#ff6b6b', fontSize: 13 }}>{paymentError}</div>}
+
+              {/* UPI ID */}
+              <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 16, padding: 20 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <CreditCard size={18} style={{ color: '#d45555' }} /> UPI Details
+                </h3>
+                <label style={{ fontSize: 12, color: '#999', marginBottom: 6, display: 'block' }}>UPI ID</label>
+                <input
+                  type="text"
+                  placeholder="yourcanteen@upi"
+                  value={paymentSettings.upi_id}
+                  onChange={(e) => { setPaymentSettings({ ...paymentSettings, upi_id: e.target.value }); setPaymentSaved(false); }}
+                  style={{ width: '100%', padding: 12, background: '#2a2a2a', border: '1px solid #444', borderRadius: 10, color: '#fff', fontSize: 14, marginBottom: 12, outline: 'none' }}
+                />
+
+                <label style={{ fontSize: 12, color: '#999', marginBottom: 6, display: 'block' }}>Payment QR Code (URL or link)</label>
+                <input
+                  type="text"
+                  placeholder="https://example.com/your-qr-code.png (optional)"
+                  value={paymentSettings.qr_image_url}
+                  onChange={(e) => { setPaymentSettings({ ...paymentSettings, qr_image_url: e.target.value }); setQrPreview(e.target.value); setPaymentSaved(false); }}
+                  style={{ width: '100%', padding: 12, background: '#2a2a2a', border: '1px solid #444', borderRadius: 10, color: '#fff', fontSize: 14, marginBottom: 12, outline: 'none' }}
+                />
+                {qrPreview && (
+                  <div style={{ marginTop: 8, textAlign: 'center' }}>
+                    <img src={qrPreview} alt="QR Preview" style={{ maxWidth: 180, maxHeight: 180, borderRadius: 8, border: '1px solid #333' }}
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Payment Mode */}
+              <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 16, padding: 20 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Accepted Payment Mode</h3>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  {['online', 'cash', 'both'].map((mode) => (
+                    <button key={mode}
+                      onClick={() => { setPaymentSettings({ ...paymentSettings, payment_mode: mode }); setPaymentSaved(false); }}
+                      style={{
+                        flex: 1, padding: '12px 8px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                        background: paymentSettings.payment_mode === mode ? '#2a1111' : '#222',
+                        border: paymentSettings.payment_mode === mode ? '1px solid #d45555' : '1px solid #444',
+                        color: paymentSettings.payment_mode === mode ? '#d45555' : '#999',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {mode === 'online' ? '💳 Online' : mode === 'cash' ? '💵 Cash' : '✅ Both'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <button
+                onClick={savePaymentConfig}
+                style={{
+                  padding: 14, background: '#d45555', border: 'none', borderRadius: 10, color: '#fff',
+                  fontWeight: 700, fontSize: 15, cursor: 'pointer', boxShadow: '0 0 15px rgba(232,85,85,0.15)',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {paymentSaved ? '✅ Saved!' : 'Save Payment Settings'}
+              </button>
+            </div>
             )}
           </div>
         )}

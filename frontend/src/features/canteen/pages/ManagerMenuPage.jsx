@@ -89,24 +89,42 @@ export default function ManagerMenuPage() {
         ) : menuItems.length === 0 ? (
           <div className="canteen-empty"><div className="canteen-empty__icon">📋</div><p className="canteen-empty__text">No menu items yet</p></div>
         ) : (
-          menuItems.map((item, idx) => (
-            <motion.div key={item.id} className="canteen-menu-item" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
-              style={{ opacity: item.is_available ? 1 : 0.5 }}>
-              <div className="canteen-menu-item__info">
-                <div className="canteen-menu-item__name-row">
-                  <span className={`canteen-menu-item__veg-dot ${item.is_veg ? 'canteen-menu-item__veg-dot--veg' : 'canteen-menu-item__veg-dot--nonveg'}`} />
-                  <span className="canteen-menu-item__name">{item.item_name}</span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+            {menuItems.map((item, idx) => (
+              <motion.div key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }}
+                style={{
+                  background: '#1a1a1a', border: '1px solid #333', borderRadius: 16, padding: 16,
+                  display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                  opacity: item.is_available ? 1 : 0.5, transition: 'border-color 0.2s',
+                  minHeight: 200,
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = '#d45555'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = '#333'}
+              >
+                {/* Top: Name + Badge */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: item.is_veg ? '#33aa33' : '#d45555', flexShrink: 0 }} />
+                    <span style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3 }}>{item.item_name}</span>
+                  </div>
+                  {item.description && <p style={{ fontSize: 12, color: '#999', marginBottom: 10, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>}
                 </div>
-                {item.description && <p className="canteen-menu-item__desc">{item.description}</p>}
-                <span className="canteen-menu-item__price">₹{item.price}</span>
-                {!item.is_available && <span style={{ fontSize: 11, color: '#ff6b6b', marginLeft: 8 }}>Unavailable</span>}
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="canteen-btn-small" onClick={() => startEdit(item)} style={{ padding: '6px 10px' }}><Edit2 size={14} /></button>
-                <button className="canteen-btn-small canteen-btn-small--danger" onClick={() => handleDelete(item.id)} style={{ padding: '6px 10px' }}><Trash2 size={14} /></button>
-              </div>
-            </motion.div>
-          ))
+
+                {/* Price + Availability */}
+                <div style={{ marginBottom: 12 }}>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: '#d45555' }}>₹{item.price}</span>
+                  {!item.is_available && <span style={{ fontSize: 11, color: '#ff6b6b', marginLeft: 8, padding: '2px 6px', background: '#331111', borderRadius: 4 }}>Unavailable</span>}
+                  {item.preparation_time_mins && <p style={{ fontSize: 11, color: '#666', marginTop: 4 }}>⏱ {item.preparation_time_mins} min</p>}
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="canteen-btn-small" onClick={() => startEdit(item)} style={{ flex: 1, padding: '8px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Edit2 size={13} /> Edit</button>
+                  <button className="canteen-btn-small canteen-btn-small--danger" onClick={() => handleDelete(item.id)} style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={13} /></button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         )}
       </div>
     </div>

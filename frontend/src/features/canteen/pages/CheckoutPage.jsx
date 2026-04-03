@@ -25,18 +25,29 @@ export default function CheckoutPage() {
   const handlePlaceOrder = async () => {
     setSubmitting(true);
     try {
+      if (!cart[0]?.canteen_id) {
+        alert('Your cart format is outdated. Please clear the cart and add the items again!');
+        setSubmitting(false);
+        return;
+      }
+
       const payload = {
+        canteen_id: cart[0].canteen_id,
         items: cart.map((item) => ({ menu_item: item.id, quantity: item.quantity })),
-        order_type: orderType,
-        delivery_address: orderType === 'delivery' ? address : null,
-        scheduled_time: orderType === 'prebook' ? scheduledTime : null,
-        notes,
+        order_type: orderType === 'prebook' ? 'prebooking' : orderType,
+        delivery_address: orderType === 'delivery' ? address : '',
+        notes: notes || '',
       };
+      if (orderType === 'prebook' && scheduledTime) {
+        payload.scheduled_time = scheduledTime;
+      }
       const order = await placeOrder(payload);
       setOrderData(order);
       setPaymentOpen(true);
     } catch (err) {
-      alert(err.response?.data?.detail || 'Failed to place order');
+      const errData = err.response?.data;
+      const msg = typeof errData === 'object' ? JSON.stringify(errData) : (errData || 'Failed to place order');
+      alert(msg);
     } finally {
       setSubmitting(false);
     }
@@ -66,7 +77,7 @@ export default function CheckoutPage() {
       <div className="canteen-checkout__section">
         <p className="canteen-checkout__section-title">Order Type</p>
         <div className="canteen-filter-tabs">
-          {['pickup', 'delivery', 'prebook'].map((type) => (
+          {['pickup', 'delivery'].map((type) => (
             <button key={type} className={`canteen-filter-tab ${orderType === type ? 'active' : ''}`} onClick={() => setOrderType(type)} style={{ textTransform: 'capitalize' }}>
               {type}
             </button>

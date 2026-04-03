@@ -25,14 +25,16 @@ export default function PaymentModal({ amount, orderId, onSuccess, onClose }) {
     if (!loaded) { alert('Razorpay SDK failed to load'); setLoading(false); return; }
 
     try {
-      const payment = await createPayment({ order_id: orderId, amount });
+      const res = await createPayment({ order_id: orderId, amount });
+      const rzpOrderId = res.payment?.razorpay_order_id || res.razorpay_order?.id;
+      const rzpAmount = res.razorpay_order?.amount || amount * 100;
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: payment.amount,
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || res.razorpay_key_id,
+        amount: rzpAmount,
         currency: 'INR',
         name: 'Upside Dine',
         description: 'Canteen Order Payment',
-        order_id: payment.razorpay_order_id,
+        order_id: rzpOrderId,
         handler: async (response) => {
           try {
             await verifyPayment({

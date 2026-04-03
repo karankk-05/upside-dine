@@ -6,8 +6,10 @@ export const useOrderSocket = (orderId, onStatusUpdate) => {
   useEffect(() => {
     if (!orderId) return;
 
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
     const ws = new WebSocket(
-      `ws://localhost:8000/ws/order/${orderId}/`
+      `${protocol}//${host}/ws/order/${orderId}/`
     );
 
     socketRef.current = ws;

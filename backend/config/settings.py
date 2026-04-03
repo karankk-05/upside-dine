@@ -201,10 +201,10 @@ CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://redis:6379/1')
 CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://redis:6379/2')
 
 if CELERY_BROKER_URL.startswith("rediss://"):
-    CELERY_BROKER_URL += "?ssl_cert_reqs=CERT_NONE" if "?" not in CELERY_BROKER_URL else "&ssl_cert_reqs=CERT_NONE"
+    CELERY_BROKER_USE_SSL = {"ssl_cert_reqs": "CERT_NONE"}
 
 if CELERY_RESULT_BACKEND.startswith("rediss://"):
-    CELERY_RESULT_BACKEND += "?ssl_cert_reqs=CERT_NONE" if "?" not in CELERY_RESULT_BACKEND else "&ssl_cert_reqs=CERT_NONE"
+    CELERY_REDIS_BACKEND_USE_SSL = {"ssl_cert_reqs": "CERT_NONE"}
 
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'

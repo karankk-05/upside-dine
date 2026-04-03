@@ -1,4 +1,18 @@
 services:
+  # Django Backend API (primary node — always-on IITK server)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: upside_dine_backend
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120"
+    env_file:
+      - .env.prod.iitk
+    restart: always
+
   # ML Crowd Monitoring Service
   ml_service:
     build:
@@ -52,5 +66,6 @@ services:
     volumes:
       - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf
     depends_on:
+      - backend
       - channels
     restart: always

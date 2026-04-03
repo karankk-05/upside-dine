@@ -3,7 +3,7 @@
   command = "npm run build"
   publish = "dist"
 
-# Proxy API calls to Render backend (IITK server is campus-only, can't proxy from Netlify)
+# Proxy API calls to Render backend (fallback for off-campus access)
 [[redirects]]
   from = "/api/*"
   to = "https://upside-dine-api.onrender.com/api/:splat"

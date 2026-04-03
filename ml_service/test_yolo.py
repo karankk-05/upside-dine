@@ -6,7 +6,7 @@ frame = cv2.imread(img_path)
 if frame is None:
     print("Could not load image")
 else:
-    model = YOLO("yolov8m.pt")
+    model = YOLO("yolov8n.pt")
     
     # test default
     res1 = model(frame, conf=0.4, verbose=False)

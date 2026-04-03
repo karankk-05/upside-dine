@@ -5,9 +5,6 @@
   "type": "module",
   "description": "Frontend for Upside Dine restaurant reservation platform",
   "dependencies": {
-    "@capacitor/android": "^6.2.1",
-    "@capacitor/cli": "^6.2.1",
-    "@capacitor/core": "^6.2.1",
     "@hookform/resolvers": "^3.3.4",
     "@tanstack/react-query": "^5.17.19",
     "axios": "^1.6.5",

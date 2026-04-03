@@ -19,11 +19,6 @@ export function useCrowdSocket(messId) {
   const maxReconnectAttempts = 10;
 
   const getWsUrl = useCallback(() => {
-    // In production, WebSocket goes to IITK server (Netlify can't proxy WS)
-    const wsBase = import.meta.env.VITE_WS_URL;
-    if (wsBase) {
-      return `${wsBase}/ws/crowd/mess/${messId}/`;
-    }
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
     return `${protocol}//${host}/ws/crowd/mess/${messId}/`;

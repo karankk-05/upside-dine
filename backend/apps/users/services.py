@@ -60,10 +60,7 @@ def send_otp_email(email, otp):
     subject = "Upside Dine OTP Verification"
     message = f"Your OTP for Upside Dine is {otp}. It is valid for 5 minutes."
     from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@upsidedine.local")
-    
-    # Send email asynchronously via Celery using delay() to prevent worker timeouts
-    from apps.users.tasks import send_email_async
-    send_email_async.delay(subject, message, from_email, [email])
+    send_mail(subject, message, from_email, [email], fail_silently=False)
 
     # Increment the email counter (persists for 24 hours)
     key = _email_count_key(email)

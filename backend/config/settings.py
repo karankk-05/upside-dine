@@ -14,7 +14,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-in-production')
 DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,0.0.0.0').split(',')
-ENVIRONMENT = config('ENVIRONMENT', default='development')
 
 
 # Application definition
@@ -197,50 +196,30 @@ SPECTACULAR_SETTINGS = {
 
 
 # Celery Configuration
-CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://redis:6379/0')
-CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://redis:6379/0')
-
-# Upstash requires database 0 only
-import re
-if "upstash.io" in CELERY_BROKER_URL:
-    CELERY_BROKER_URL = re.sub(r':(\d+)/[1-9]\d*', r':\g<1>/0', CELERY_BROKER_URL)
-if "upstash.io" in CELERY_RESULT_BACKEND:
-    CELERY_RESULT_BACKEND = re.sub(r':(\d+)/[1-9]\d*', r':\g<1>/0', CELERY_RESULT_BACKEND)
-
-import ssl
-
-if CELERY_BROKER_URL.startswith("rediss://"):
-    CELERY_BROKER_URL += "&ssl_cert_reqs=CERT_NONE" if "?" in CELERY_BROKER_URL else "?ssl_cert_reqs=CERT_NONE"
-    CELERY_BROKER_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE}
-
-if CELERY_RESULT_BACKEND.startswith("rediss://"):
-    CELERY_RESULT_BACKEND += "&ssl_cert_reqs=CERT_NONE" if "?" in CELERY_RESULT_BACKEND else "?ssl_cert_reqs=CERT_NONE"
-    CELERY_REDIS_BACKEND_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE}
-
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://redis:6379/1')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://redis:6379/2')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
 
-# Redis Cache (django-redis supports rediss:// TLS for Upstash)
+# Redis Cache
 CACHES = {
     "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": config('REDIS_URL', default='redis://redis:6379/0'),
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
+        "KEY_PREFIX": "",
     }
 }
 
 
-# Channels (WebSocket) — URL-based config for Upstash TLS support
+# Channels (WebSocket)
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [config('REDIS_URL', default='redis://redis:6379/0')],
+            "hosts": [(config('REDIS_HOST', default='redis'), config('REDIS_PORT', default=6379, cast=int))],
         },
     },
 }
@@ -251,11 +230,3 @@ RAZORPAY_KEY_ID = config("RAZORPAY_KEY_ID", default="")
 RAZORPAY_KEY_SECRET = config("RAZORPAY_KEY_SECRET", default="")
 RAZORPAY_WEBHOOK_SECRET = config("RAZORPAY_WEBHOOK_SECRET", default="")
 RAZORPAY_BASE_URL = config("RAZORPAY_BASE_URL", default="https://api.razorpay.com/v1")
-
-
-# Production Security
-if ENVIRONMENT == 'production':
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True

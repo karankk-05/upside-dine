@@ -48,7 +48,7 @@ services:
     image: nginx:alpine
     container_name: upside_dine_lb
     ports:
-      - "80:80"
+      - "8080:80"
     volumes:
       - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf
     depends_on:

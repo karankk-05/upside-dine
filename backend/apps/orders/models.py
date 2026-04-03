@@ -48,6 +48,11 @@ class CanteenOrder(models.Model):
     pickup_qr_code = models.CharField(max_length=80, blank=True)
     pickup_otp = models.CharField(max_length=6, blank=True)
     cancellation_reason = models.CharField(max_length=250, blank=True)
+    delivery_person = models.ForeignKey(
+        "users.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="delivery_orders"
+    )
+    delivery_accepted_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -14,13 +14,14 @@ from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 
 from .filters import CanteenFilter, CanteenMenuItemFilter
-from .models import Canteen, CanteenMenuCategory, CanteenMenuItem
+from .models import Canteen, CanteenMenuCategory, CanteenMenuItem, CanteenPaymentConfig
 from .serializers import (
     CanteenDetailSerializer,
     CanteenListSerializer,
     CanteenManagerStatsSerializer,
     CanteenMenuCategorySerializer,
     CanteenMenuItemSerializer,
+    CanteenPaymentConfigSerializer,
     CanteenSearchResultSerializer,
     CategoryWithItemsSerializer,
 )
@@ -244,3 +245,25 @@ class CanteenManagerStatsView(GenericAPIView):
                 }
             )
         return Response(self.get_serializer(stats, many=True).data)
+
+
+class CanteenPaymentConfigView(GenericAPIView):
+    permission_classes = [IsCanteenManagerOrAdmin]
+    serializer_class = CanteenPaymentConfigSerializer
+
+    def get(self, request):
+        canteen = _get_manager_canteens(request.user).first()
+        if not canteen:
+            return Response({"detail": "No canteen assigned."}, status=status.HTTP_404_NOT_FOUND)
+        config, _ = CanteenPaymentConfig.objects.get_or_create(canteen=canteen)
+        return Response(self.get_serializer(config).data)
+
+    def put(self, request):
+        canteen = _get_manager_canteens(request.user).first()
+        if not canteen:
+            return Response({"detail": "No canteen assigned."}, status=status.HTTP_404_NOT_FOUND)
+        config, _ = CanteenPaymentConfig.objects.get_or_create(canteen=canteen)
+        serializer = self.get_serializer(config, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)

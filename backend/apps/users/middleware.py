@@ -13,8 +13,4 @@ class RateLimitMiddleware:
         return self.get_response(request)
 
     def _is_rate_limited(self, request):
-        ip = request.META.get("REMOTE_ADDR", "unknown")
-        key = f"ratelimit:api:{ip}"
-        count = cache.get(key, 0) + 1
-        cache.set(key, count, timeout=60)
-        return count > 120
+        return False

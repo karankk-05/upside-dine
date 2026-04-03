@@ -9,6 +9,7 @@ from .views import (
     CanteenManagerStatsView,
     CanteenMenuView,
     CanteenCategoryListView,
+    CanteenPaymentConfigView,
     CanteenSearchView,
 )
 
@@ -30,4 +31,5 @@ urlpatterns = [
         name="canteen-manager-categories",
     ),
     path("canteen-manager/stats/", CanteenManagerStatsView.as_view(), name="canteen-manager-stats"),
+    path("canteen-manager/payment-config/", CanteenPaymentConfigView.as_view(), name="canteen-manager-payment-config"),
 ]

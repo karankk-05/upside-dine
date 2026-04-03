@@ -87,3 +87,23 @@ class CanteenMenuItem(models.Model):
 
     def __str__(self):
         return f"{self.item_name} ({self.canteen.name})"
+
+
+class CanteenPaymentConfig(models.Model):
+    PAYMENT_MODE_ONLINE = "online"
+    PAYMENT_MODE_CASH = "cash"
+    PAYMENT_MODE_BOTH = "both"
+    PAYMENT_MODE_CHOICES = [
+        (PAYMENT_MODE_ONLINE, "Online"),
+        (PAYMENT_MODE_CASH, "Cash"),
+        (PAYMENT_MODE_BOTH, "Both"),
+    ]
+
+    canteen = models.OneToOneField(Canteen, on_delete=models.CASCADE, related_name="payment_config")
+    upi_id = models.CharField(max_length=120, blank=True)
+    qr_image_url = models.CharField(max_length=500, blank=True)
+    payment_mode = models.CharField(max_length=20, choices=PAYMENT_MODE_CHOICES, default=PAYMENT_MODE_BOTH)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Payment config for {self.canteen.name}"

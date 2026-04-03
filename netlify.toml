@@ -3,11 +3,10 @@
   command = "npm run build"
   publish = "dist"
 
-# Proxy API calls through IITK Nginx Load Balancer
-# The LB round-robins to both Render instances
+# Proxy API calls to Render backend (IITK server is campus-only, can't proxy from Netlify)
 [[redirects]]
   from = "/api/*"
-  to = "http://172.27.16.252/api/:splat"
+  to = "https://upside-dine-api.onrender.com/api/:splat"
   status = 200
   force = true
 

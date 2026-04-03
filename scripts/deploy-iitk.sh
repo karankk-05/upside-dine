@@ -18,7 +18,7 @@ fi
 echo "✅ Docker found: $(docker --version)"
 
 # 2. Clone or pull the repo
-REPO_DIR="$HOME/upside_dine"
+REPO_DIR="$HOME/upside-dine"
 if [ -d "$REPO_DIR" ]; then
     echo "📦 Pulling latest changes..."
     cd "$REPO_DIR"

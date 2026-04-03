@@ -179,7 +179,7 @@ class CreateDeliveryPersonSerializer(serializers.Serializer):
     def create(self, validated_data):
         import secrets
         import string
-        from django.core.mail import send_mail
+        from apps.users.tasks import send_email_async
         from django.conf import settings
 
         # Generate secure temporary password
@@ -218,7 +218,7 @@ class CreateDeliveryPersonSerializer(serializers.Serializer):
 
         # Send email with credentials
         try:
-            send_mail(
+            send_email_async.delay(
                 subject='Your Delivery Personnel Account - Upside Dine',
                 message=f'''Hello {validated_data['full_name']},
 
@@ -235,8 +235,7 @@ Login at: {settings.CORS_ALLOWED_ORIGINS.split(',')[0] if settings.CORS_ALLOWED_
 Best regards,
 Upside Dine Team''',
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[validated_data['email']],
-                fail_silently=False,
+                recipient_list=[validated_data['email']]
             )
         except Exception as e:
             # Log error but don't fail the creation
@@ -287,7 +286,7 @@ class CreateManagerSerializer(serializers.Serializer):
     def create(self, validated_data):
         import secrets
         import string
-        from django.core.mail import send_mail
+        from apps.users.tasks import send_email_async
         from django.conf import settings
         from apps.mess.models import MessStaffAssignment
 
@@ -350,12 +349,11 @@ Best regards,
 Upside Dine Team'''
             
             from_email = settings.DEFAULT_FROM_EMAIL
-            send_mail(
+            send_email_async.delay(
                 subject=subject,
                 message=message,
                 from_email=from_email,
-                recipient_list=[validated_data['email']],
-                fail_silently=False,
+                recipient_list=[validated_data['email']]
             )
         except Exception as e:
             # Log error but don't fail the creation
@@ -448,7 +446,7 @@ class CreateMessWorkerSerializer(serializers.Serializer):
     def create(self, validated_data):
         import secrets
         from django.conf import settings
-        from django.core.mail import send_mail
+        from apps.users.tasks import send_email_async
 
         # Get the mess manager's mess assignment
         mess_manager = self.context['mess_manager']
@@ -518,12 +516,11 @@ IMPORTANT: Please change your password immediately after your first login.
 Best regards,
 Upside Dine Team'''
 
-            send_mail(
+            send_email_async.delay(
                 subject=subject,
                 message=message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[validated_data['email']],
-                fail_silently=False,
+                recipient_list=[validated_data['email']]
             )
         except Exception as e:
             print(f"Failed to send email: {e}")

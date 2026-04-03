@@ -6,11 +6,18 @@ export const useOrderSocket = (orderId, onStatusUpdate) => {
   useEffect(() => {
     if (!orderId) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const ws = new WebSocket(
-      `${protocol}//${host}/ws/order/${orderId}/`
-    );
+    // In production, WebSocket goes to IITK server (Netlify can't proxy WS)
+    // Set VITE_WS_URL in Netlify env vars to ws://172.27.16.252
+    const wsBase = import.meta.env.VITE_WS_URL;
+    let wsUrl;
+    if (wsBase) {
+      wsUrl = `${wsBase}/ws/order/${orderId}/`;
+    } else {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      wsUrl = `${protocol}//${host}/ws/order/${orderId}/`;
+    }
+    const ws = new WebSocket(wsUrl);
 
     socketRef.current = ws;
 

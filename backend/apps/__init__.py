@@ -1,0 +1,1 @@
+"""App namespace package for local Django apps."""

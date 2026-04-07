@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Upside Dine</string>
+    <string name="title_activity_main">Upside Dine</string>
+    <string name="package_name">com.upsidedine.app</string>
+    <string name="custom_url_scheme">com.upsidedine.app</string>
+</resources>

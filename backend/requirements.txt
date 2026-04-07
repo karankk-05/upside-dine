@@ -1,0 +1,77 @@
+# Core Django packages
+Django==5.0.1
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+django-filter==23.5
+
+# Database
+psycopg2-binary==2.9.9
+dj-database-url==2.1.0
+
+# Authentication & Security
+djangorestframework-simplejwt==5.3.1
+django-allauth==0.60.1
+python-decouple==3.8
+
+# WebSocket support
+channels==4.0.0
+channels-redis==4.2.0
+daphne==4.1.0
+
+# Task Queue
+celery==5.3.6
+redis==5.0.1
+django-celery-beat==2.6.0
+django-celery-results==2.5.1
+
+# API Documentation
+drf-spectacular==0.27.1
+
+# Image handling
+Pillow==10.2.0
+qrcode==7.4.2
+
+# Email
+django-anymail==10.2
+
+# Utilities
+python-dotenv==1.0.0
+pytz==2024.1
+python-dateutil==2.8.2
+
+# HTTP requests
+requests==2.31.0
+httpx==0.26.0
+
+# Data validation
+pydantic==2.5.3
+
+# FastAPI for ML service
+fastapi==0.109.1
+uvicorn[standard]==0.27.0
+scikit-learn==1.4.0
+numpy==1.26.3
+pandas==2.2.0
+
+# Testing
+pytest==7.4.4
+pytest-django==4.7.0
+pytest-cov==4.1.0
+factory-boy==3.3.0
+faker==22.6.0
+
+# Code Quality
+flake8==7.0.0
+black==24.1.1
+isort==5.13.2
+mypy==1.8.0
+
+# Production server
+gunicorn==21.2.0
+whitenoise==6.6.0
+
+# Monitoring & Logging
+sentry-sdk==1.40.0
+
+# Environment
+environs==11.0.0

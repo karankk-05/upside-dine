@@ -1,0 +1,9 @@
+{
+  "appId": "com.upsidedine.app",
+  "appName": "Upside Dine",
+  "webDir": "dist",
+  "server": {
+    "url": "https://upside-dine.netlify.app",
+    "cleartext": true
+  }
+}

@@ -6,6 +6,7 @@ import {
   BedDouble,
   Building2,
   CheckCircle2,
+  History,
   LogOut,
   Mail,
   MapPin,
@@ -18,9 +19,11 @@ import {
   Users,
   UtensilsCrossed,
   Wallet,
+  XCircle,
 } from 'lucide-react';
 import api from '../lib/api';
 import PullToRefresh from '../components/PullToRefresh';
+import { useScanHistory } from '../features/mess/hooks/useScanHistory';
 import { getDefaultRouteForRole, logoutUser, setAuthSession } from '../lib/auth';
 import { CURRENT_USER_QUERY_KEY, PUBLIC_HALLS_QUERY_KEY, useCurrentUser, usePublicHalls } from '../hooks/useCurrentUser';
 import {
@@ -138,6 +141,7 @@ const ProfilePage = () => {
   const { data: user, isLoading: isUserLoading, error: userLoadError } = useCurrentUser();
   const { data: availableHalls = [] } = usePublicHalls();
   const isStudent = user?.role === 'student';
+  const isMessWorker = user?.role === 'mess_worker';
   const { data: messAccount = null, isLoading: isMessAccountLoading } = useQuery({
     queryKey: MESS_ACCOUNT_QUERY_KEY,
     queryFn: async () => {
@@ -145,6 +149,14 @@ const ProfilePage = () => {
       return data;
     },
     enabled: isStudent,
+    retry: false,
+  });
+  const {
+    data: workerScans = [],
+    isLoading: isWorkerScansLoading,
+    isError: isWorkerScansError,
+  } = useScanHistory({
+    enabled: isMessWorker,
     retry: false,
   });
 
@@ -158,6 +170,11 @@ const ProfilePage = () => {
 
     if (nextRole === 'student') {
       refreshTasks.push(queryClient.invalidateQueries({ queryKey: MESS_ACCOUNT_QUERY_KEY }));
+    }
+    if (nextRole === 'mess_worker') {
+      refreshTasks.push(
+        queryClient.invalidateQueries({ queryKey: ['mess', 'worker', 'scan-history'] })
+      );
     }
 
     await Promise.all(refreshTasks);
@@ -189,6 +206,28 @@ const ProfilePage = () => {
     ? user.profile.active_mess_assignments
     : [];
   const primaryMessAssignment = activeMessAssignments[0] || null;
+  const workerScanSummary = useMemo(() => {
+    const scans = Array.isArray(workerScans) ? workerScans : [];
+    const getScanTimestamp = (scan) => {
+      const rawValue = scan?.attempted_at || scan?.created_at;
+      const timestamp = rawValue ? new Date(rawValue).getTime() : Number.NaN;
+      return Number.isFinite(timestamp) ? timestamp : 0;
+    };
+    const latestByStatus = (status) =>
+      scans
+        .filter((scan) => scan?.scan_status === status)
+        .sort((left, right) => getScanTimestamp(right) - getScanTimestamp(left))[0] || null;
+    const successful = scans.filter((scan) => scan?.scan_status !== 'failed').length;
+    const failed = scans.filter((scan) => scan?.scan_status === 'failed').length;
+
+    return {
+      total: scans.length,
+      successful,
+      failed,
+      latestSuccess: latestByStatus('success'),
+      latestFailure: latestByStatus('failed'),
+    };
+  }, [workerScans]);
   const readOnlyMeta = useMemo(
     () => [
       { label: 'Email', value: user?.email || 'Not available', icon: <Mail size={16} /> },
@@ -235,13 +274,13 @@ const ProfilePage = () => {
       ];
     }
 
-    if (user?.role === 'mess_manager' || user?.role === 'mess_worker') {
+    if (user?.role === 'mess_manager') {
       return [
         {
           key: 'access',
           icon: <ShieldCheck size={16} />,
           label: 'Access type',
-          value: user.role === 'mess_manager' ? 'Mess management' : 'Mess operations',
+          value: 'Mess management',
           note: primaryMessAssignment
             ? `Assigned as ${formatAssignmentRole(primaryMessAssignment.assignment_role)}`
             : 'Your role permissions are active on supported mess screens.',
@@ -254,6 +293,69 @@ const ProfilePage = () => {
           note: primaryMessAssignment?.hall_name
             ? `Hall: ${primaryMessAssignment.hall_name}`
             : 'Connect with an admin manager to link a mess.',
+        },
+      ];
+    }
+
+    if (user?.role === 'mess_worker') {
+      const totalAttemptsLabel = workerScanSummary.total
+        ? `${workerScanSummary.total} total scan attempt${workerScanSummary.total === 1 ? '' : 's'} recorded.`
+        : 'No scans recorded yet.';
+      const lastFailureAt = workerScanSummary.latestFailure?.attempted_at || workerScanSummary.latestFailure?.created_at;
+      const lastSuccessAt = workerScanSummary.latestSuccess?.attempted_at || workerScanSummary.latestSuccess?.created_at;
+
+      return [
+        {
+          key: 'access',
+          icon: <ShieldCheck size={16} />,
+          label: 'Access type',
+          value: 'Mess operations',
+          note: primaryMessAssignment
+            ? `Assigned as ${formatAssignmentRole(primaryMessAssignment.assignment_role)}`
+            : 'Your role permissions are active on supported mess screens.',
+        },
+        {
+          key: 'assignment',
+          icon: <UtensilsCrossed size={16} />,
+          label: 'Assigned mess',
+          value: primaryMessAssignment?.mess_name || 'Not assigned',
+          note: primaryMessAssignment?.hall_name
+            ? `Hall: ${primaryMessAssignment.hall_name}`
+            : 'Connect with an admin manager to link a mess.',
+        },
+        {
+          key: 'successful-scans',
+          icon: <History size={16} />,
+          label: 'Successful scans',
+          value: isWorkerScansLoading
+            ? 'Loading...'
+            : isWorkerScansError
+            ? 'Unavailable'
+            : String(workerScanSummary.successful),
+          note: isWorkerScansLoading
+            ? 'Fetching worker scan stats.'
+            : isWorkerScansError
+            ? 'Worker scan stats are currently unavailable.'
+            : lastSuccessAt
+            ? `Last valid scan ${formatDateTime(lastSuccessAt)}`
+            : totalAttemptsLabel,
+        },
+        {
+          key: 'failed-scans',
+          icon: <XCircle size={16} />,
+          label: 'Failed scans',
+          value: isWorkerScansLoading
+            ? 'Loading...'
+            : isWorkerScansError
+            ? 'Unavailable'
+            : String(workerScanSummary.failed),
+          note: isWorkerScansLoading
+            ? 'Fetching worker scan stats.'
+            : isWorkerScansError
+            ? 'Worker scan stats are currently unavailable.'
+            : lastFailureAt
+            ? `Last failed scan ${formatDateTime(lastFailureAt)}`
+            : totalAttemptsLabel,
         },
       ];
     }
@@ -324,7 +426,17 @@ const ProfilePage = () => {
     }
 
     return [];
-  }, [formData.hostel_name, formData.room_number, isStudent, messAccount, primaryMessAssignment, user]);
+  }, [
+    formData.hostel_name,
+    formData.room_number,
+    isStudent,
+    isWorkerScansError,
+    isWorkerScansLoading,
+    messAccount,
+    primaryMessAssignment,
+    user,
+    workerScanSummary,
+  ]);
 
   const initialForm = useMemo(() => toProfileForm(user), [user]);
   const hasChanges = useMemo(

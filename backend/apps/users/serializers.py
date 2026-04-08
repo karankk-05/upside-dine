@@ -138,6 +138,64 @@ class UserSerializer(serializers.ModelSerializer):
         return None
 
 
+class UserProfileUpdateSerializer(serializers.Serializer):
+    phone = serializers.CharField(required=False, allow_blank=True, max_length=20)
+    full_name = serializers.CharField(required=False, max_length=100)
+    hostel_name = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    room_number = serializers.CharField(required=False, allow_blank=True, max_length=20)
+
+    def validate(self, attrs):
+        allowed_fields = set(self.fields.keys())
+        unknown_fields = set(self.initial_data.keys()) - allowed_fields
+        if unknown_fields:
+            raise serializers.ValidationError(
+                {field: ["This field cannot be updated."] for field in sorted(unknown_fields)}
+            )
+
+        if not attrs:
+            raise serializers.ValidationError("Provide at least one field to update.")
+
+        user = self.instance
+        student_only_fields = {"hostel_name", "room_number"}
+
+        if hasattr(user, "student_profile"):
+            return attrs
+
+        unsupported_fields = [field for field in student_only_fields if field in attrs]
+        if unsupported_fields:
+            raise serializers.ValidationError(
+                {field: ["This field is only available for student accounts."] for field in unsupported_fields}
+            )
+
+        return attrs
+
+    def update(self, instance, validated_data):
+        user_fields = []
+        phone = validated_data.get("phone")
+        if phone is not None:
+            instance.phone = phone
+            user_fields.append("phone")
+
+        if user_fields:
+            instance.save(update_fields=user_fields)
+
+        if hasattr(instance, "student_profile"):
+            profile = instance.student_profile
+            profile_fields = []
+            for field in ("full_name", "hostel_name", "room_number"):
+                if field in validated_data:
+                    setattr(profile, field, validated_data[field])
+                    profile_fields.append(field)
+            if profile_fields:
+                profile.save(update_fields=profile_fields)
+        elif hasattr(instance, "staff_profile") and "full_name" in validated_data:
+            profile = instance.staff_profile
+            profile.full_name = validated_data["full_name"]
+            profile.save(update_fields=["full_name"])
+
+        return instance
+
+
 class MessAccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = MessAccount
@@ -533,4 +591,3 @@ Upside Dine Team'''
             'temp_password': temp_password,
             'employee_code': employee_code,
         }
-

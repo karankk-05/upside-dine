@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { getDefaultRouteForRole, setAuthSession } from '../../../lib/auth';
 
 const EyeIcon = ({ isVisible }) => (
   <svg
@@ -60,33 +61,12 @@ const LoginForm = ({ selectedRole }) => {
       const rawRole = response.data.user?.role || selectedRole;
       const actualRole = typeof rawRole === 'string' ? rawRole.toLowerCase().replace(/\s+/g, '_') : 'student';
 
-      console.log('--- DEBUG LOGIN ROUTING ---');
-      console.log('1. Backend User Response:', response.data.user);
-      console.log('2. Selected Role (UI):', selectedRole);
-      console.log('3. Raw Role Evaluated:', rawRole);
-      console.log('4. Normalized Actual Role:', actualRole);
-
-      // Store tokens
-      localStorage.setItem('access_token', response.data.access);
-      localStorage.setItem('refresh_token', response.data.refresh);
-      localStorage.setItem('user_role', actualRole);
-
-      // Navigate based on actual role
-      const roleRoutes = {
-        student: '/dashboard',
-        mess_manager: '/manager/mess',
-        mess_worker: '/worker/scan',
-        canteen_manager: '/manager/canteen',
-        delivery_person: '/delivery',
-        admin_manager: '/admin/managers',
-        superadmin: '/admin',
-      };
-
-      const finalRoute = roleRoutes[actualRole] || '/dashboard';
-      console.log('5. Final Computed Route:', finalRoute);
-      console.log('---------------------------');
-
-      navigate(finalRoute);
+      setAuthSession({
+        access: response.data.access,
+        refresh: response.data.refresh,
+        role: actualRole,
+      });
+      navigate(getDefaultRouteForRole(actualRole));
     } catch (err) {
       setError(
         err.response?.data?.message ||

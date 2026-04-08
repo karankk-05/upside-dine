@@ -59,7 +59,20 @@ class CameraFeedListCreateView(ListCreateAPIView):
     Only superadmin, mess managers, and canteen managers can access."""
     permission_classes = [FeedManagePermission]
     serializer_class = CameraFeedSerializer
-    queryset = CameraFeed.objects.all()
+    queryset = CameraFeed.objects.order_by("mess_id", "created_at", "id")
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        feeds = list(self.get_queryset())
+        feed_number_map = {}
+        counts_by_mess = {}
+
+        for feed in feeds:
+            counts_by_mess[feed.mess_id] = counts_by_mess.get(feed.mess_id, 0) + 1
+            feed_number_map[feed.id] = counts_by_mess[feed.mess_id]
+
+        context["feed_number_map"] = feed_number_map
+        return context
 
     def perform_create(self, serializer):
         serializer.save()
@@ -71,7 +84,7 @@ class CameraFeedDetailView(RetrieveUpdateDestroyAPIView):
     Only superadmin, mess managers, and canteen managers can access."""
     permission_classes = [FeedManagePermission]
     serializer_class = CameraFeedSerializer
-    queryset = CameraFeed.objects.all()
+    queryset = CameraFeed.objects.order_by("mess_id", "created_at", "id")
 
     def perform_update(self, serializer):
         serializer.save()

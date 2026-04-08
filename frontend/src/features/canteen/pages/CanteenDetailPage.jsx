@@ -13,6 +13,7 @@ export default function CanteenDetailPage() {
   const navigate = useNavigate();
   const [orderType, setOrderType] = useState('pickup');
   const [cartOpen, setCartOpen] = useState(false);
+  const [dietPref, setDietPref] = useState('all');
   const { data: canteen, isLoading: loadingCanteen } = useCanteenDetail(id);
   const { data: menuItems = [], isLoading: loadingMenu } = useCanteenMenu(id);
   const { cart, getTotal, getItemCount } = useCartStore();
@@ -54,13 +55,32 @@ export default function CanteenDetailPage() {
 
       {/* Menu */}
       <div className="canteen-menu">
-        <h3 className="canteen-menu-section-title">Menu Items</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h3 className="canteen-menu-section-title" style={{ marginBottom: 0 }}>Menu Items</h3>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[{ value: 'all', label: 'All' }, { value: 'veg', label: '🟢 Veg' }, { value: 'non-veg', label: '🔴 Non-Veg' }].map((d) => (
+              <button key={d.value} 
+                onClick={() => setDietPref(d.value)}
+                style={{
+                  padding: '4px 12px', fontSize: 12, borderRadius: 16, cursor: 'pointer',
+                  background: dietPref === d.value ? '#d55555' : '#1a1a1a', 
+                  color: '#fff', border: '1px solid #333'
+                }}>
+                {d.label}
+              </button>
+            ))}
+          </div>
+        </div>
         {loadingMenu ? (
           <div className="canteen-loading"><div className="canteen-loading-spinner" /></div>
         ) : menuItems.length === 0 ? (
           <div className="canteen-empty"><div className="canteen-empty__icon">📋</div><p className="canteen-empty__text">No menu items available</p></div>
         ) : (
-          menuItems.map((item, i) => (
+          menuItems.filter(item => {
+            if (dietPref === 'veg') return item.is_veg;
+            if (dietPref === 'non-veg') return !item.is_veg;
+            return true;
+          }).map((item, i) => (
             <MenuItemCard key={item.id} item={item} canteenId={Number(id)} index={i} />
           ))
         )}

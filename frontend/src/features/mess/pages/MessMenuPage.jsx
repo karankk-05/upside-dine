@@ -31,6 +31,7 @@ const MessMenuPage = () => {
   const [mealType, setMealType] = useState('');
   const [dayOfWeek, setDayOfWeek] = useState('');
   const [bookingItem, setBookingItem] = useState(null);
+  const [dietPref, setDietPref] = useState('all');
 
   const filters = {};
   if (mealType) filters.meal_type = mealType;
@@ -43,7 +44,13 @@ const MessMenuPage = () => {
     navigate(`/mess/bookings/${result.id}`);
   };
 
-  const groupedItems = (menuItems || []).reduce((acc, item) => {
+  const displayItems = (menuItems || []).filter(item => {
+    if (dietPref === 'veg') return item.is_veg;
+    if (dietPref === 'non-veg') return !item.is_veg;
+    return true;
+  });
+
+  const groupedItems = displayItems.reduce((acc, item) => {
     if (!acc[item.day_of_week]) acc[item.day_of_week] = [];
     acc[item.day_of_week].push(item);
     return acc;
@@ -70,6 +77,14 @@ const MessMenuPage = () => {
         <div className="mess-tabs" style={{ marginBottom: 16 }}>
           {DAYS.map((d) => (
             <button key={d.value} className={`mess-tab ${dayOfWeek === d.value ? 'active' : ''}`} onClick={() => setDayOfWeek(d.value)}>
+              {d.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mess-tabs" style={{ marginBottom: 16 }}>
+          {[{ value: 'all', label: 'All' }, { value: 'veg', label: '🟢 Veg' }, { value: 'non-veg', label: '🔴 Non-Veg' }].map((d) => (
+            <button key={d.value} className={`mess-tab ${dietPref === d.value ? 'active' : ''}`} onClick={() => setDietPref(d.value)}>
               {d.label}
             </button>
           ))}
@@ -109,9 +124,14 @@ const MessMenuPage = () => {
               );
             })}
           </div>
+        ) : displayItems.length === 0 ? (
+          <div className="mess-empty">
+            <div className="mess-empty-icon">🍽️</div>
+            <div>No matching dietary items found.</div>
+          </div>
         ) : (
           <div className="mess-menu-grid">
-            {(menuItems || []).map((item) => (
+            {displayItems.map((item) => (
               <MenuItemCard key={item.id} item={item} onBook={setBookingItem} />
             ))}
           </div>

@@ -56,7 +56,15 @@ const StudentDashboard = () => {
   const filteredCanteens = canteens.filter(
     (c) =>
       c.name.toLowerCase().includes(q) || c.location?.toLowerCase().includes(q)
-  );
+  ).sort((a, b) => {
+    const aName = a.name.toLowerCase();
+    const bName = b.name.toLowerCase();
+    const isAHall = aName.includes('hall') || aName.includes('gh1') || aName.includes('ght2');
+    const isBHall = bName.includes('hall') || bName.includes('gh1') || bName.includes('ght2');
+    if (isAHall && !isBHall) return 1;
+    if (!isAHall && isBHall) return -1;
+    return aName.localeCompare(bName);
+  });
   const showMess =
     mess && (mess.name?.toLowerCase().includes(q) || mess.hall_name?.toLowerCase().includes(q) || !q);
 

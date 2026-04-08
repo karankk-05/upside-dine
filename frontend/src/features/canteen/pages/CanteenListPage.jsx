@@ -22,7 +22,15 @@ export default function CanteenListPage() {
 
   const filtered = canteens.filter(
     (c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.location?.toLowerCase().includes(search.toLowerCase())
-  );
+  ).sort((a, b) => {
+    const aName = a.name.toLowerCase();
+    const bName = b.name.toLowerCase();
+    const isAHall = aName.includes('hall') || aName.includes('gh1') || aName.includes('ght2');
+    const isBHall = bName.includes('hall') || bName.includes('gh1') || bName.includes('ght2');
+    if (isAHall && !isBHall) return 1;
+    if (!isAHall && isBHall) return -1;
+    return aName.localeCompare(bName);
+  });
 
   return (
     <div className="canteen-page">

@@ -142,6 +142,7 @@ dist
 .env.development.local
 .env.test.local
 .env.production.local
+.env.prod.iitk
 
 # Logs
 logs
@@ -177,3 +178,9 @@ htmlcov/
 
 # Local development
 .local/
+
+# Sensitive Instructions
+server_instructions.md
+
+# Utility Scripts
+backend/scripts/

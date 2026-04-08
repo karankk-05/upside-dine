@@ -509,33 +509,52 @@ class AdminMessManagementView(GenericAPIView):
             "id": mess.id,
             "name": mess.name,
             "hall_name": mess.hall_name,
+            "location": mess.location,
         }, status=status.HTTP_201_CREATED)
 
 
 class AdminMessDetailView(GenericAPIView):
-    """View to toggle status or delete a mess"""
+    """View to update, toggle status, or delete a mess"""
     permission_classes = [IsAuthenticated]
 
-    def patch(self, request, mess_id):
+    def put(self, request, pk):
         if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
             return Response({"detail": "Only admin managers can access this."}, status=status.HTTP_403_FORBIDDEN)
-        
-        from apps.mess.models import Mess
+
+        from .serializers import UpdateMessSerializer, MessListSerializer
         try:
-            mess = Mess.objects.get(id=mess_id)
+            mess = Mess.objects.get(id=pk)
+        except Mess.DoesNotExist:
+            return Response({"detail": "Mess not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = UpdateMessSerializer(mess, data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        updated_mess = serializer.save()
+        return Response({
+            "detail": f"Mess updated successfully: {updated_mess.name}",
+            **MessListSerializer(updated_mess).data,
+        })
+
+    def patch(self, request, pk):
+        if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
+            return Response({"detail": "Only admin managers can access this."}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            mess = Mess.objects.get(id=pk)
             mess.is_active = not mess.is_active
             mess.save()
             return Response({"detail": f"Mess {'activated' if mess.is_active else 'frozen'} successfully.", "is_active": mess.is_active})
         except Mess.DoesNotExist:
             return Response({"detail": "Mess not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    def delete(self, request, mess_id):
+    def delete(self, request, pk):
         if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
             return Response({"detail": "Only admin managers can access this."}, status=status.HTTP_403_FORBIDDEN)
-        
-        from apps.mess.models import Mess
+
         try:
-            mess = Mess.objects.get(id=mess_id)
+            mess = Mess.objects.get(id=pk)
             mess_name = mess.name
             mess.delete()
             return Response({"detail": f"Mess {mess_name} deleted successfully."})

@@ -12,6 +12,7 @@ import {
   sanitizeRollNumber,
   sanitizeRoomNumber,
 } from '../../../lib/formValidation';
+import { compareNaturalText } from '../../../lib/naturalSort';
 
 const EyeIcon = ({ isVisible }) => (
   <svg
@@ -38,6 +39,38 @@ const EyeIcon = ({ isVisible }) => (
   </svg>
 );
 
+const REGISTRATION_FIELD_NAMES = [
+  'full_name',
+  'email',
+  'phone',
+  'roll_number',
+  'hostel_name',
+  'room_number',
+  'employee_code',
+  'password',
+];
+
+const getApiErrorMessage = (value) => {
+  if (Array.isArray(value)) {
+    return getApiErrorMessage(value[0]);
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (value && typeof value === 'object') {
+    for (const nestedValue of Object.values(value)) {
+      const nestedMessage = getApiErrorMessage(nestedValue);
+      if (nestedMessage) {
+        return nestedMessage;
+      }
+    }
+  }
+
+  return '';
+};
+
 const SignupForm = ({ selectedRole }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -59,6 +92,7 @@ const SignupForm = ({ selectedRole }) => {
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [serverFieldErrors, setServerFieldErrors] = useState({});
   const [availableHalls, setAvailableHalls] = useState([]);
   const [blurredFields, setBlurredFields] = useState({});
   const step = searchParams.get('step') === 'verify' ? 2 : 1;
@@ -70,7 +104,8 @@ const SignupForm = ({ selectedRole }) => {
         try {
           const response = await axios.get('/api/public/halls/');
           // response.data is an array of strings e.g. ["Hall 1", "Hall 2"]
-          setAvailableHalls(response.data);
+          const halls = Array.isArray(response.data) ? response.data : [];
+          setAvailableHalls(halls.sort(compareNaturalText));
         } catch (err) {
           console.error("Halls currently not available", err);
         }
@@ -102,6 +137,14 @@ const SignupForm = ({ selectedRole }) => {
       [name]: nextValueByField[name] ?? value,
     });
     setError('');
+    setServerFieldErrors((current) => {
+      if (!current[name]) {
+        return current;
+      }
+      const nextErrors = { ...current };
+      delete nextErrors[name];
+      return nextErrors;
+    });
   };
 
   const handleBlur = (e) => {
@@ -109,51 +152,61 @@ const SignupForm = ({ selectedRole }) => {
     setBlurredFields((current) => ({ ...current, [name]: true }));
   };
 
-  const fullNameError = getInlineValidationMessage('personName', formData.full_name, {
+  const fullNameClientError = getInlineValidationMessage('personName', formData.full_name, {
     required: true,
   });
-  const emailError = getInlineValidationMessage('email', formData.email, { required: true });
-  const phoneError = getInlineValidationMessage('phone', formData.phone, { required: true });
-  const rollNumberError =
+  const emailClientError = getInlineValidationMessage('email', formData.email, { required: true });
+  const phoneClientError = getInlineValidationMessage('phone', formData.phone, { required: true });
+  const rollNumberClientError =
     selectedRole === 'student'
       ? getInlineValidationMessage('rollNumber', formData.roll_number, { required: true })
       : '';
-  const passwordError = getInlineValidationMessage('password', formData.password, {
+  const passwordClientError = getInlineValidationMessage('password', formData.password, {
     required: true,
   });
-  const confirmPasswordError = !formData.confirmPassword
+  const confirmPasswordClientError = !formData.confirmPassword
     ? 'This field is required.'
     : formData.password === formData.confirmPassword
     ? ''
     : 'Passwords do not match.';
   const otpError = getInlineValidationMessage('otp', otp, { required: true });
 
+  const fullNameError = serverFieldErrors.full_name || fullNameClientError;
+  const emailError = serverFieldErrors.email || emailClientError;
+  const phoneError = serverFieldErrors.phone || phoneClientError;
+  const rollNumberError = serverFieldErrors.roll_number || rollNumberClientError;
+  const hostelNameError = serverFieldErrors.hostel_name || '';
+  const roomNumberError = serverFieldErrors.room_number || '';
+  const passwordError = serverFieldErrors.password || passwordClientError;
+  const confirmPasswordError = confirmPasswordClientError;
+
   const shouldShowFieldMessage = (fieldName, message) =>
-    Boolean(message) && blurredFields[fieldName];
+    Boolean(message) && (blurredFields[fieldName] || Boolean(serverFieldErrors[fieldName]));
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setServerFieldErrors({});
 
     const fieldErrors = [
-      fullNameError,
-      emailError,
-      phoneError,
-      rollNumberError,
-      passwordError,
-      confirmPasswordError,
+      fullNameClientError,
+      emailClientError,
+      phoneClientError,
+      rollNumberClientError,
+      passwordClientError,
+      confirmPasswordClientError,
     ].filter(Boolean);
 
     if (fieldErrors.length > 0) {
       setBlurredFields((current) => ({
         ...current,
-        ...(fullNameError ? { full_name: true } : {}),
-        ...(emailError ? { email: true } : {}),
-        ...(phoneError ? { phone: true } : {}),
-        ...(rollNumberError ? { roll_number: true } : {}),
-        ...(passwordError ? { password: true } : {}),
-        ...(confirmPasswordError ? { confirmPassword: true } : {}),
+        ...(fullNameClientError ? { full_name: true } : {}),
+        ...(emailClientError ? { email: true } : {}),
+        ...(phoneClientError ? { phone: true } : {}),
+        ...(rollNumberClientError ? { roll_number: true } : {}),
+        ...(passwordClientError ? { password: true } : {}),
+        ...(confirmPasswordClientError ? { confirmPassword: true } : {}),
       }));
       setError('Please correct the highlighted fields before continuing.');
       setLoading(false);
@@ -194,15 +247,33 @@ const SignupForm = ({ selectedRole }) => {
       setSearchParams({ mode: 'signup', step: 'verify' });
     } catch (err) {
       console.error('Registration error:', err.response?.data);
-      const errorMessage = 
-        err.response?.data?.email?.[0] ||
-        err.response?.data?.phone?.[0] ||
-        err.response?.data?.roll_number?.[0] ||
-        err.response?.data?.employee_code?.[0] ||
-        err.response?.data?.message ||
-        err.response?.data?.detail ||
-        err.response?.data?.error ||
-        (typeof err.response?.data === 'string' ? err.response.data : null) ||
+      const responseData = err.response?.data;
+      const nextServerFieldErrors = {};
+
+      if (responseData && typeof responseData === 'object' && !Array.isArray(responseData)) {
+        REGISTRATION_FIELD_NAMES.forEach((fieldName) => {
+          const fieldMessage = getApiErrorMessage(responseData[fieldName]);
+          if (fieldMessage) {
+            nextServerFieldErrors[fieldName] = fieldMessage;
+          }
+        });
+      }
+
+      if (Object.keys(nextServerFieldErrors).length > 0) {
+        setServerFieldErrors(nextServerFieldErrors);
+        setBlurredFields((current) => ({
+          ...current,
+          ...Object.fromEntries(Object.keys(nextServerFieldErrors).map((fieldName) => [fieldName, true])),
+        }));
+      }
+
+      const errorMessage =
+        getApiErrorMessage(responseData?.non_field_errors) ||
+        Object.values(nextServerFieldErrors)[0] ||
+        getApiErrorMessage(responseData?.message) ||
+        getApiErrorMessage(responseData?.detail) ||
+        getApiErrorMessage(responseData?.error) ||
+        (typeof responseData === 'string' ? responseData : null) ||
         'Registration failed. Please check your information and try again.';
       setError(errorMessage);
     } finally {
@@ -298,6 +369,7 @@ const SignupForm = ({ selectedRole }) => {
           className="btn-secondary"
           onClick={() => {
             setBlurredFields({});
+            setServerFieldErrors({});
             setSearchParams({ mode: 'signup' });
           }}
         >
@@ -405,27 +477,35 @@ const SignupForm = ({ selectedRole }) => {
             <label className="input-label">Hostel / Hall</label>
             <select
               name="hostel_name"
-              className="input-field"
+              className={`input-field ${shouldShowFieldMessage('hostel_name', hostelNameError) ? 'input-field--error' : ''}`}
               value={formData.hostel_name}
               onChange={handleChange}
+              onBlur={handleBlur}
             >
               <option value="">Select your hostel</option>
               {availableHalls.map((hall) => (
                 <option key={hall} value={hall}>{hall}</option>
               ))}
             </select>
+            {shouldShowFieldMessage('hostel_name', hostelNameError) ? (
+              <small className="input-helper-text input-helper-text--error">{hostelNameError}</small>
+            ) : null}
           </div>
 
           <div className="input-group">
             <label className="input-label">Room Number</label>
             <input
               name="room_number"
-              className="input-field"
+              className={`input-field ${shouldShowFieldMessage('room_number', roomNumberError) ? 'input-field--error' : ''}`}
               placeholder="Enter your room number"
               value={formData.room_number}
               onChange={handleChange}
+              onBlur={handleBlur}
               {...STANDARD_INPUT_PROPS.roomNumber}
             />
+            {shouldShowFieldMessage('room_number', roomNumberError) ? (
+              <small className="input-helper-text input-helper-text--error">{roomNumberError}</small>
+            ) : null}
           </div>
         </>
       )}

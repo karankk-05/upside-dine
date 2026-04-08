@@ -23,6 +23,7 @@ import {
   sanitizePersonName,
   sanitizePhone,
 } from '../lib/formValidation';
+import { compareNaturalText } from '../lib/naturalSort';
 import PullToRefresh from '../components/PullToRefresh';
 import './AdminManagerDashboard.css';
 
@@ -396,7 +397,13 @@ const AdminManagerDashboard = () => {
   });
 
   const managers = managersQueryData;
-  const messes = messesQueryData;
+  const messes = useMemo(
+    () =>
+      [...messesQueryData].sort((left, right) =>
+        compareNaturalText(left.hall_name || left.name, right.hall_name || right.name)
+      ),
+    [messesQueryData]
+  );
   const canteens = canteensQueryData;
 
   const counts = useMemo(

@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
@@ -11,6 +13,116 @@ class AuthSmokeTests(APITestCase):
     def test_register_requires_iitk_email(self):
         response = self.client.post("/api/auth/register/", {"email": "user@gmail.com", "password": "password123"})
         self.assertEqual(response.status_code, 400)
+
+    def test_register_student_rejects_duplicate_roll_number_cleanly(self):
+        student_role = Role.objects.create(role_name="student")
+        existing_user = User.objects.create_user(
+            email="existing@iitk.ac.in",
+            password="password123",
+            role=student_role,
+            is_active=True,
+            is_verified=True,
+        )
+        Student.objects.create(
+            user=existing_user,
+            roll_number="230546",
+            full_name="Existing Student",
+            hostel_name="Hall 4",
+            room_number="A101",
+        )
+        User.objects.create_user(
+            email="retry@iitk.ac.in",
+            password="password123",
+            role=student_role,
+            is_active=False,
+            is_verified=False,
+        )
+
+        response = self.client.post(
+            "/api/auth/register/",
+            {
+                "email": "retry@iitk.ac.in",
+                "password": "password123",
+                "phone": "9156718623",
+                "role_name": "student",
+                "full_name": "Asta",
+                "roll_number": "230546",
+                "hostel_name": "Hall 4",
+                "room_number": "E106",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.data["roll_number"][0],
+            "This roll number is already associated with another student account.",
+        )
+
+    @patch("apps.users.views.send_otp_email")
+    def test_register_unverified_student_updates_existing_profile(self, mock_send_otp_email):
+        student_role = Role.objects.create(role_name="student")
+        retry_user = User.objects.create_user(
+            email="retry@iitk.ac.in",
+            password="oldpassword123",
+            role=student_role,
+            is_active=False,
+            is_verified=False,
+        )
+        Student.objects.create(
+            user=retry_user,
+            roll_number="230100",
+            full_name="Old Name",
+            hostel_name="Hall 1",
+            room_number="A101",
+        )
+
+        response = self.client.post(
+            "/api/auth/register/",
+            {
+                "email": "retry@iitk.ac.in",
+                "password": "password123",
+                "phone": "9156718623",
+                "role_name": "student",
+                "full_name": "Updated Name",
+                "roll_number": "230100",
+                "hostel_name": "Hall 4",
+                "room_number": "E106",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        retry_user.refresh_from_db()
+        retry_user.student_profile.refresh_from_db()
+        self.assertEqual(retry_user.student_profile.full_name, "Updated Name")
+        self.assertEqual(retry_user.student_profile.hostel_name, "Hall 4")
+        self.assertEqual(retry_user.student_profile.room_number, "E106")
+        self.assertEqual(retry_user.phone, "9156718623")
+        mock_send_otp_email.assert_called_once()
+
+    def test_public_halls_are_naturally_sorted(self):
+        Mess.objects.create(hall_name="Hall 10", location="Zone 10", is_active=True)
+        Mess.objects.create(hall_name="Hall 2", location="Zone 2", is_active=True)
+        Mess.objects.create(hall_name="Hall 1", location="Zone 1", is_active=True)
+
+        response = self.client.get("/api/public/halls/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data[:3], ["Hall 1", "Hall 2", "Hall 10"])
+
+    def test_public_canteens_are_naturally_sorted(self):
+        Canteen.objects.create(name="Hall 10 Canteen", location="Hall 10", is_active=True)
+        Canteen.objects.create(name="Hall 2 Canteen", location="Hall 2", is_active=True)
+        Canteen.objects.create(name="Hall 1 Canteen", location="Hall 1", is_active=True)
+
+        response = self.client.get("/api/public/canteens/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [canteen["name"] for canteen in response.data[:3]],
+            ["Hall 1 Canteen", "Hall 2 Canteen", "Hall 10 Canteen"],
+        )
 
 
 class DeliveryPersonnelManagementTests(APITestCase):

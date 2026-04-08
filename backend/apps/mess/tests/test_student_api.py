@@ -132,6 +132,29 @@ class MessStudentAPITests(APITestCase):
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["id"], self.mess.id)
 
+    def test_list_mess_uses_natural_hall_order(self):
+        Mess.objects.create(
+            name="Hall Mess 10",
+            location="Zone C",
+            hall_name="Hall 10",
+            is_active=True,
+        )
+        Mess.objects.create(
+            name="Hall Mess 3",
+            location="Zone D",
+            hall_name="Hall 3",
+            is_active=True,
+        )
+
+        self._auth_student()
+        response = self.client.get("/api/mess/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [mess["hall_name"] for mess in response.data],
+            ["Hall 1", "Hall 3", "Hall 10"],
+        )
+
     def test_menu_list_supports_filters(self):
         self._auth_student()
         response = self.client.get(

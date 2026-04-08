@@ -30,6 +30,11 @@
   flex-shrink: 0;
 }
 
+.canteen-detail-icon--skeleton {
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
 .canteen-detail-meta {
   flex: 1;
 }
@@ -115,6 +120,14 @@
   animation: canteen-highlight-pulse 1.2s ease-in-out 3;
 }
 
+.canteen-menu-item--skeleton {
+  cursor: default;
+}
+
+.canteen-menu-item--skeleton:hover {
+  border-color: #333;
+}
+
 .canteen-menu-item--unavailable {
   opacity: 0.5;
 }
@@ -196,6 +209,13 @@
   object-fit: cover;
   border-radius: 12px;
   border: 1px solid #333;
+}
+
+.canteen-page-title-skeleton {
+  display: inline-block;
+  width: 156px;
+  height: 22px;
+  vertical-align: middle;
 }
 
 /* ── Add / Qty Buttons ── */

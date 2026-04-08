@@ -46,6 +46,43 @@ const FilterChoiceButton = ({ active, children, onClick }) => (
 const getOptionLabel = (options, value, fallback) =>
   options.find((option) => option.value === value)?.label || fallback;
 
+const MENU_SKELETON_COUNT = 6;
+
+const CanteenHeroSkeleton = () => (
+  <div className="canteen-detail-header">
+    <div className="canteen-detail-hero">
+      <div className="canteen-detail-icon canteen-detail-icon--skeleton ui-skeleton" />
+      <div className="canteen-detail-meta">
+        <div className="ui-skeleton ui-skeleton-text" style={{ width: '58%', height: 24, marginBottom: 10 }} />
+        <div className="ui-skeleton ui-skeleton-text" style={{ width: '72%', height: 12, marginBottom: 10 }} />
+        <div className="ui-skeleton ui-skeleton-text" style={{ width: '44%', height: 12 }} />
+      </div>
+    </div>
+  </div>
+);
+
+const MenuItemSkeletonCard = ({ index = 0 }) => (
+  <div className="canteen-menu-item canteen-menu-item--skeleton" style={{ animationDelay: `${index * 0.05}s` }}>
+    <div className="canteen-menu-item__info">
+      <div className="canteen-menu-item__name-row" style={{ marginBottom: 10 }}>
+        <span className="ui-skeleton ui-skeleton-circle" style={{ width: 10, height: 10 }} />
+        <span className="ui-skeleton ui-skeleton-text" style={{ width: '44%', height: 16 }} />
+      </div>
+      <div className="ui-skeleton ui-skeleton-text" style={{ width: '78%', height: 12, marginBottom: 8 }} />
+      <div className="ui-skeleton ui-skeleton-text" style={{ width: '62%', height: 12, marginBottom: 14 }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span className="ui-skeleton ui-skeleton-text" style={{ width: 54, height: 16 }} />
+        <span className="ui-skeleton ui-skeleton-text" style={{ width: 72, height: 12 }} />
+      </div>
+    </div>
+
+    <div className="canteen-menu-item__actions">
+      <div className="ui-skeleton ui-skeleton-card" style={{ width: 80, height: 80, borderRadius: 12 }} />
+      <div className="ui-skeleton ui-skeleton-card" style={{ width: 72, height: 36, borderRadius: 10 }} />
+    </div>
+  </div>
+);
+
 export default function CanteenDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -64,6 +101,8 @@ export default function CanteenDetailPage() {
   const { getTotal, getItemCount } = useCartStore();
   const itemCount = getItemCount();
   const total = getTotal();
+  const isCanteenLoading = loadingCanteen && !canteen;
+  const isMenuLoading = loadingMenu && menuItems.length === 0;
 
   const emojis = ['🍕', '🍔', '🥡', '☕', '🍜', '🧁'];
   const filteredMenuItems = useMemo(() => {
@@ -185,72 +224,84 @@ export default function CanteenDetailPage() {
     return () => window.clearTimeout(clearHighlightTimeout);
   }, [highlightedItemId, location.pathname, location.state, navigate]);
 
-  if (loadingCanteen) {
-    return <div className="canteen-page"><div className="canteen-loading"><div className="canteen-loading-spinner" /><span style={{ color: '#999' }}>Loading...</span></div></div>;
-  }
-
   return (
     <div className="canteen-page">
       {/* Header */}
       <div className="canteen-page-header">
         <button className="canteen-back-btn" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-        <h1 className="canteen-page-title">{canteen?.name || 'Canteen'}</h1>
+        <h1 className="canteen-page-title">
+          {canteen?.name || (isCanteenLoading ? <span className="ui-skeleton ui-skeleton-text canteen-page-title-skeleton" /> : 'Canteen')}
+        </h1>
       </div>
 
       {/* Canteen Info */}
-      <div className="canteen-detail-header">
-        <div className="canteen-detail-hero">
-          <div className="canteen-detail-icon">{emojis[Number(id) % emojis.length]}</div>
-          <div className="canteen-detail-meta">
-            <h2 className="canteen-detail-name">{canteen?.name}</h2>
-            <div className="canteen-detail-status">
-              <span style={{ width: 8, height: 8, background: '#00ff00', borderRadius: '50%', boxShadow: '0 0 8px #00ff00' }} />
-              <span>Open Now{canteen?.opening_time ? ` • ${canteen.opening_time.slice(0,5)} - ${canteen.closing_time?.slice(0,5)}` : ''}</span>
-            </div>
-            <div className="canteen-detail-rating">
-              ⭐ {canteen?.rating || '4.0'} • {canteen?.location || ''}
+      {isCanteenLoading ? (
+        <CanteenHeroSkeleton />
+      ) : (
+        <div className="canteen-detail-header">
+          <div className="canteen-detail-hero">
+            <div className="canteen-detail-icon">{emojis[Number(id) % emojis.length]}</div>
+            <div className="canteen-detail-meta">
+              <h2 className="canteen-detail-name">{canteen?.name}</h2>
+              <div className="canteen-detail-status">
+                <span style={{ width: 8, height: 8, background: '#00ff00', borderRadius: '50%', boxShadow: '0 0 8px #00ff00' }} />
+                <span>Open Now{canteen?.opening_time ? ` • ${canteen.opening_time.slice(0,5)} - ${canteen.closing_time?.slice(0,5)}` : ''}</span>
+              </div>
+              <div className="canteen-detail-rating">
+                ⭐ {canteen?.rating || '4.0'} • {canteen?.location || ''}
+              </div>
             </div>
           </div>
         </div>
-
-
-      </div>
+      )}
 
       {/* Menu */}
       <div className="canteen-menu">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
           <div>
             <h3 className="canteen-menu-section-title" style={{ marginBottom: 6 }}>Menu Items</h3>
-            <p style={{ fontSize: 13, color: '#999', margin: 0 }}>
-              {activeFilterSummary.length > 0
-                ? activeFilterSummary.join(' • ')
-                : 'All items'}
-            </p>
+            {isMenuLoading ? (
+              <div className="ui-skeleton ui-skeleton-text" style={{ width: 104, height: 12 }} />
+            ) : (
+              <p style={{ fontSize: 13, color: '#999', margin: 0 }}>
+                {activeFilterSummary.length > 0
+                  ? activeFilterSummary.join(' • ')
+                  : 'All items'}
+              </p>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={openFilters}
-            style={{
-              minHeight: 40,
-              padding: '0 14px',
-              borderRadius: 12,
-              background: '#1a1a1a',
-              color: '#fff',
-              border: '1px solid #333',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            <SlidersHorizontal size={16} />
-            Filters{activeFilterSummary.length > 0 ? ` (${activeFilterSummary.length})` : ''}
-          </button>
+          {isMenuLoading ? (
+            <div className="ui-skeleton ui-skeleton-card" style={{ width: 108, height: 40, borderRadius: 12 }} />
+          ) : (
+            <button
+              type="button"
+              onClick={openFilters}
+              style={{
+                minHeight: 40,
+                padding: '0 14px',
+                borderRadius: 12,
+                background: '#1a1a1a',
+                color: '#fff',
+                border: '1px solid #333',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <SlidersHorizontal size={16} />
+              Filters{activeFilterSummary.length > 0 ? ` (${activeFilterSummary.length})` : ''}
+            </button>
+          )}
         </div>
-        {loadingMenu ? (
-          <div className="canteen-loading"><div className="canteen-loading-spinner" /></div>
+        {isMenuLoading ? (
+          <div>
+            {Array.from({ length: MENU_SKELETON_COUNT }).map((_, index) => (
+              <MenuItemSkeletonCard key={`canteen-menu-skeleton-${index}`} index={index} />
+            ))}
+          </div>
         ) : menuItems.length === 0 ? (
           <div className="canteen-empty"><div className="canteen-empty__icon">📋</div><p className="canteen-empty__text">No menu items available</p></div>
         ) : filteredMenuItems.length === 0 ? (

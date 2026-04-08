@@ -9,6 +9,7 @@ import CameraFeedStatus from '../components/CameraFeedStatus';
 import { useLiveCrowdDensity } from '../hooks/useLiveCrowdDensity';
 import PullToRefresh from '../../../components/PullToRefresh';
 import { STANDARD_INPUT_PROPS, sanitizeUrl } from '../../../lib/formValidation';
+import { compareNaturalText } from '../../../lib/naturalSort';
 import '../styles/crowd.css';
 
 /**
@@ -103,7 +104,10 @@ export default function ManagerCrowdOverview() {
       const { data } = await axios.get('/api/mess/', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      return Array.isArray(data) ? data : data.results || [];
+      const messes = Array.isArray(data) ? data : data.results || [];
+      return messes.sort((left, right) =>
+        compareNaturalText(left.hall_name || left.name, right.hall_name || right.name)
+      );
     },
     staleTime: 300000,
   });

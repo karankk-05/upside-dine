@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import { compareNaturalText } from '../../../lib/naturalSort';
 import '../styles/crowd.css';
 
 /**
@@ -16,7 +17,10 @@ export default function MessSelector({ value, onChange }) {
       const { data } = await axios.get('/api/mess/', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      return Array.isArray(data) ? data : data.results || [];
+      const messes = Array.isArray(data) ? data : data.results || [];
+      return messes.sort((left, right) =>
+        compareNaturalText(left.hall_name || left.name, right.hall_name || right.name)
+      );
     },
     staleTime: 300000,
   });

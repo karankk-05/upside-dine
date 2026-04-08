@@ -4,6 +4,23 @@ import axios from 'axios';
 import { Store, ClipboardList, Package, Users, Settings, Plus, Trash2, ToggleLeft, ToggleRight, LogOut, X, User, BarChart, CreditCard, Upload } from 'lucide-react';
 import '../features/canteen/canteen.css';
 
+const UPI_ID_PATTERN = /^[A-Za-z0-9._-]{2,64}@[A-Za-z0-9.-]{2,64}$/;
+
+const getUpiIdValidationError = (value) => {
+  if (!value) return '';
+  return UPI_ID_PATTERN.test(value) ? '' : 'Enter a valid UPI ID like yourname@bank.';
+};
+
+const extractPaymentConfigError = (data) => {
+  if (!data) return 'Failed to save payment settings.';
+  if (typeof data.detail === 'string') return data.detail;
+
+  const fieldError = [data.upi_id, data.qr_image_url, data.payment_mode]
+    .find((value) => Array.isArray(value) && typeof value[0] === 'string');
+
+  return fieldError?.[0] || 'Failed to save payment settings.';
+};
+
 const CanteenManagerDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('canteen');
@@ -30,6 +47,8 @@ const CanteenManagerDashboard = () => {
 
   const token = localStorage.getItem('access_token');
   const headers = { Authorization: `Bearer ${token}` };
+  const normalizedUpiId = paymentSettings.upi_id.trim();
+  const upiIdValidationError = getUpiIdValidationError(normalizedUpiId);
 
   const fetchDeliveryPersonnel = async () => {
     setLoadingDelivery(true);
@@ -68,16 +87,27 @@ const CanteenManagerDashboard = () => {
 
   const savePaymentConfig = async () => {
     setPaymentError('');
+    if (upiIdValidationError) {
+      setPaymentError(upiIdValidationError);
+      return;
+    }
+
+    const nextPaymentSettings = {
+      ...paymentSettings,
+      upi_id: normalizedUpiId,
+    };
+
+    setPaymentSettings(nextPaymentSettings);
     try {
       await axios.put('/api/canteen-manager/payment-config/', {
-        upi_id: paymentSettings.upi_id,
-        payment_mode: paymentSettings.payment_mode,
-        qr_image_url: paymentSettings.qr_image_url,
+        upi_id: nextPaymentSettings.upi_id,
+        payment_mode: nextPaymentSettings.payment_mode,
+        qr_image_url: nextPaymentSettings.qr_image_url,
       }, { headers });
       setPaymentSaved(true);
       setTimeout(() => setPaymentSaved(false), 3000);
     } catch (err) {
-      setPaymentError(err.response?.data?.detail || 'Failed to save payment settings.');
+      setPaymentError(extractPaymentConfigError(err.response?.data));
     }
   };
 
@@ -315,16 +345,42 @@ const CanteenManagerDashboard = () => {
                   type="text"
                   placeholder="yourcanteen@upi"
                   value={paymentSettings.upi_id}
-                  onChange={(e) => { setPaymentSettings({ ...paymentSettings, upi_id: e.target.value }); setPaymentSaved(false); }}
-                  style={{ width: '100%', padding: 12, background: '#2a2a2a', border: '1px solid #444', borderRadius: 10, color: '#fff', fontSize: 14, marginBottom: 12, outline: 'none' }}
+                  onChange={(e) => {
+                    setPaymentSettings({ ...paymentSettings, upi_id: e.target.value });
+                    setPaymentSaved(false);
+                    setPaymentError('');
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: 12,
+                    background: '#2a2a2a',
+                    border: upiIdValidationError ? '1px solid #d45555' : '1px solid #444',
+                    borderRadius: 10,
+                    color: '#fff',
+                    fontSize: 14,
+                    marginBottom: 12,
+                    outline: 'none',
+                  }}
                 />
+                {upiIdValidationError ? (
+                  <p style={{ margin: '-4px 0 12px', color: '#ff6b6b', fontSize: 12 }}>{upiIdValidationError}</p>
+                ) : (
+                  <p style={{ margin: '-4px 0 12px', color: '#888', fontSize: 12 }}>
+                    Use a valid UPI ID format like `yourcanteen@upi`.
+                  </p>
+                )}
 
                 <label style={{ fontSize: 12, color: '#999', marginBottom: 6, display: 'block' }}>Payment QR Code (URL or link)</label>
                 <input
                   type="text"
                   placeholder="https://example.com/your-qr-code.png (optional)"
                   value={paymentSettings.qr_image_url}
-                  onChange={(e) => { setPaymentSettings({ ...paymentSettings, qr_image_url: e.target.value }); setQrPreview(e.target.value); setPaymentSaved(false); }}
+                  onChange={(e) => {
+                    setPaymentSettings({ ...paymentSettings, qr_image_url: e.target.value });
+                    setQrPreview(e.target.value);
+                    setPaymentSaved(false);
+                    setPaymentError('');
+                  }}
                   style={{ width: '100%', padding: 12, background: '#2a2a2a', border: '1px solid #444', borderRadius: 10, color: '#fff', fontSize: 14, marginBottom: 12, outline: 'none' }}
                 />
                 {qrPreview && (
@@ -360,10 +416,12 @@ const CanteenManagerDashboard = () => {
               {/* Save Button */}
               <button
                 onClick={savePaymentConfig}
+                disabled={Boolean(upiIdValidationError)}
                 style={{
                   padding: 14, background: '#d45555', border: 'none', borderRadius: 10, color: '#fff',
                   fontWeight: 700, fontSize: 15, cursor: 'pointer', boxShadow: '0 0 15px rgba(232,85,85,0.15)',
                   transition: 'all 0.2s',
+                  opacity: upiIdValidationError ? 0.6 : 1,
                 }}
               >
                 {paymentSaved ? '✅ Saved!' : 'Save Payment Settings'}

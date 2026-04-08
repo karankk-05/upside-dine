@@ -1,8 +1,12 @@
+import re
 from decimal import Decimal
 
 from rest_framework import serializers
 
 from .models import Canteen, CanteenMenuCategory, CanteenMenuItem, CanteenPaymentConfig
+
+
+UPI_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{2,64}@[A-Za-z0-9.-]{2,64}$")
 
 
 class CanteenMenuCategorySerializer(serializers.ModelSerializer):
@@ -106,6 +110,14 @@ class CanteenManagerStatsSerializer(serializers.Serializer):
 
 
 class CanteenPaymentConfigSerializer(serializers.ModelSerializer):
+    def validate_upi_id(self, value):
+        normalized_value = value.strip()
+        if not normalized_value:
+            return ""
+        if not UPI_ID_PATTERN.fullmatch(normalized_value):
+            raise serializers.ValidationError("Enter a valid UPI ID like yourname@bank.")
+        return normalized_value
+
     class Meta:
         model = CanteenPaymentConfig
         fields = ["id", "canteen", "upi_id", "qr_image_url", "payment_mode", "updated_at"]

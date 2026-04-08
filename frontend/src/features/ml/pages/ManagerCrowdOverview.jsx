@@ -7,6 +7,7 @@ import { ArrowLeft, BarChart3, TrendingUp, TrendingDown, Minus } from 'lucide-re
 import DensityIndicator from '../components/DensityIndicator';
 import CameraFeedStatus from '../components/CameraFeedStatus';
 import { useLiveCrowdDensity } from '../hooks/useLiveCrowdDensity';
+import { STANDARD_INPUT_PROPS, sanitizeUrl } from '../../../lib/formValidation';
 import '../styles/crowd.css';
 
 /**
@@ -125,7 +126,7 @@ export default function ManagerCrowdOverview() {
             className="crowd-dashboard__back-btn"
             onClick={() => {
               if (userRole === 'mess_manager') navigate('/manager/mess');
-              else if (userRole === 'admin') navigate('/admin/managers');
+              else if (userRole === 'admin' || userRole === 'admin_manager') navigate('/manager/admin');
               else navigate(-1);
             }}
             aria-label="Go back"
@@ -193,7 +194,7 @@ export default function ManagerCrowdOverview() {
           {userRole === 'mess_manager' && managerStats?.mess_id && (
             <div style={{ marginTop: 20, padding: 16, background: 'var(--st-light-gray)', borderRadius: 12, border: '1px solid var(--st-border)' }}>
               <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Add Video Feed Link</h3>
-              <form onSubmit={async (e) => {
+              <form noValidate onSubmit={async (e) => {
                 e.preventDefault();
                 setSubmittingFeed(true);
                 try {
@@ -227,10 +228,10 @@ export default function ManagerCrowdOverview() {
                   </select>
                 )}
                 <input 
-                  type="url" 
                   value={feedUrl} 
-                  onChange={(e) => setFeedUrl(e.target.value)} 
+                  onChange={(e) => setFeedUrl(sanitizeUrl(e.target.value))} 
                   placeholder="Enter RTSP or HTTP stream URL..." 
+                  {...STANDARD_INPUT_PROPS.url}
                   style={{ padding: 10, background: '#111', border: '1px solid #333', color: '#fff', borderRadius: 8 }}
                   required 
                 />

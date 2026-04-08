@@ -5,6 +5,11 @@ import { useCartStore } from '../../../stores/cartStore';
 import { usePlaceOrder } from '../hooks/usePlaceOrder';
 import PaymentModal from '../components/PaymentModal';
 import OrderConfirmation from '../components/OrderConfirmation';
+import {
+  FIELD_LIMITS,
+  sanitizeLocationText,
+  sanitizeMultilineText,
+} from '../../../lib/formValidation';
 import '../canteen.css';
 
 export default function CheckoutPage() {
@@ -89,7 +94,7 @@ export default function CheckoutPage() {
       {orderType === 'delivery' && (
         <div className="canteen-checkout__section">
           <p className="canteen-checkout__section-title">Delivery Address</p>
-          <input className="canteen-checkout__input" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Room no, Hall name..." />
+          <input className="canteen-checkout__input" value={address} onChange={(e) => setAddress(sanitizeLocationText(e.target.value, FIELD_LIMITS.address))} placeholder="Room no, Hall name..." maxLength={FIELD_LIMITS.address} autoComplete="street-address" />
         </div>
       )}
 
@@ -104,7 +109,7 @@ export default function CheckoutPage() {
       {/* Notes */}
       <div className="canteen-checkout__section">
         <p className="canteen-checkout__section-title">Special Instructions</p>
-        <textarea className="canteen-checkout__input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. less spicy, no onions..." rows={2} style={{ resize: 'none' }} />
+        <textarea className="canteen-checkout__input" value={notes} onChange={(e) => setNotes(sanitizeMultilineText(e.target.value, FIELD_LIMITS.notes))} placeholder="e.g. less spicy, no onions..." rows={2} maxLength={FIELD_LIMITS.notes} style={{ resize: 'none' }} />
       </div>
 
       {/* Order Summary */}

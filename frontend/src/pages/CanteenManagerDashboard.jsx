@@ -2,6 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Store, ClipboardList, Package, Users, Settings, Plus, Trash2, ToggleLeft, ToggleRight, LogOut, X, User, BarChart, CreditCard, Upload } from 'lucide-react';
+import {
+  STANDARD_INPUT_PROPS,
+  sanitizeEmail,
+  sanitizePersonName,
+  sanitizePhone,
+  sanitizeUpiId,
+  sanitizeUrl,
+} from '../lib/formValidation';
 import '../features/canteen/canteen.css';
 
 const CanteenManagerDashboard = () => {
@@ -48,6 +56,38 @@ const CanteenManagerDashboard = () => {
     if (activeTab === 'payment') fetchPaymentConfig();
   }, [activeTab]);
 
+  const updateAddForm = (field, value) => {
+    const nextValueByField = {
+      full_name: sanitizePersonName(value),
+      email: sanitizeEmail(value),
+      phone: sanitizePhone(value),
+    };
+
+    setAddForm((current) => ({
+      ...current,
+      [field]: nextValueByField[field] ?? value,
+    }));
+    setAddError('');
+  };
+
+  const updatePaymentSettings = (field, value) => {
+    const nextValueByField = {
+      upi_id: sanitizeUpiId(value),
+      qr_image_url: sanitizeUrl(value),
+    };
+    const nextValue = nextValueByField[field] ?? value;
+
+    setPaymentSettings((current) => ({
+      ...current,
+      [field]: nextValue,
+    }));
+    if (field === 'qr_image_url') {
+      setQrPreview(nextValue);
+    }
+    setPaymentSaved(false);
+    setPaymentError('');
+  };
+
   const fetchPaymentConfig = async () => {
     setPaymentLoading(true);
     setPaymentError('');
@@ -70,9 +110,9 @@ const CanteenManagerDashboard = () => {
     setPaymentError('');
     try {
       await axios.put('/api/canteen-manager/payment-config/', {
-        upi_id: paymentSettings.upi_id,
+        upi_id: paymentSettings.upi_id.trim(),
         payment_mode: paymentSettings.payment_mode,
-        qr_image_url: paymentSettings.qr_image_url,
+        qr_image_url: paymentSettings.qr_image_url.trim(),
       }, { headers });
       setPaymentSaved(true);
       setTimeout(() => setPaymentSaved(false), 3000);
@@ -221,15 +261,18 @@ const CanteenManagerDashboard = () => {
             {showAddForm && (
               <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 16, padding: 24, marginBottom: 24 }}>
                 <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>New Delivery Person</h3>
-                <form onSubmit={handleAddDeliveryPerson} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <form onSubmit={handleAddDeliveryPerson} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <input placeholder="Full Name" value={addForm.full_name} required
-                    onChange={(e) => setAddForm({ ...addForm, full_name: e.target.value })}
+                    onChange={(e) => updateAddForm('full_name', e.target.value)}
+                    {...STANDARD_INPUT_PROPS.personName}
                     style={{ padding: 12, background: '#2a2a2a', border: '1px solid #444', borderRadius: 10, color: '#fff', fontSize: 14 }} />
-                  <input placeholder="Email" type="email" value={addForm.email} required
-                    onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
+                  <input placeholder="Email" value={addForm.email} required
+                    onChange={(e) => updateAddForm('email', e.target.value)}
+                    {...STANDARD_INPUT_PROPS.email}
                     style={{ padding: 12, background: '#2a2a2a', border: '1px solid #444', borderRadius: 10, color: '#fff', fontSize: 14 }} />
                   <input placeholder="Phone" value={addForm.phone} required
-                    onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })}
+                    onChange={(e) => updateAddForm('phone', e.target.value)}
+                    {...STANDARD_INPUT_PROPS.phone}
                     style={{ padding: 12, background: '#2a2a2a', border: '1px solid #444', borderRadius: 10, color: '#fff', fontSize: 14 }} />
                   <button type="submit" disabled={submitting}
                     style={{ padding: 14, background: '#d45555', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, cursor: 'pointer', opacity: submitting ? 0.6 : 1 }}>
@@ -312,19 +355,19 @@ const CanteenManagerDashboard = () => {
                 </h3>
                 <label style={{ fontSize: 12, color: '#999', marginBottom: 6, display: 'block' }}>UPI ID</label>
                 <input
-                  type="text"
                   placeholder="yourcanteen@upi"
                   value={paymentSettings.upi_id}
-                  onChange={(e) => { setPaymentSettings({ ...paymentSettings, upi_id: e.target.value }); setPaymentSaved(false); }}
+                  onChange={(e) => updatePaymentSettings('upi_id', e.target.value)}
+                  {...STANDARD_INPUT_PROPS.upiId}
                   style={{ width: '100%', padding: 12, background: '#2a2a2a', border: '1px solid #444', borderRadius: 10, color: '#fff', fontSize: 14, marginBottom: 12, outline: 'none' }}
                 />
 
                 <label style={{ fontSize: 12, color: '#999', marginBottom: 6, display: 'block' }}>Payment QR Code (URL or link)</label>
                 <input
-                  type="text"
                   placeholder="https://example.com/your-qr-code.png (optional)"
                   value={paymentSettings.qr_image_url}
-                  onChange={(e) => { setPaymentSettings({ ...paymentSettings, qr_image_url: e.target.value }); setQrPreview(e.target.value); setPaymentSaved(false); }}
+                  onChange={(e) => updatePaymentSettings('qr_image_url', e.target.value)}
+                  {...STANDARD_INPUT_PROPS.url}
                   style={{ width: '100%', padding: 12, background: '#2a2a2a', border: '1px solid #444', borderRadius: 10, color: '#fff', fontSize: 14, marginBottom: 12, outline: 'none' }}
                 />
                 {qrPreview && (

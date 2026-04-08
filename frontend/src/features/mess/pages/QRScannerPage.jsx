@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Camera, History, Upload, LogOut, User } from 'lucide-react';
 import { useVerifyQR } from '../hooks/useVerifyQR';
 import VerificationResult from '../components/VerificationResult';
+import { FIELD_LIMITS, sanitizeUnstructuredText } from '../../../lib/formValidation';
 import '../mess.css';
 
 const QRScannerPage = () => {
@@ -295,8 +296,11 @@ const QRScannerPage = () => {
             className="mess-input-field"
             type="text"
             value={bookingIdInput}
-            onChange={(e) => setBookingIdInput(e.target.value)}
+            onChange={(e) => setBookingIdInput(sanitizeUnstructuredText(e.target.value, FIELD_LIMITS.qrInput))}
             placeholder="Enter booking ID (e.g. 1) or QR code string"
+            maxLength={FIELD_LIMITS.qrInput}
+            autoComplete="off"
+            spellCheck={false}
             onKeyDown={(e) => e.key === 'Enter' && handleManualVerify()}
           />
         </div>

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { Search, ArrowLeft } from 'lucide-react';
 import CanteenCard from '../components/CanteenCard';
+import { STANDARD_INPUT_PROPS, sanitizeSearchText } from '../../../lib/formValidation';
 import '../canteen.css';
 
 export default function CanteenListPage() {
@@ -41,7 +42,7 @@ export default function CanteenListPage() {
 
       <div style={{ padding: 20 }}>
         <div className="canteen-search">
-          <input className="canteen-search__input" placeholder="Search canteens..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input className="canteen-search__input" placeholder="Search canteens..." value={search} onChange={(e) => setSearch(sanitizeSearchText(e.target.value))} {...STANDARD_INPUT_PROPS.search} />
           <span className="canteen-search__icon"><Search size={18} /></span>
         </div>
 

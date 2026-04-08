@@ -194,7 +194,7 @@ const DeliveryDashboard = () => {
                         <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, textAlign: 'center' }}>🔑 Enter Student's OTP</p>
                         <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 8 }}>
                           {[0, 1, 2, 3, 4, 5].map((i) => (
-                            <input key={i} maxLength={1} value={otp[i] || ''}
+                            <input key={i} type="text" inputMode="numeric" pattern="[0-9]" autoComplete={i === 0 ? 'one-time-code' : 'off'} maxLength={1} value={otp[i] || ''}
                               onChange={(e) => {
                                 const val = e.target.value.replace(/\D/, '');
                                 const arr = otp.split('');

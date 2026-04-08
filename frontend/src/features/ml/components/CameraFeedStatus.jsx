@@ -4,6 +4,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { Clock, Edit2, Trash2, Check, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { STANDARD_INPUT_PROPS, sanitizeUrl } from '../../../lib/formValidation';
 import '../styles/crowd.css';
 
 /**
@@ -116,9 +117,9 @@ export default function CameraFeedStatus({ filterMessId, messesList = [] }) {
             {editingId === feed.id ? (
               <div style={{ marginTop: 8, marginBottom: 8 }}>
                 <input 
-                  type="text" 
                   value={editUrl} 
-                  onChange={(e) => setEditUrl(e.target.value)}
+                  onChange={(e) => setEditUrl(sanitizeUrl(e.target.value))}
+                  {...STANDARD_INPUT_PROPS.url}
                   style={{ width: '100%', padding: '6px', fontSize: 12, background: '#111', border: '1px solid #333', color: '#fff', borderRadius: 4, boxSizing: 'border-box' }}
                 />
               </div>

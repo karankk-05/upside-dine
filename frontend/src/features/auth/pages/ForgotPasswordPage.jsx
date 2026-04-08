@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import {
+  getInlineValidationMessage,
+  STANDARD_INPUT_PROPS,
+  sanitizeEmail,
+  sanitizeOtp,
+  sanitizePassword,
+} from '../../../lib/formValidation';
 import './AuthPage.css';
 
 const ForgotPasswordPage = () => {
@@ -14,6 +21,7 @@ const ForgotPasswordPage = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [blurredFields, setBlurredFields] = useState({});
 
   const EyeIcon = ({ isVisible }) => (
     <svg
@@ -45,8 +53,17 @@ const ForgotPasswordPage = () => {
     setLoading(true);
     setError('');
 
+    const emailError = getInlineValidationMessage('email', email, { required: true });
+    if (emailError) {
+      setBlurredFields((current) => ({ ...current, email: true }));
+      setError('Please correct the highlighted field.');
+      setLoading(false);
+      return;
+    }
+
     try {
       await axios.post('/api/auth/forgot-password/', { email });
+      setBlurredFields({});
       setStep(2);
     } catch (err) {
       setError(
@@ -63,6 +80,30 @@ const ForgotPasswordPage = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    const emailError = getInlineValidationMessage('email', email, { required: true });
+    const otpFieldError = getInlineValidationMessage('otp', otp, { required: true });
+    const passwordFieldError = getInlineValidationMessage('password', newPassword, {
+      required: true,
+    });
+    const confirmPasswordError = !confirmPassword
+      ? 'This field is required.'
+      : newPassword === confirmPassword
+      ? ''
+      : 'Passwords do not match.';
+
+    if (emailError || otpFieldError || passwordFieldError || confirmPasswordError) {
+      setBlurredFields((current) => ({
+        ...current,
+        ...(emailError ? { email: true } : {}),
+        ...(otpFieldError ? { otp: true } : {}),
+        ...(passwordFieldError ? { newPassword: true } : {}),
+        ...(confirmPasswordError ? { confirmPassword: true } : {}),
+      }));
+      setError('Please correct the highlighted fields.');
+      setLoading(false);
+      return;
+    }
 
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match');
@@ -88,6 +129,20 @@ const ForgotPasswordPage = () => {
     }
   };
 
+  const emailError = getInlineValidationMessage('email', email, { required: true });
+  const otpFieldError = getInlineValidationMessage('otp', otp, { required: true });
+  const passwordFieldError = getInlineValidationMessage('password', newPassword, {
+    required: true,
+  });
+  const confirmPasswordError = !confirmPassword
+    ? 'This field is required.'
+    : newPassword === confirmPassword
+    ? ''
+    : 'Passwords do not match.';
+
+  const shouldShowFieldMessage = (fieldName, message) =>
+    Boolean(message) && blurredFields[fieldName];
+
   return (
     <div className="auth-container">
       <div className="auth-content">
@@ -104,17 +159,28 @@ const ForgotPasswordPage = () => {
         {error && <div className="error-message">{error}</div>}
 
         {step === 1 && (
-          <form className="auth-form" onSubmit={handleRequestOTP}>
+          <form className="auth-form" onSubmit={handleRequestOTP} noValidate>
             <div className="input-group">
-              <label className="input-label">Email</label>
+              <label className="input-label">
+                <span className="input-label-row">
+                  Email <strong className="input-label-required">*</strong>
+                </span>
+              </label>
               <input
-                type="email"
-                className="input-field"
+                className={`input-field ${shouldShowFieldMessage('email', emailError) ? 'input-field--error' : ''}`}
                 placeholder="Enter your email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(sanitizeEmail(e.target.value));
+                  setError('');
+                }}
+                onBlur={() => setBlurredFields((current) => ({ ...current, email: true }))}
+                {...STANDARD_INPUT_PROPS.email}
                 required
               />
+              {shouldShowFieldMessage('email', emailError) ? (
+                <small className="input-helper-text input-helper-text--error">{emailError}</small>
+              ) : null}
             </div>
 
             <button type="submit" className="btn-primary" disabled={loading}>
@@ -132,7 +198,7 @@ const ForgotPasswordPage = () => {
         )}
 
         {step === 2 && (
-          <form className="auth-form" onSubmit={handleResetPassword}>
+          <form className="auth-form" onSubmit={handleResetPassword} noValidate>
             <div className="otp-info">
               <p className="otp-message">
                 We've sent a 6-digit OTP to <strong>{email}</strong>
@@ -140,27 +206,47 @@ const ForgotPasswordPage = () => {
             </div>
 
             <div className="input-group">
-              <label className="input-label">Enter OTP</label>
+              <label className="input-label">
+                <span className="input-label-row">
+                  Enter OTP <strong className="input-label-required">*</strong>
+                </span>
+              </label>
               <input
-                type="text"
-                className="input-field"
+                className={`input-field ${shouldShowFieldMessage('otp', otpFieldError) ? 'input-field--error' : ''}`}
                 placeholder="Enter 6-digit OTP"
                 value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                maxLength={6}
+                onChange={(e) => {
+                  setOtp(sanitizeOtp(e.target.value));
+                  setError('');
+                }}
+                onBlur={() => setBlurredFields((current) => ({ ...current, otp: true }))}
+                {...STANDARD_INPUT_PROPS.otp}
                 required
               />
+              {shouldShowFieldMessage('otp', otpFieldError) ? (
+                <small className="input-helper-text input-helper-text--error">{otpFieldError}</small>
+              ) : null}
             </div>
 
             <div className="input-group">
-              <label className="input-label">New Password</label>
+              <label className="input-label">
+                <span className="input-label-row">
+                  New Password <strong className="input-label-required">*</strong>
+                </span>
+              </label>
               <div className="password-input-wrapper">
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  className="input-field"
+                  className={`input-field ${shouldShowFieldMessage('newPassword', passwordFieldError) ? 'input-field--error' : ''}`}
                   placeholder="Enter new password"
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  onChange={(e) => {
+                    setNewPassword(sanitizePassword(e.target.value));
+                    setError('');
+                  }}
+                  onBlur={() => setBlurredFields((current) => ({ ...current, newPassword: true }))}
+                  {...STANDARD_INPUT_PROPS.password}
+                  autoComplete="new-password"
                   required
                 />
                 <button
@@ -172,17 +258,30 @@ const ForgotPasswordPage = () => {
                   <EyeIcon isVisible={showPassword} />
                 </button>
               </div>
+              {shouldShowFieldMessage('newPassword', passwordFieldError) ? (
+                <small className="input-helper-text input-helper-text--error">{passwordFieldError}</small>
+              ) : null}
             </div>
 
             <div className="input-group">
-              <label className="input-label">Confirm Password</label>
+              <label className="input-label">
+                <span className="input-label-row">
+                  Confirm Password <strong className="input-label-required">*</strong>
+                </span>
+              </label>
               <div className="password-input-wrapper">
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
-                  className="input-field"
+                  className={`input-field ${shouldShowFieldMessage('confirmPassword', confirmPasswordError) ? 'input-field--error' : ''}`}
                   placeholder="Confirm new password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => {
+                    setConfirmPassword(sanitizePassword(e.target.value));
+                    setError('');
+                  }}
+                  onBlur={() => setBlurredFields((current) => ({ ...current, confirmPassword: true }))}
+                  {...STANDARD_INPUT_PROPS.password}
+                  autoComplete="new-password"
                   required
                 />
                 <button
@@ -194,6 +293,9 @@ const ForgotPasswordPage = () => {
                   <EyeIcon isVisible={showConfirmPassword} />
                 </button>
               </div>
+              {shouldShowFieldMessage('confirmPassword', confirmPasswordError) ? (
+                <small className="input-helper-text input-helper-text--error">{confirmPasswordError}</small>
+              ) : null}
             </div>
 
             <button type="submit" className="btn-primary" disabled={loading}>
@@ -203,7 +305,10 @@ const ForgotPasswordPage = () => {
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => setStep(1)}
+              onClick={() => {
+                setBlurredFields({});
+                setStep(1);
+              }}
             >
               Back
             </button>

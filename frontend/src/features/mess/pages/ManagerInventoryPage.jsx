@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 import { useManagerInventory, useUpdateInventory } from '../hooks/useManagerInventory';
+import { STANDARD_INPUT_PROPS, sanitizeIntegerInput } from '../../../lib/formValidation';
 import '../mess.css';
 
 const ManagerInventoryPage = () => {
@@ -50,7 +51,7 @@ const ManagerInventoryPage = () => {
               <div className="mess-inventory-qty">
                 {editingId === item.id ? (
                   <>
-                    <input className="mess-inventory-qty-input" type="number" min="0" value={editQty} onChange={(e) => setEditQty(e.target.value)} autoFocus />
+                    <input className="mess-inventory-qty-input" type="number" value={editQty} onChange={(e) => setEditQty(sanitizeIntegerInput(e.target.value))} {...STANDARD_INPUT_PROPS.quantity} autoFocus />
                     <button className="mess-btn-small" onClick={() => handleSave(item.id)} disabled={updateMutation.isPending} style={{ padding: '8px 12px' }}><Save size={14} /></button>
                   </>
                 ) : (

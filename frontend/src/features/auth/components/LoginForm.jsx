@@ -2,6 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getDefaultRouteForRole, setAuthSession } from '../../../lib/auth';
+import {
+  getInlineValidationMessage,
+  STANDARD_INPUT_PROPS,
+  sanitizeEmail,
+  sanitizePassword,
+} from '../../../lib/formValidation';
 
 const EyeIcon = ({ isVisible }) => (
   <svg
@@ -37,19 +43,43 @@ const LoginForm = ({ selectedRole }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [blurredFields, setBlurredFields] = useState({});
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: name === 'email' ? sanitizeEmail(value) : sanitizePassword(value),
     });
     setError('');
   };
+
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setBlurredFields((current) => ({ ...current, [name]: true }));
+  };
+
+  const emailError = getInlineValidationMessage('email', formData.email, { required: true });
+  const passwordError = formData.password ? '' : 'This field is required.';
+
+  const shouldShowFieldMessage = (fieldName, message) =>
+    Boolean(message) && blurredFields[fieldName];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    if (emailError || passwordError) {
+      setBlurredFields((current) => ({
+        ...current,
+        ...(emailError ? { email: true } : {}),
+        ...(passwordError ? { password: true } : {}),
+      }));
+      setError('Please correct the highlighted fields.');
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await axios.post('/api/auth/login/', {
@@ -79,7 +109,7 @@ const LoginForm = ({ selectedRole }) => {
   };
 
   return (
-    <form className="auth-form" onSubmit={handleSubmit}>
+    <form className="auth-form" onSubmit={handleSubmit} noValidate>
       {error && (
         <div className="error-message">
           {error}
@@ -87,28 +117,43 @@ const LoginForm = ({ selectedRole }) => {
       )}
 
       <div className="input-group">
-        <label className="input-label">Email</label>
+        <label className="input-label">
+          <span className="input-label-row">
+            Email <strong className="input-label-required">*</strong>
+          </span>
+        </label>
         <input
-          type="email"
           name="email"
-          className="input-field"
+          className={`input-field ${shouldShowFieldMessage('email', emailError) ? 'input-field--error' : ''}`}
           placeholder="Enter your email"
           value={formData.email}
           onChange={handleChange}
+          onBlur={handleBlur}
+          {...STANDARD_INPUT_PROPS.email}
           required
         />
+        {shouldShowFieldMessage('email', emailError) ? (
+          <small className="input-helper-text input-helper-text--error">{emailError}</small>
+        ) : null}
       </div>
 
       <div className="input-group">
-        <label className="input-label">Password</label>
+        <label className="input-label">
+          <span className="input-label-row">
+            Password <strong className="input-label-required">*</strong>
+          </span>
+        </label>
         <div className="password-input-wrapper">
           <input
             type={showPassword ? 'text' : 'password'}
             name="password"
-            className="input-field"
+            className={`input-field ${shouldShowFieldMessage('password', passwordError) ? 'input-field--error' : ''}`}
             placeholder="Enter your password"
             value={formData.password}
             onChange={handleChange}
+            onBlur={handleBlur}
+            {...STANDARD_INPUT_PROPS.password}
+            autoComplete="current-password"
             required
           />
           <button
@@ -120,6 +165,9 @@ const LoginForm = ({ selectedRole }) => {
             <EyeIcon isVisible={showPassword} />
           </button>
         </div>
+        {shouldShowFieldMessage('password', passwordError) ? (
+          <small className="input-helper-text input-helper-text--error">{passwordError}</small>
+        ) : null}
       </div>
 
       <div className="forgot-password">

@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.test import TestCase
 from rest_framework.test import APITestCase
 
-from .models import Canteen, CanteenPaymentConfig
+from .models import Canteen
 from apps.users.models import Role, Staff, User
 from .models import CanteenMenuCategory, CanteenMenuItem
 
@@ -85,50 +85,3 @@ class CanteenManagerMenuApiTests(APITestCase):
         menu_item.refresh_from_db()
         self.assertEqual(menu_item.category.category_name, "Beverages")
         self.assertEqual(response.data["category_name"], "Beverages")
-
-
-class CanteenDetailPaymentConfigApiTests(APITestCase):
-    def setUp(self):
-        self.student_role = Role.objects.create(role_name="student")
-        self.student_user = User.objects.create_user(
-            email="issue51.student@iitk.ac.in",
-            password="password123",
-            role=self.student_role,
-            is_active=True,
-            is_verified=True,
-        )
-        self.canteen = Canteen.objects.create(name="Issue 51 Canteen", location="Hall 5")
-        self.client.force_authenticate(user=self.student_user)
-
-    def test_detail_returns_default_payment_config_when_none_saved(self):
-        response = self.client.get(f"/api/canteens/{self.canteen.id}/")
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.data["payment_config"],
-            {
-                "payment_mode": CanteenPaymentConfig.PAYMENT_MODE_BOTH,
-                "upi_id": "",
-                "qr_image_url": "",
-            },
-        )
-
-    def test_detail_returns_saved_payment_config(self):
-        CanteenPaymentConfig.objects.create(
-            canteen=self.canteen,
-            payment_mode=CanteenPaymentConfig.PAYMENT_MODE_CASH,
-            upi_id="issue51@upi",
-            qr_image_url="https://example.com/issue51-qr.png",
-        )
-
-        response = self.client.get(f"/api/canteens/{self.canteen.id}/")
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.data["payment_config"],
-            {
-                "payment_mode": CanteenPaymentConfig.PAYMENT_MODE_CASH,
-                "upi_id": "issue51@upi",
-                "qr_image_url": "https://example.com/issue51-qr.png",
-            },
-        )

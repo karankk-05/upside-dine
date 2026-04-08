@@ -5,8 +5,6 @@ import '../canteen.css';
 export default function OrderConfirmation({ order, onClose }) {
   if (!order) return null;
 
-  const isPayLaterOrder = order.checkout_payment_method === 'cash';
-
   return (
     <div className="canteen-confirmation">
       <motion.div
@@ -21,24 +19,6 @@ export default function OrderConfirmation({ order, onClose }) {
           Order #{order.id} has been placed successfully.<br />
           Estimated ready time: {order.estimated_ready_time || '15-20 mins'}
         </p>
-
-        {isPayLaterOrder ? (
-          <div
-            style={{
-              background: '#20170d',
-              border: '1px solid #8b6b33',
-              borderRadius: 12,
-              padding: 12,
-              marginBottom: 16,
-              color: '#f0d28a',
-              fontSize: 13,
-              lineHeight: 1.5,
-            }}
-          >
-            Pay Later selected. Please pay at the canteen counter
-            {order.order_type === 'delivery' ? ' or on delivery' : ''}.
-          </div>
-        ) : null}
 
         <div style={{
           background: '#1a1a1a', border: '1px solid #333', borderRadius: 12,

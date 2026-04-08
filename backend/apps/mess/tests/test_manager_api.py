@@ -269,6 +269,39 @@ class MessManagerAPITests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_manager_patch_menu_item_rejects_duplicate_day_meal_name(self):
+        conflict_day = (
+            MessMenuItem.DayOfWeek.THURSDAY
+            if self.current_day != MessMenuItem.DayOfWeek.THURSDAY
+            else MessMenuItem.DayOfWeek.MONDAY
+        )
+        conflicting_item = MessMenuItem.objects.create(
+            mess=self.mess,
+            item_name=self.menu_item.item_name,
+            description="Conflict item",
+            price=Decimal("45.00"),
+            meal_type=self.menu_item.meal_type,
+            day_of_week=conflict_day,
+            available_quantity=120,
+            default_quantity=120,
+            is_active=True,
+        )
+
+        self._auth_manager()
+        response = self.client.patch(
+            f"/api/mess/manager/menu/{self.menu_item.id}/",
+            {"day_of_week": conflicting_item.day_of_week},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["detail"][0],
+            f'An extra named "Paneer Roll" already exists for {conflict_day.title()} lunch.',
+        )
+        self.menu_item.refresh_from_db()
+        self.assertEqual(self.menu_item.day_of_week, self.current_day)
+
     def test_manager_delete_menu_item_soft_deletes(self):
         self._auth_manager()
         response = self.client.delete(f"/api/mess/manager/menu/{self.menu_item.id}/")

@@ -106,6 +106,39 @@ class MessMenuItemCreateUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Item name cannot be blank.")
         return value
 
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        instance = getattr(self, "instance", None)
+        mess = attrs.get("mess") or getattr(instance, "mess", None)
+        item_name = attrs.get("item_name") or getattr(instance, "item_name", None)
+        meal_type = attrs.get("meal_type") or getattr(instance, "meal_type", None)
+        day_of_week = attrs.get("day_of_week") or getattr(instance, "day_of_week", None)
+
+        if not all([mess, item_name, meal_type, day_of_week]):
+            return attrs
+
+        conflicting_items = MessMenuItem.objects.filter(
+            mess=mess,
+            item_name=item_name,
+            meal_type=meal_type,
+            day_of_week=day_of_week,
+        )
+        if instance is not None:
+            conflicting_items = conflicting_items.exclude(pk=instance.pk)
+
+        if conflicting_items.exists():
+            raise serializers.ValidationError(
+                {
+                    "detail": (
+                        f'An extra named "{item_name}" already exists for '
+                        f"{day_of_week.replace('_', ' ').title()} {meal_type}."
+                    )
+                }
+            )
+
+        return attrs
+
 
 class MessBookingCreateSerializer(serializers.Serializer):
     menu_item = serializers.PrimaryKeyRelatedField(queryset=MessMenuItem.objects.select_related("mess").all())

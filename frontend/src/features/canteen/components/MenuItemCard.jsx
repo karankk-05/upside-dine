@@ -4,7 +4,9 @@ import { useCartStore } from '../../../stores/cartStore';
 import '../canteen.css';
 
 export default function MenuItemCard({ item, canteenId, index = 0 }) {
-  const { cart, addItem, updateQuantity } = useCartStore();
+  const cart = useCartStore((state) => state.getCart(canteenId));
+  const addItem = useCartStore((state) => state.addItem);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
   const quantity = cart.find((i) => i.id === item.id)?.quantity || 0;
   const isVeg = item.is_veg;
   const isAvailable = item.is_available && item.available_quantity > 0;
@@ -15,7 +17,7 @@ export default function MenuItemCard({ item, canteenId, index = 0 }) {
   };
 
   const handleDecrement = () => {
-    updateQuantity(item.id, quantity <= 1 ? 0 : quantity - 1);
+    updateQuantity(canteenId, item.id, quantity <= 1 ? 0 : quantity - 1);
   };
 
   return (

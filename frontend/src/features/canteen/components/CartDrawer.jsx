@@ -2,9 +2,12 @@ import { X, Minus, Plus, Trash2 } from 'lucide-react';
 import { useCartStore } from '../../../stores/cartStore';
 import '../canteen.css';
 
-export default function CartDrawer({ open, onClose, onCheckout }) {
-  const { cart, updateQuantity, removeItem, clearCart, getTotal } = useCartStore();
-  const total = getTotal();
+export default function CartDrawer({ canteenId, open, onClose, onCheckout }) {
+  const cart = useCartStore((state) => state.getCart(canteenId));
+  const total = useCartStore((state) => state.getTotal(canteenId));
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const removeItem = useCartStore((state) => state.removeItem);
+  const clearCart = useCartStore((state) => state.clearCart);
 
   if (!open) return null;
 
@@ -34,18 +37,18 @@ export default function CartDrawer({ open, onClose, onCheckout }) {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div className="canteen-qty-stepper">
-                    <button onClick={() => updateQuantity(item.id, Math.max(0, item.quantity - 1))}>
+                    <button onClick={() => updateQuantity(canteenId, item.id, Math.max(0, item.quantity - 1))}>
                       <Minus size={14} />
                     </button>
                     <span>{item.quantity}</span>
-                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)}>
+                    <button onClick={() => updateQuantity(canteenId, item.id, item.quantity + 1)}>
                       <Plus size={14} />
                     </button>
                   </div>
                   <span style={{ fontSize: 14, fontWeight: 600, minWidth: 50, textAlign: 'right' }}>
                     ₹{item.price * item.quantity}
                   </span>
-                  <button onClick={() => removeItem(item.id)} style={{
+                  <button onClick={() => removeItem(canteenId, item.id)} style={{
                     background: 'transparent', border: 'none', color: '#ff6b6b', cursor: 'pointer', padding: 4,
                   }}>
                     <Trash2 size={14} />
@@ -62,7 +65,7 @@ export default function CartDrawer({ open, onClose, onCheckout }) {
             </div>
 
             <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
-              <button className="canteen-btn-small" onClick={clearCart} style={{ flex: 1 }}>Clear Cart</button>
+              <button className="canteen-btn-small" onClick={() => clearCart(canteenId)} style={{ flex: 1 }}>Clear Cart</button>
               <button className="canteen-btn-small canteen-btn-small--primary" onClick={onCheckout} style={{ flex: 2 }}>
                 Checkout • ₹{total}
               </button>

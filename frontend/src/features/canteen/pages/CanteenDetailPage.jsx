@@ -10,15 +10,14 @@ import '../canteen.css';
 
 export default function CanteenDetailPage() {
   const { id } = useParams();
+  const canteenId = Number(id);
   const navigate = useNavigate();
-  const [orderType, setOrderType] = useState('pickup');
   const [cartOpen, setCartOpen] = useState(false);
   const [dietPref, setDietPref] = useState('all');
   const { data: canteen, isLoading: loadingCanteen } = useCanteenDetail(id);
   const { data: menuItems = [], isLoading: loadingMenu } = useCanteenMenu(id);
-  const { cart, getTotal, getItemCount } = useCartStore();
-  const itemCount = getItemCount();
-  const total = getTotal();
+  const itemCount = useCartStore((state) => state.getItemCount(canteenId));
+  const total = useCartStore((state) => state.getTotal(canteenId));
 
   const emojis = ['🍕', '🍔', '🥡', '☕', '🍜', '🧁'];
 
@@ -81,7 +80,7 @@ export default function CanteenDetailPage() {
             if (dietPref === 'non-veg') return !item.is_veg;
             return true;
           }).map((item, i) => (
-            <MenuItemCard key={item.id} item={item} canteenId={Number(id)} index={i} />
+            <MenuItemCard key={item.id} item={item} canteenId={canteenId} index={i} />
           ))
         )}
       </div>
@@ -97,7 +96,15 @@ export default function CanteenDetailPage() {
       )}
 
       {/* Cart Drawer */}
-      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} onCheckout={() => { setCartOpen(false); navigate('/checkout'); }} />
+      <CartDrawer
+        canteenId={canteenId}
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        onCheckout={() => {
+          setCartOpen(false);
+          navigate(`/checkout?canteen=${canteenId}`);
+        }}
+      />
     </div>
   );
 }

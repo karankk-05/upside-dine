@@ -509,3 +509,34 @@ class AdminMessManagementTests(APITestCase):
         mess.refresh_from_db()
         self.assertFalse(mess.is_active)
         self.assertEqual(response.data["is_active"], False)
+
+
+class AdminCanteenManagementTests(APITestCase):
+    def setUp(self):
+        self.admin_role = Role.objects.create(role_name="admin_manager")
+        self.admin_user = User.objects.create_user(
+            email="admin.canteen@example.com",
+            password="password123",
+            role=self.admin_role,
+            is_active=True,
+            is_verified=True,
+        )
+        self.client.force_authenticate(user=self.admin_user)
+
+    def test_admin_can_toggle_canteen_status(self):
+        canteen = Canteen.objects.create(name="Issue 2 Canteen", location="North Block")
+
+        response = self.client.patch(f"/api/admin/canteens/{canteen.id}/", {}, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        canteen.refresh_from_db()
+        self.assertFalse(canteen.is_active)
+        self.assertEqual(response.data["is_active"], False)
+
+    def test_admin_can_delete_canteen(self):
+        canteen = Canteen.objects.create(name="Issue 2 Delete Canteen", location="South Block")
+
+        response = self.client.delete(f"/api/admin/canteens/{canteen.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Canteen.objects.filter(id=canteen.id).exists())

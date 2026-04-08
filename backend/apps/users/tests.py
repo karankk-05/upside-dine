@@ -326,6 +326,136 @@ class MessWorkerManagementTests(APITestCase):
         self.assertEqual(response.status_code, 404)
 
 
+class AdminManagerManagementTests(APITestCase):
+    def setUp(self):
+        self.admin_role = Role.objects.create(role_name="admin_manager")
+        self.mess_manager_role = Role.objects.create(role_name="mess_manager")
+        self.canteen_manager_role = Role.objects.create(role_name="canteen_manager")
+
+        self.admin_user = User.objects.create_user(
+            email="admin.manager@example.com",
+            password="password123",
+            role=self.admin_role,
+            is_active=True,
+            is_verified=True,
+        )
+        self.client.force_authenticate(user=self.admin_user)
+
+        self.mess = Mess.objects.create(hall_name="Hall 1", location="North Block")
+        self.other_mess = Mess.objects.create(hall_name="Hall 2", location="South Block")
+        self.canteen = Canteen.objects.create(name="North Canteen", location="Hall 1")
+
+        self.manager = User.objects.create_user(
+            email="manager.one@example.com",
+            password="password123",
+            phone="9999999999",
+            role=self.mess_manager_role,
+            is_active=True,
+            is_verified=True,
+        )
+        self.manager_staff = Staff.objects.create(
+            user=self.manager,
+            full_name="Manager One",
+            employee_code="ADM001",
+            is_mess_staff=True,
+        )
+        MessStaffAssignment.objects.filter(staff=self.manager_staff).update(is_active=False)
+        MessStaffAssignment.objects.create(
+            staff=self.manager_staff,
+            mess=self.mess,
+            assignment_role="manager",
+            is_active=True,
+        )
+
+        self.duplicate_user = User.objects.create_user(
+            email="taken@example.com",
+            password="password123",
+            role=self.admin_role,
+            is_active=True,
+            is_verified=True,
+        )
+
+    def test_admin_can_update_manager_details_and_assignment(self):
+        response = self.client.put(
+            f"/api/admin/managers/{self.manager.id}/",
+            {
+                "full_name": "Updated Manager",
+                "email": "updated.manager@example.com",
+                "phone": "8888888888",
+                "role_name": "canteen_manager",
+                "canteen_id": self.canteen.id,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.manager.refresh_from_db()
+        self.manager_staff.refresh_from_db()
+        self.assertEqual(self.manager.email, "updated.manager@example.com")
+        self.assertEqual(self.manager.phone, "8888888888")
+        self.assertEqual(self.manager.role.role_name, "canteen_manager")
+        self.assertEqual(self.manager_staff.full_name, "Updated Manager")
+        self.assertEqual(self.manager_staff.canteen, self.canteen)
+        self.assertFalse(self.manager_staff.is_mess_staff)
+        self.assertFalse(
+            MessStaffAssignment.objects.filter(
+                staff=self.manager_staff,
+                assignment_role="manager",
+                is_active=True,
+            ).exists()
+        )
+        self.assertEqual(response.data["assignment_name"], self.canteen.name)
+        self.assertEqual(response.data["canteen_id"], self.canteen.id)
+        self.assertIsNone(response.data["mess_id"])
+
+    def test_admin_can_reassign_manager_to_another_mess(self):
+        response = self.client.put(
+            f"/api/admin/managers/{self.manager.id}/",
+            {
+                "full_name": "Manager One",
+                "email": "manager.one@example.com",
+                "phone": "9999999999",
+                "role_name": "mess_manager",
+                "mess_id": self.other_mess.id,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        active_assignment = MessStaffAssignment.objects.get(
+            staff=self.manager_staff,
+            assignment_role="manager",
+            is_active=True,
+        )
+        self.assertEqual(active_assignment.mess, self.other_mess)
+        self.assertEqual(response.data["mess_id"], self.other_mess.id)
+        self.assertEqual(response.data["assignment_name"], self.other_mess.name)
+
+    def test_admin_update_rejects_duplicate_manager_email(self):
+        response = self.client.put(
+            f"/api/admin/managers/{self.manager.id}/",
+            {
+                "full_name": "Manager One",
+                "email": self.duplicate_user.email,
+                "phone": "9999999999",
+                "role_name": "mess_manager",
+                "mess_id": self.mess.id,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("email", response.data)
+        self.manager.refresh_from_db()
+        self.assertEqual(self.manager.email, "manager.one@example.com")
+
+    def test_admin_can_delete_manager(self):
+        response = self.client.delete(f"/api/admin/managers/{self.manager.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(id=self.manager.id).exists())
+
+
 class AdminMessManagementTests(APITestCase):
     def setUp(self):
         self.admin_role = Role.objects.create(role_name="admin_manager")

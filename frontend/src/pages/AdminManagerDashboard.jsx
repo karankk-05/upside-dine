@@ -27,6 +27,14 @@ import { compareNaturalText } from '../lib/naturalSort';
 import PullToRefresh from '../components/PullToRefresh';
 import './AdminManagerDashboard.css';
 
+const INITIAL_MANAGER_FORM_DATA = {
+  email: '',
+  full_name: '',
+  phone: '',
+  role_name: 'mess_manager',
+  canteen_id: '',
+  mess_id: '',
+};
 const INITIAL_MESS_FORM_DATA = { hall_name: '', location: '' };
 
 const TAB_ITEMS = [
@@ -169,10 +177,12 @@ const EntitySectionSkeleton = ({ columns = 6 }) => (
 const DetailSheet = ({
   entity,
   onClose,
+  onEditManager,
   onEditMess,
   onToggleManager,
   onToggleMess,
   onToggleCanteen,
+  onDeleteManager,
   onDeleteMess,
   onDeleteCanteen,
 }) => {
@@ -197,6 +207,7 @@ const DetailSheet = ({
       { label: 'Email', value: item.email },
       { label: 'Phone', value: item.phone || 'Not set' },
       { label: 'Role', value: formatRoleLabel(item.role_name) },
+      { label: 'Assignment', value: item.assignment_name || 'Not assigned' },
       { label: 'Employee Code', value: item.employee_code || 'Not assigned' },
     ];
     primaryAction = {
@@ -206,6 +217,18 @@ const DetailSheet = ({
         : 'admin-action-button admin-action-button--success',
       onClick: () => onToggleManager(item.id, item.is_active),
       icon: ShieldCheck,
+    };
+    secondaryAction = {
+      label: 'Edit Manager',
+      className: 'admin-action-button',
+      onClick: () => onEditManager(item),
+      icon: Pencil,
+    };
+    tertiaryAction = {
+      label: 'Delete Manager',
+      className: 'admin-action-button admin-action-button--ghost',
+      onClick: () => onDeleteManager(item.id),
+      icon: Trash2,
     };
   }
 
@@ -347,14 +370,8 @@ const AdminManagerDashboard = () => {
   const [showAddMessForm, setShowAddMessForm] = useState(false);
   const [showAddCanteenForm, setShowAddCanteenForm] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState(null);
-  const [formData, setFormData] = useState({
-    email: '',
-    full_name: '',
-    phone: '',
-    role_name: 'mess_manager',
-    canteen_id: '',
-    mess_id: '',
-  });
+  const [formData, setFormData] = useState(INITIAL_MANAGER_FORM_DATA);
+  const [editingManagerId, setEditingManagerId] = useState(null);
   const [messFormData, setMessFormData] = useState(INITIAL_MESS_FORM_DATA);
   const [editingMessId, setEditingMessId] = useState(null);
   const [canteenFormData, setCanteenFormData] = useState({ name: '', location: '' });
@@ -425,6 +442,8 @@ const AdminManagerDashboard = () => {
     setShowAddForm(false);
     setShowAddCanteenForm(false);
     setShowAddMessForm(false);
+    setEditingManagerId(null);
+    setFormData(INITIAL_MANAGER_FORM_DATA);
     setEditingMessId(null);
     setMessFormData(INITIAL_MESS_FORM_DATA);
   };
@@ -482,7 +501,52 @@ const AdminManagerDashboard = () => {
     setMessage({ type: '', text: '' });
   };
 
-  const handleAddManager = async (event) => {
+  const resetManagerForm = () => {
+    setFormData(INITIAL_MANAGER_FORM_DATA);
+    setEditingManagerId(null);
+    setShowAddForm(false);
+  };
+
+  const getManagerErrorMessage = (error, fallbackMessage) =>
+    error.response?.data?.email?.[0] ||
+    error.response?.data?.email ||
+    error.response?.data?.phone?.[0] ||
+    error.response?.data?.phone ||
+    error.response?.data?.full_name?.[0] ||
+    error.response?.data?.full_name ||
+    error.response?.data?.role_name?.[0] ||
+    error.response?.data?.role_name ||
+    error.response?.data?.canteen_id?.[0] ||
+    error.response?.data?.canteen_id ||
+    error.response?.data?.mess_id?.[0] ||
+    error.response?.data?.mess_id ||
+    error.response?.data?.detail ||
+    fallbackMessage;
+
+  const handleEditManager = (manager) => {
+    setSelectedEntity(null);
+    setMessage({ type: '', text: '' });
+    setEditingManagerId(manager.id);
+    setFormData({
+      email: manager.email || '',
+      full_name: manager.full_name || '',
+      phone: manager.phone || '',
+      role_name: manager.role_name || 'mess_manager',
+      canteen_id:
+        manager.role_name === 'canteen_manager' && manager.canteen_id
+          ? String(manager.canteen_id)
+          : '',
+      mess_id:
+        manager.role_name === 'mess_manager' && manager.mess_id
+          ? String(manager.mess_id)
+          : '',
+    });
+    setShowAddMessForm(false);
+    setShowAddCanteenForm(false);
+    setShowAddForm(true);
+  };
+
+  const handleSaveManager = async (event) => {
     event.preventDefault();
     setSubmittingType('manager');
     setMessage({ type: '', text: '' });
@@ -503,37 +567,26 @@ const AdminManagerDashboard = () => {
         payload.mess_id = parseInt(formData.mess_id, 10);
       }
 
-      const { data } = await api.post('/admin/managers/', payload);
+      const { data } = editingManagerId
+        ? await api.put(`/admin/managers/${editingManagerId}/`, payload)
+        : await api.post('/admin/managers/', payload);
       setMessage({
         type: 'success',
-        text: `Manager created. Email: ${data.email}, Employee Code: ${data.employee_code}.`,
+        text: editingManagerId
+          ? `Manager updated: ${data.full_name}.`
+          : `Manager created. Email: ${data.email}, Employee Code: ${data.employee_code}.`,
       });
-      setFormData({
-        email: '',
-        full_name: '',
-        phone: '',
-        role_name: 'mess_manager',
-        canteen_id: '',
-        mess_id: '',
-      });
-      setShowAddForm(false);
+      setSelectedEntity(null);
+      resetManagerForm();
       await refreshManagers();
     } catch (error) {
-      const data = error.response?.data;
-      let errorMessage = 'Unable to create manager.';
-
-      if (data) {
-        if (data.email) errorMessage = `Email error: ${data.email[0] || data.email}`;
-        else if (data.phone) errorMessage = `Phone error: ${data.phone[0] || data.phone}`;
-        else if (data.full_name) errorMessage = `Name error: ${data.full_name[0] || data.full_name}`;
-        else if (data.role_name) errorMessage = `Role error: ${data.role_name[0] || data.role_name}`;
-        else if (data.canteen_id) errorMessage = `Canteen error: ${data.canteen_id[0] || data.canteen_id}`;
-        else if (data.mess_id) errorMessage = `Mess error: ${data.mess_id[0] || data.mess_id}`;
-        else if (data.detail) errorMessage = data.detail;
-        else if (typeof data === 'string') errorMessage = data;
-      }
-
-      setMessage({ type: 'error', text: errorMessage });
+      setMessage({
+        type: 'error',
+        text: getManagerErrorMessage(
+          error,
+          editingManagerId ? 'Unable to update manager.' : 'Unable to create manager.'
+        ),
+      });
     } finally {
       setSubmittingType('');
     }
@@ -626,6 +679,24 @@ const AdminManagerDashboard = () => {
       });
     } catch {
       setMessage({ type: 'error', text: 'Unable to update manager status.' });
+    }
+  };
+
+  const handleDeleteManager = async (userId) => {
+    if (!window.confirm('Are you sure you want to delete this manager?')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/admin/managers/${userId}/`);
+      setSelectedEntity(null);
+      if (editingManagerId === userId) {
+        resetManagerForm();
+      }
+      await refreshManagers();
+      setMessage({ type: 'success', text: 'Manager deleted successfully.' });
+    } catch {
+      setMessage({ type: 'error', text: 'Unable to delete manager.' });
     }
   };
 
@@ -726,7 +797,13 @@ const AdminManagerDashboard = () => {
     setMessage({ type: '', text: '' });
 
     if (activeTab === 'managers') {
-      setShowAddForm((current) => !current);
+      if (showAddForm) {
+        resetManagerForm();
+      } else {
+        setEditingManagerId(null);
+        setFormData(INITIAL_MANAGER_FORM_DATA);
+        setShowAddForm(true);
+      }
       setShowAddMessForm(false);
       setShowAddCanteenForm(false);
       return;
@@ -807,6 +884,13 @@ const AdminManagerDashboard = () => {
                       <div className="admin-action-row admin-action-row--desktop">
                         <button
                           type="button"
+                          className="admin-action-button"
+                          onClick={() => handleEditManager(manager)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
                           className={`admin-action-button ${
                             manager.is_active
                               ? 'admin-action-button--danger'
@@ -815,6 +899,13 @@ const AdminManagerDashboard = () => {
                           onClick={() => handleToggleStatus(manager.id, manager.is_active)}
                         >
                           {manager.is_active ? 'Freeze' : 'Activate'}
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-action-button admin-action-button--ghost"
+                          onClick={() => handleDeleteManager(manager.id)}
+                        >
+                          Delete
                         </button>
                       </div>
                     </td>
@@ -1099,7 +1190,7 @@ const AdminManagerDashboard = () => {
 
             <section className="admin-panel">
               {activeTab === 'managers' && showAddForm ? (
-                <form className="admin-form-panel" onSubmit={handleAddManager} noValidate>
+                <form className="admin-form-panel" onSubmit={handleSaveManager} noValidate>
                   <div className="admin-form-grid">
                     <label className="admin-field">
                       <span>Full Name *</span>
@@ -1219,7 +1310,13 @@ const AdminManagerDashboard = () => {
                       className="admin-primary-button"
                       disabled={submittingType === 'manager'}
                     >
-                      {submittingType === 'manager' ? 'Creating...' : 'Create Manager'}
+                      {submittingType === 'manager'
+                        ? editingManagerId
+                          ? 'Saving...'
+                          : 'Creating...'
+                        : editingManagerId
+                        ? 'Save Changes'
+                        : 'Create Manager'}
                     </button>
                   </div>
                 </form>
@@ -1342,10 +1439,12 @@ const AdminManagerDashboard = () => {
         <DetailSheet
           entity={selectedEntity}
           onClose={() => setSelectedEntity(null)}
+          onEditManager={handleEditManager}
           onEditMess={handleEditMess}
           onToggleManager={handleToggleStatus}
           onToggleMess={handleToggleMess}
           onToggleCanteen={handleToggleCanteen}
+          onDeleteManager={handleDeleteManager}
           onDeleteMess={handleDeleteMess}
           onDeleteCanteen={handleDeleteCanteen}
         />

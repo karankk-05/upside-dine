@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.generics import GenericAPIView, ListAPIView, RetrieveAPIView
 from rest_framework.permissions import BasePermission, IsAuthenticated
@@ -266,6 +267,8 @@ class CanteenManagerVerifyPickupView(GenericAPIView):
                 pickup_otp=serializer.validated_data.get("pickup_otp", ""),
                 pickup_qr_code=serializer.validated_data.get("pickup_qr_code", ""),
             )
+        except ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
         except Exception as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(OrderStatusSerializer(order).data)

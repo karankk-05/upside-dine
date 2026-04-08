@@ -61,22 +61,20 @@ export default function CameraFeedStatus({ filterMessId, messesList = [] }) {
     );
   }
 
-  const feeds = React.useMemo(() => {
-    const scopedFeeds = filterMessId
-      ? allFeeds.filter((feed) => feed.mess_id === Number(filterMessId))
-      : allFeeds;
+  const scopedFeeds = filterMessId
+    ? allFeeds.filter((feed) => feed.mess_id === Number(filterMessId))
+    : allFeeds;
 
-    return [...scopedFeeds].sort((left, right) => {
-      const messDelta = Number(left.mess_id) - Number(right.mess_id);
-      if (messDelta !== 0) return messDelta;
+  const feeds = [...scopedFeeds].sort((left, right) => {
+    const messDelta = Number(left.mess_id) - Number(right.mess_id);
+    if (messDelta !== 0) return messDelta;
 
-      const feedNumberDelta =
-        Number(left.feed_number ?? left.id) - Number(right.feed_number ?? right.id);
-      if (feedNumberDelta !== 0) return feedNumberDelta;
+    const feedNumberDelta =
+      Number(left.feed_number ?? left.id) - Number(right.feed_number ?? right.id);
+    if (feedNumberDelta !== 0) return feedNumberDelta;
 
-      return Number(left.id) - Number(right.id);
-    });
-  }, [allFeeds, filterMessId]);
+    return Number(left.id) - Number(right.id);
+  });
 
   if (!feeds.length) {
     return (

@@ -7,6 +7,7 @@ import { ArrowLeft, BarChart3, TrendingUp, TrendingDown, Minus } from 'lucide-re
 import DensityIndicator from '../components/DensityIndicator';
 import CameraFeedStatus from '../components/CameraFeedStatus';
 import { useLiveCrowdDensity } from '../hooks/useLiveCrowdDensity';
+import PullToRefresh from '../../../components/PullToRefresh';
 import { STANDARD_INPUT_PROPS, sanitizeUrl } from '../../../lib/formValidation';
 import '../styles/crowd.css';
 
@@ -86,6 +87,14 @@ export default function ManagerCrowdOverview() {
   const [feedUrl, setFeedUrl] = React.useState('');
   const [selectedFeedMess, setSelectedFeedMess] = React.useState('');
   const [submittingFeed, setSubmittingFeed] = React.useState(false);
+  const handleRefresh = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['mess', 'list'] }),
+      queryClient.invalidateQueries({ queryKey: ['manager', 'stats'] }),
+      queryClient.invalidateQueries({ queryKey: ['crowd', 'live'] }),
+      queryClient.invalidateQueries({ queryKey: ['crowd', 'feeds'] }),
+    ]);
+  };
 
   const { data: messes = [], isLoading } = useQuery({
     queryKey: ['mess', 'list'],
@@ -119,8 +128,9 @@ export default function ManagerCrowdOverview() {
   }
 
   return (
-    <div className="manager-overview">
-      <div className="crowd-dashboard__header">
+    <PullToRefresh onRefresh={handleRefresh}>
+      <div className="manager-overview">
+        <div className="crowd-dashboard__header">
         <div className="crowd-dashboard__header-row">
           <button
             className="crowd-dashboard__back-btn"
@@ -140,7 +150,7 @@ export default function ManagerCrowdOverview() {
         </p>
       </div>
 
-      <div className="crowd-dashboard__content">
+        <div className="crowd-dashboard__content">
         {/* All Mess Density */}
         <div className="crowd-section">
           <div className="crowd-section__title">
@@ -246,7 +256,8 @@ export default function ManagerCrowdOverview() {
             </div>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </PullToRefresh>
   );
 }

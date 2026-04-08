@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -14,6 +14,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import api from '../lib/api';
+import PullToRefresh from '../components/PullToRefresh';
 import { getDefaultRouteForRole, logoutUser, setAuthSession } from '../lib/auth';
 import {
   getInlineValidationMessage,
@@ -86,62 +87,48 @@ const ProfilePage = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [blurredFields, setBlurredFields] = useState({});
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadProfile = useCallback(async () => {
+    setLoading(true);
+    setError('');
 
-    const loadProfile = async () => {
-      setLoading(true);
-      setError('');
+    try {
+      const [userResponse, hallsResponse] = await Promise.all([
+        api.get('/users/me/'),
+        api.get('/public/halls/'),
+      ]);
 
-      try {
-        const [userResponse, hallsResponse] = await Promise.all([
-          api.get('/users/me/'),
-          api.get('/public/halls/'),
-        ]);
+      const nextUser = userResponse.data;
+      let nextMessAccount = null;
 
-        const nextUser = userResponse.data;
-        let nextMessAccount = null;
-
-        if (nextUser.role === 'student') {
-          try {
-            const messAccountResponse = await api.get('/users/me/mess-account/');
-            nextMessAccount = messAccountResponse.data;
-          } catch (accountError) {
-            if (accountError.response?.status !== 404) {
-              throw accountError;
-            }
+      if (nextUser.role === 'student') {
+        try {
+          const messAccountResponse = await api.get('/users/me/mess-account/');
+          nextMessAccount = messAccountResponse.data;
+        } catch (accountError) {
+          if (accountError.response?.status !== 404) {
+            throw accountError;
           }
         }
-
-        if (cancelled) {
-          return;
-        }
-
-        setUser(nextUser);
-        setFormData(toProfileForm(nextUser));
-        setAvailableHalls(Array.isArray(hallsResponse.data) ? hallsResponse.data : []);
-        setMessAccount(nextMessAccount);
-        setAuthSession({ role: nextUser.role });
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(
-            loadError.response?.data?.detail ||
-              'We could not load your profile right now. Please try again.'
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
       }
-    };
 
-    loadProfile();
-
-    return () => {
-      cancelled = true;
-    };
+      setUser(nextUser);
+      setFormData(toProfileForm(nextUser));
+      setAvailableHalls(Array.isArray(hallsResponse.data) ? hallsResponse.data : []);
+      setMessAccount(nextMessAccount);
+      setAuthSession({ role: nextUser.role });
+    } catch (loadError) {
+      setError(
+        loadError.response?.data?.detail ||
+          'We could not load your profile right now. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadProfile().catch(() => {});
+  }, [loadProfile]);
 
   const isStudent = user?.role === 'student';
   const isStaff = Boolean(user?.profile && !isStudent);
@@ -291,8 +278,9 @@ const ProfilePage = () => {
     .join('');
 
   return (
-    <div className="profile-page-shell">
-      <div className="profile-page-frame">
+    <PullToRefresh onRefresh={loadProfile}>
+      <div className="profile-page-shell">
+        <div className="profile-page-frame">
         <div className="profile-page-header">
           <button className="profile-icon-button" onClick={() => navigate(getDefaultRouteForRole())}>
             <ArrowLeft size={18} />
@@ -482,12 +470,13 @@ const ProfilePage = () => {
           </div>
         ) : null}
 
-        <button className="profile-logout-button" onClick={handleLogout}>
-          <LogOut size={18} />
-          Log Out
-        </button>
+          <button className="profile-logout-button" onClick={handleLogout}>
+            <LogOut size={18} />
+            Log Out
+          </button>
+        </div>
       </div>
-    </div>
+    </PullToRefresh>
   );
 };
 

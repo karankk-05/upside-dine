@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { Activity, ArrowLeft } from 'lucide-react';
 import MessSelector from '../components/MessSelector';
 import MessLiveDensity from '../components/MessLiveDensity';
+import PullToRefresh from '../../../components/PullToRefresh';
 import '../styles/crowd.css';
 
 /**
@@ -14,8 +15,15 @@ import '../styles/crowd.css';
  */
 export default function CrowdDashboard() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [selectedMess, setSelectedMess] = useState(null);
   const userRole = localStorage.getItem('user_role');
+  const handleRefresh = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['mess', 'list'] }),
+      queryClient.invalidateQueries({ queryKey: ['user', 'profile'] }),
+    ]);
+  };
 
   const { data: profile } = useQuery({
     queryKey: ['user', 'profile'],
@@ -52,8 +60,9 @@ export default function CrowdDashboard() {
   }
 
   return (
-    <div className="crowd-dashboard">
-      <div className="crowd-dashboard__header">
+    <PullToRefresh onRefresh={handleRefresh}>
+      <div className="crowd-dashboard">
+        <div className="crowd-dashboard__header">
         <div className="crowd-dashboard__header-row">
           <button
             className="crowd-dashboard__back-btn"
@@ -72,7 +81,7 @@ export default function CrowdDashboard() {
         </p>
       </div>
 
-      <div className="crowd-dashboard__content">
+        <div className="crowd-dashboard__content">
         {/* Mess Selector */}
         {userRole !== 'student' && (
           <div className="crowd-section">
@@ -118,7 +127,8 @@ export default function CrowdDashboard() {
             </motion.div>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </PullToRefresh>
   );
 }

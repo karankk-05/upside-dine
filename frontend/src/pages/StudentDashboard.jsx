@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { STANDARD_INPUT_PROPS, sanitizeSearchText } from '../lib/formValidation';
+import PullToRefresh from '../components/PullToRefresh';
 import '../features/mess/mess.css';
 
 const StudentDashboard = () => {
@@ -12,7 +13,7 @@ const StudentDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadDashboard = useCallback(async () => {
     const token = localStorage.getItem('access_token');
     if (!token) {
       navigate('/auth');
@@ -21,32 +22,38 @@ const StudentDashboard = () => {
 
     const headers = { Authorization: `Bearer ${token}` };
 
-    // Fetch user profile + canteens + mess in parallel
-    Promise.all([
-      axios.get('/api/users/me/', { headers }),
-      axios.get('/api/public/canteens/'),
-      axios.get('/api/mess/', { headers }),
-    ])
-      .then(([userRes, canteenRes, messRes]) => {
-        const profile = userRes.data.profile;
-        setUserName(profile?.full_name || userRes.data.email.split('@')[0]);
+    setLoading(true);
 
-        setCanteens(canteenRes.data || []);
+    try {
+      const [userRes, canteenRes, messRes] = await Promise.all([
+        axios.get('/api/users/me/', { headers }),
+        axios.get('/api/public/canteens/'),
+        axios.get('/api/mess/', { headers }),
+      ]);
 
-        // Find the student's own mess based on hostel_name
-        const messes = messRes.data || [];
-        const studentHostel = profile?.hostel_name || '';
-        const myMess = messes.find(
-          (m) => m.hall_name?.toLowerCase() === studentHostel.toLowerCase()
-        );
-        setMess(myMess || messes[0] || null);
-      })
-      .catch((err) => {
-        console.error('Dashboard load error:', err);
-        if (err.response?.status === 401) navigate('/auth');
-      })
-      .finally(() => setLoading(false));
+      const profile = userRes.data.profile;
+      setUserName(profile?.full_name || userRes.data.email.split('@')[0]);
+      setCanteens(canteenRes.data || []);
+
+      const messes = messRes.data || [];
+      const studentHostel = profile?.hostel_name || '';
+      const myMess = messes.find(
+        (m) => m.hall_name?.toLowerCase() === studentHostel.toLowerCase()
+      );
+      setMess(myMess || messes[0] || null);
+    } catch (err) {
+      console.error('Dashboard load error:', err);
+      if (err.response?.status === 401) {
+        navigate('/auth');
+      }
+    } finally {
+      setLoading(false);
+    }
   }, [navigate]);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
 
   const canteenEmojis = ['🍕', '🍔', '🥡', '☕', '🍜', '🧁', '🥪', '🍩'];
 
@@ -83,8 +90,9 @@ const StudentDashboard = () => {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff' }}>
-      <div style={{ maxWidth: 428, margin: '0 auto', minHeight: '100vh', background: '#000', position: 'relative' }}>
+    <PullToRefresh onRefresh={loadDashboard}>
+      <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff' }}>
+        <div style={{ maxWidth: 428, margin: '0 auto', minHeight: '100vh', background: '#000', position: 'relative' }}>
 
         {/* Header */}
         <div style={{ padding: '40px 20px 0 20px', background: 'linear-gradient(180deg, #000 0%, #0a0a0a 100%)' }}>
@@ -227,8 +235,9 @@ const StudentDashboard = () => {
             <span style={{ fontSize: 24 }}>👤</span>Profile
           </a>
         </nav>
+        </div>
       </div>
-    </div>
+    </PullToRefresh>
   );
 };
 

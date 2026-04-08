@@ -2,6 +2,7 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from apps.canteen.models import Canteen
+from apps.mess.models import Mess
 from apps.orders.models import CanteenOrder
 from apps.users.models import Role, Staff, Student, User
 
@@ -87,3 +88,58 @@ class DeliveryPersonnelManagementTests(APITestCase):
         self.assertEqual(self.order.status, CanteenOrder.STATUS_READY)
         self.assertIsNone(self.order.delivery_person)
         self.assertIsNone(self.order.delivery_accepted_at)
+
+
+class AdminMessManagementTests(APITestCase):
+    def setUp(self):
+        self.admin_role = Role.objects.create(role_name="admin_manager")
+        self.admin_user = User.objects.create_user(
+            email="admin.manager@example.com",
+            password="password123",
+            role=self.admin_role,
+            is_active=True,
+            is_verified=True,
+        )
+        self.client.force_authenticate(user=self.admin_user)
+
+    def test_admin_can_update_mess_details(self):
+        mess = Mess.objects.create(hall_name="Hall 1", location="North Block")
+
+        response = self.client.put(
+            f"/api/admin/messes/{mess.id}/",
+            {"hall_name": "Hall 1 Extension", "location": "East Wing"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mess.refresh_from_db()
+        self.assertEqual(mess.hall_name, "Hall 1 Extension")
+        self.assertEqual(mess.name, "Hall 1 Extension Mess")
+        self.assertEqual(mess.location, "East Wing")
+        self.assertEqual(response.data["name"], "Hall 1 Extension Mess")
+        self.assertEqual(response.data["location"], "East Wing")
+
+    def test_admin_update_rejects_duplicate_hall_name(self):
+        Mess.objects.create(hall_name="Hall 1", location="North Block")
+        mess = Mess.objects.create(hall_name="Hall 2", location="South Block")
+
+        response = self.client.put(
+            f"/api/admin/messes/{mess.id}/",
+            {"hall_name": "Hall 1", "location": "South Block"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("hall_name", response.data)
+        mess.refresh_from_db()
+        self.assertEqual(mess.hall_name, "Hall 2")
+
+    def test_admin_can_toggle_mess_status(self):
+        mess = Mess.objects.create(hall_name="Hall 3", location="Central Block")
+
+        response = self.client.patch(f"/api/admin/messes/{mess.id}/", {}, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        mess.refresh_from_db()
+        self.assertFalse(mess.is_active)
+        self.assertEqual(response.data["is_active"], False)

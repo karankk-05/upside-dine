@@ -472,17 +472,48 @@ class ManagerSerializer(serializers.ModelSerializer):
 class CreateMessSerializer(serializers.Serializer):
     """Serializer for admin manager to create a mess for a hall"""
     hall_name = serializers.CharField()
+    location = serializers.CharField(required=False, allow_blank=True)
 
     def validate_hall_name(self, value):
-        if Mess.objects.filter(hall_name=value).exists():
-            raise serializers.ValidationError(f"A mess for {value} already exists.")
-        return value
+        normalized_value = " ".join(value.split())
+        if not normalized_value:
+            raise serializers.ValidationError("Hall name cannot be blank.")
+        if Mess.objects.filter(hall_name__iexact=normalized_value).exists():
+            raise serializers.ValidationError(f"A mess for {normalized_value} already exists.")
+        return normalized_value
+
+    def validate_location(self, value):
+        return " ".join(value.split())
 
     def create(self, validated_data):
         mess = Mess.objects.create(
             hall_name=validated_data['hall_name'],
+            location=validated_data.get('location', ''),
         )
         return mess
+
+
+class UpdateMessSerializer(serializers.ModelSerializer):
+    """Serializer for admin manager to update mess details"""
+
+    class Meta:
+        model = Mess
+        fields = ['hall_name', 'location']
+
+    def validate_hall_name(self, value):
+        normalized_value = " ".join(value.split())
+        if not normalized_value:
+            raise serializers.ValidationError("Hall name cannot be blank.")
+
+        existing_messes = Mess.objects.filter(hall_name__iexact=normalized_value)
+        if self.instance is not None:
+            existing_messes = existing_messes.exclude(pk=self.instance.pk)
+        if existing_messes.exists():
+            raise serializers.ValidationError(f"A mess for {normalized_value} already exists.")
+        return normalized_value
+
+    def validate_location(self, value):
+        return " ".join(value.split())
 
 
 class MessListSerializer(serializers.ModelSerializer):
@@ -491,7 +522,7 @@ class MessListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Mess
-        fields = ['id', 'name', 'hall_name', 'hall_display', 'is_active', 'created_at']
+        fields = ['id', 'name', 'hall_name', 'hall_display', 'location', 'is_active', 'created_at']
         read_only_fields = fields
 
     def get_hall_display(self, obj):

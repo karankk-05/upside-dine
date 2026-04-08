@@ -465,7 +465,14 @@ class ManagerMenuListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         mess = _get_manager_mess(self.request)
-        return MessMenuItem.objects.select_related("mess").filter(mess=mess).order_by(
+        queryset = MessMenuItem.objects.select_related("mess").filter(mess=mess)
+        is_active_value = self.request.query_params.get("is_active")
+        if is_active_value is not None:
+            _parse_bool(is_active_value, "is_active")
+        if is_active_value is None:
+            queryset = queryset.filter(is_active=True)
+
+        return queryset.order_by(
             "day_of_week",
             "meal_type",
             "item_name",

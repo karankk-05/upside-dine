@@ -1,13 +1,17 @@
+import { forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Minus } from 'lucide-react';
 import { useCartStore } from '../../../stores/cartStore';
 import '../canteen.css';
 
-export default function MenuItemCard({ item, canteenId, index = 0 }) {
+const MenuItemCard = forwardRef(function MenuItemCard(
+  { item, canteenId, index = 0, isHighlighted = false },
+  ref
+) {
   const cart = useCartStore((state) => state.getCart(canteenId));
   const addItem = useCartStore((state) => state.addItem);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
-  const quantity = cart.find((i) => i.id === item.id)?.quantity || 0;
+  const quantity = cart.find((cartItem) => cartItem.id === item.id)?.quantity || 0;
   const isVeg = item.is_veg;
   const isAvailable = item.is_available && item.available_quantity > 0;
 
@@ -22,7 +26,9 @@ export default function MenuItemCard({ item, canteenId, index = 0 }) {
 
   return (
     <motion.div
-      className={`canteen-menu-item ${!isAvailable ? 'canteen-menu-item--unavailable' : ''}`}
+      ref={ref}
+      id={`canteen-menu-item-${item.id}`}
+      className={`canteen-menu-item ${!isAvailable ? 'canteen-menu-item--unavailable' : ''} ${isHighlighted ? 'canteen-menu-item--highlighted' : ''}`}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay: index * 0.05 }}
@@ -54,4 +60,6 @@ export default function MenuItemCard({ item, canteenId, index = 0 }) {
       </div>
     </motion.div>
   );
-}
+});
+
+export default MenuItemCard;

@@ -201,7 +201,7 @@ const QRScannerPage = () => {
               background: 'var(--st-light-gray)', border: '2px solid var(--st-text-dim)',
               borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
-            onClick={() => navigate('/worker/profile')}
+            onClick={() => navigate('/profile')}
             title="Profile"
           >
             <User size={16} color="var(--st-text-dim)" />

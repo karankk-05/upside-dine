@@ -110,9 +110,39 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 
 
 class StaffProfileSerializer(serializers.ModelSerializer):
+    canteen_name = serializers.SerializerMethodField()
+    canteen_location = serializers.SerializerMethodField()
+    active_mess_assignments = serializers.SerializerMethodField()
+
+    def get_canteen_name(self, obj):
+        return obj.canteen.name if obj.canteen else None
+
+    def get_canteen_location(self, obj):
+        return obj.canteen.location if obj.canteen else None
+
+    def get_active_mess_assignments(self, obj):
+        assignments = obj.mess_assignments.filter(is_active=True).select_related("mess")
+        return [
+            {
+                "mess_id": assignment.mess_id,
+                "mess_name": assignment.mess.name,
+                "hall_name": assignment.mess.hall_name,
+                "assignment_role": assignment.assignment_role,
+            }
+            for assignment in assignments
+        ]
+
     class Meta:
         model = Staff
-        fields = ["full_name", "employee_code", "canteen", "is_mess_staff"]
+        fields = [
+            "full_name",
+            "employee_code",
+            "canteen",
+            "canteen_name",
+            "canteen_location",
+            "is_mess_staff",
+            "active_mess_assignments",
+        ]
         read_only_fields = fields
 
 

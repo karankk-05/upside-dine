@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
   BedDouble,
@@ -7,15 +8,21 @@ import {
   CheckCircle2,
   LogOut,
   Mail,
+  MapPin,
   Phone,
   Save,
   ShieldCheck,
+  Store,
+  Truck,
   User,
+  Users,
+  UtensilsCrossed,
   Wallet,
 } from 'lucide-react';
 import api from '../lib/api';
 import PullToRefresh from '../components/PullToRefresh';
 import { getDefaultRouteForRole, logoutUser, setAuthSession } from '../lib/auth';
+import { CURRENT_USER_QUERY_KEY, PUBLIC_HALLS_QUERY_KEY, useCurrentUser, usePublicHalls } from '../hooks/useCurrentUser';
 import {
   getInlineValidationMessage,
   STANDARD_INPUT_PROPS,
@@ -42,6 +49,46 @@ const ROLE_LABELS = {
   superadmin: 'Super Admin',
 };
 
+const ROLE_COPY = {
+  student: {
+    subtitle: 'Update your account and dining details.',
+    overviewTitle: 'Dining overview',
+    overviewDescription: 'Live details from your current student account.',
+  },
+  mess_manager: {
+    subtitle: 'Update your account details and review your mess assignment.',
+    overviewTitle: 'Work overview',
+    overviewDescription: 'Your manager account is currently linked to mess operations.',
+  },
+  mess_worker: {
+    subtitle: 'Update your account details and review your worker assignment.',
+    overviewTitle: 'Work overview',
+    overviewDescription: 'Your worker account is linked to live scan and redemption operations.',
+  },
+  canteen_manager: {
+    subtitle: 'Update your account details and review your assigned canteen.',
+    overviewTitle: 'Work overview',
+    overviewDescription: 'Your manager account is currently linked to canteen operations.',
+  },
+  delivery_person: {
+    subtitle: 'Update your account details and review your delivery assignment.',
+    overviewTitle: 'Work overview',
+    overviewDescription: 'Your delivery account is linked to active pickup and drop tasks.',
+  },
+  admin_manager: {
+    subtitle: 'Update your account details and review your admin access.',
+    overviewTitle: 'Admin overview',
+    overviewDescription: 'Your account has control over managers, messes, and canteens.',
+  },
+  superadmin: {
+    subtitle: 'Update your account details and review your platform access.',
+    overviewTitle: 'Admin overview',
+    overviewDescription: 'Your account has full platform-level access.',
+  },
+};
+
+const MESS_ACCOUNT_QUERY_KEY = ['current-user', 'mess-account'];
+
 const toProfileForm = (user) => ({
   phone: user?.phone || '',
   full_name: user?.profile?.full_name || '',
@@ -50,6 +97,8 @@ const toProfileForm = (user) => ({
 });
 
 const formatRole = (role) => ROLE_LABELS[role] || 'Account';
+const formatAssignmentRole = (value) =>
+  value === 'manager' ? 'Manager' : value === 'worker' ? 'Worker' : 'Team member';
 
 const formatDateTime = (value) => {
   if (!value) {
@@ -77,61 +126,69 @@ const formatCurrency = (value) => {
 
 const ProfilePage = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState(EMPTY_FORM);
-  const [availableHalls, setAvailableHalls] = useState([]);
-  const [messAccount, setMessAccount] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [blurredFields, setBlurredFields] = useState({});
+  const [hasLocalEdits, setHasLocalEdits] = useState(false);
+  const [hydratedUserId, setHydratedUserId] = useState(null);
+
+  const { data: user, isLoading: isUserLoading, error: userLoadError } = useCurrentUser();
+  const { data: availableHalls = [] } = usePublicHalls();
+  const isStudent = user?.role === 'student';
+  const { data: messAccount = null, isLoading: isMessAccountLoading } = useQuery({
+    queryKey: MESS_ACCOUNT_QUERY_KEY,
+    queryFn: async () => {
+      const { data } = await api.get('/users/me/mess-account/');
+      return data;
+    },
+    enabled: isStudent,
+    retry: false,
+  });
 
   const loadProfile = useCallback(async () => {
-    setLoading(true);
-    setError('');
+    const cachedUser = queryClient.getQueryData(CURRENT_USER_QUERY_KEY);
+    const nextRole = user?.role || cachedUser?.role;
+    const refreshTasks = [
+      queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: PUBLIC_HALLS_QUERY_KEY }),
+    ];
 
-    try {
-      const [userResponse, hallsResponse] = await Promise.all([
-        api.get('/users/me/'),
-        api.get('/public/halls/'),
-      ]);
-
-      const nextUser = userResponse.data;
-      let nextMessAccount = null;
-
-      if (nextUser.role === 'student') {
-        try {
-          const messAccountResponse = await api.get('/users/me/mess-account/');
-          nextMessAccount = messAccountResponse.data;
-        } catch (accountError) {
-          if (accountError.response?.status !== 404) {
-            throw accountError;
-          }
-        }
-      }
-
-      setUser(nextUser);
-      setFormData(toProfileForm(nextUser));
-      setAvailableHalls(Array.isArray(hallsResponse.data) ? hallsResponse.data : []);
-      setMessAccount(nextMessAccount);
-      setAuthSession({ role: nextUser.role });
-    } catch (loadError) {
-      setError(
-        loadError.response?.data?.detail ||
-          'We could not load your profile right now. Please try again.'
-      );
-    } finally {
-      setLoading(false);
+    if (nextRole === 'student') {
+      refreshTasks.push(queryClient.invalidateQueries({ queryKey: MESS_ACCOUNT_QUERY_KEY }));
     }
-  }, []);
+
+    await Promise.all(refreshTasks);
+  }, [queryClient, user?.role]);
 
   useEffect(() => {
-    loadProfile().catch(() => {});
-  }, [loadProfile]);
+    if (user?.role) {
+      setAuthSession({ role: user.role });
+    }
+  }, [user?.role]);
 
-  const isStudent = user?.role === 'student';
-  const isStaff = Boolean(user?.profile && !isStudent);
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    if (hydratedUserId !== user.id || !hasLocalEdits) {
+      setFormData(toProfileForm(user));
+      setHydratedUserId(user.id);
+    }
+  }, [user, hydratedUserId, hasLocalEdits]);
+
+  const roleCopy = ROLE_COPY[user?.role] || {
+    subtitle: 'Update your account details.',
+    overviewTitle: 'Account overview',
+    overviewDescription: 'Live details from your current account.',
+  };
+  const activeMessAssignments = Array.isArray(user?.profile?.active_mess_assignments)
+    ? user.profile.active_mess_assignments
+    : [];
+  const primaryMessAssignment = activeMessAssignments[0] || null;
   const readOnlyMeta = useMemo(
     () => [
       { label: 'Email', value: user?.email || 'Not available', icon: <Mail size={16} /> },
@@ -153,6 +210,121 @@ const ProfilePage = () => {
     ],
     [isStudent, user]
   );
+
+  const overviewCards = useMemo(() => {
+    if (isStudent) {
+      return [
+        {
+          key: 'balance',
+          icon: <Wallet size={16} />,
+          label: 'Mess account balance',
+          value: messAccount ? formatCurrency(messAccount.balance) : 'Unavailable',
+          note: `Last updated ${
+            messAccount ? formatDateTime(messAccount.last_updated) : 'Not available'
+          }`,
+        },
+        {
+          key: 'hall',
+          icon: <Building2 size={16} />,
+          label: 'Assigned dining hall',
+          value: formData.hostel_name || 'Not selected',
+          note: formData.room_number
+            ? `Room ${formData.room_number}`
+            : 'Select your hall to keep mess suggestions accurate.',
+        },
+      ];
+    }
+
+    if (user?.role === 'mess_manager' || user?.role === 'mess_worker') {
+      return [
+        {
+          key: 'access',
+          icon: <ShieldCheck size={16} />,
+          label: 'Access type',
+          value: user.role === 'mess_manager' ? 'Mess management' : 'Mess operations',
+          note: primaryMessAssignment
+            ? `Assigned as ${formatAssignmentRole(primaryMessAssignment.assignment_role)}`
+            : 'Your role permissions are active on supported mess screens.',
+        },
+        {
+          key: 'assignment',
+          icon: <UtensilsCrossed size={16} />,
+          label: 'Assigned mess',
+          value: primaryMessAssignment?.mess_name || 'Not assigned',
+          note: primaryMessAssignment?.hall_name
+            ? `Hall: ${primaryMessAssignment.hall_name}`
+            : 'Connect with an admin manager to link a mess.',
+        },
+      ];
+    }
+
+    if (user?.role === 'canteen_manager') {
+      return [
+        {
+          key: 'access',
+          icon: <Store size={16} />,
+          label: 'Access type',
+          value: 'Canteen management',
+          note: 'Manage menu, orders, delivery staff, and payment settings.',
+        },
+        {
+          key: 'assignment',
+          icon: <MapPin size={16} />,
+          label: 'Assigned canteen',
+          value: user?.profile?.canteen_name || 'Not assigned',
+          note:
+            user?.profile?.canteen_location || 'Connect with an admin manager to link a canteen.',
+        },
+      ];
+    }
+
+    if (user?.role === 'delivery_person') {
+      return [
+        {
+          key: 'access',
+          icon: <Truck size={16} />,
+          label: 'Access type',
+          value: 'Delivery operations',
+          note: 'Accept deliveries, verify OTPs, and complete student orders.',
+        },
+        {
+          key: 'assignment',
+          icon: <Store size={16} />,
+          label: 'Pickup canteen',
+          value: user?.profile?.canteen_name || 'Not assigned',
+          note:
+            user?.profile?.canteen_location || 'Connect with a canteen manager to link a base.',
+        },
+      ];
+    }
+
+    if (user?.role === 'admin_manager' || user?.role === 'superadmin') {
+      return [
+        {
+          key: 'access',
+          icon: <ShieldCheck size={16} />,
+          label: 'Access type',
+          value: user?.role === 'superadmin' ? 'Super admin control' : 'Admin control panel',
+          note:
+            user?.role === 'superadmin'
+              ? 'Your account has full platform-level privileges.'
+              : 'Your account can manage managers, messes, and canteens.',
+        },
+        {
+          key: 'scope',
+          icon: <Users size={16} />,
+          label: 'Operational scope',
+          value:
+            user?.role === 'superadmin'
+              ? 'Platform administration'
+              : 'Campus administration',
+          note: 'Use your dashboard to maintain operational accounts and outlets.',
+        },
+      ];
+    }
+
+    return [];
+  }, [formData.hostel_name, formData.room_number, isStudent, messAccount, primaryMessAssignment, user]);
 
   const initialForm = useMemo(() => toProfileForm(user), [user]);
   const hasChanges = useMemo(
@@ -180,6 +352,7 @@ const ProfilePage = () => {
       ...current,
       [name]: nextValueByField[name] ?? value,
     }));
+    setHasLocalEdits(true);
     setSuccessMessage('');
     setError('');
   };
@@ -231,8 +404,10 @@ const ProfilePage = () => {
 
     try {
       const response = await api.patch('/users/me/', payload);
-      setUser(response.data);
+      queryClient.setQueryData(CURRENT_USER_QUERY_KEY, response.data);
       setFormData(toProfileForm(response.data));
+      setHasLocalEdits(false);
+      setHydratedUserId(response.data.id);
       setBlurredFields({});
       setSuccessMessage('Your profile settings have been saved.');
     } catch (saveError) {
@@ -258,17 +433,6 @@ const ProfilePage = () => {
     navigate('/auth');
   };
 
-  if (loading) {
-    return (
-      <div className="profile-page-shell">
-        <div className="profile-page-card profile-loading-card">
-          <div className="profile-loading-spinner" />
-          <p>Loading your profile...</p>
-        </div>
-      </div>
-    );
-  }
-
   const heroTitle = user?.profile?.full_name || user?.email?.split('@')[0] || 'Account';
   const initials = heroTitle
     .split(' ')
@@ -287,32 +451,58 @@ const ProfilePage = () => {
           </button>
           <div>
             <h1>Profile & Settings</h1>
-            <p>Update your account and dining details.</p>
+            <p>{user ? roleCopy.subtitle : 'Your account settings will appear here.'}</p>
           </div>
         </div>
 
         <div className="profile-hero-card">
-          <div className="profile-avatar">{initials || 'UD'}</div>
+          <div className="profile-avatar">{user ? initials || 'UD' : '··'}</div>
           <div className="profile-hero-copy">
-            <h2>{heroTitle}</h2>
-            <p>{user?.email}</p>
-            <div className="profile-role-pill">{formatRole(user?.role)}</div>
+            {user ? (
+              <>
+                <h2>{heroTitle}</h2>
+                <p>{user?.email}</p>
+                <div className="profile-role-pill">{formatRole(user?.role)}</div>
+              </>
+            ) : (
+              <>
+                <div className="ui-skeleton ui-skeleton-text" style={{ width: '48%', height: 24, marginBottom: 10 }} />
+                <div className="ui-skeleton ui-skeleton-text" style={{ width: '72%', height: 14, marginBottom: 12 }} />
+                <div className="ui-skeleton ui-skeleton-text" style={{ width: 118, height: 30, borderRadius: 999 }} />
+              </>
+            )}
           </div>
         </div>
 
-        {error ? <div className="profile-banner profile-banner-error">{error}</div> : null}
+        {error || userLoadError ? (
+          <div className="profile-banner profile-banner-error">
+            {error ||
+              userLoadError?.response?.data?.detail ||
+              'We could not load your profile right now. Please try again.'}
+          </div>
+        ) : null}
         {successMessage ? <div className="profile-banner profile-banner-success">{successMessage}</div> : null}
 
         <div className="profile-summary-grid">
-          {readOnlyMeta.map((item) => (
-            <div className="profile-summary-card" key={item.label}>
-              <span className="profile-summary-icon">{item.icon}</span>
-              <div>
-                <p>{item.label}</p>
-                <strong>{item.value}</strong>
-              </div>
-            </div>
-          ))}
+          {user
+            ? readOnlyMeta.map((item) => (
+                <div className="profile-summary-card" key={item.label}>
+                  <span className="profile-summary-icon">{item.icon}</span>
+                  <div>
+                    <p>{item.label}</p>
+                    <strong>{item.value}</strong>
+                  </div>
+                </div>
+              ))
+            : Array.from({ length: 4 }).map((_, index) => (
+                <div className="profile-summary-card" key={`summary-skeleton-${index}`}>
+                  <span className="profile-summary-icon ui-skeleton ui-skeleton-circle" />
+                  <div style={{ flex: 1 }}>
+                    <div className="ui-skeleton ui-skeleton-text" style={{ width: '38%', height: 12, marginBottom: 10 }} />
+                    <div className="ui-skeleton ui-skeleton-text" style={{ width: '74%', height: 16 }} />
+                  </div>
+                </div>
+              ))}
         </div>
 
         <form className="profile-section-card" onSubmit={handleSave} noValidate>
@@ -323,45 +513,56 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          <div className="profile-form-grid">
-            <label className="profile-field">
-              <span className="profile-label-row">
-                Full name <strong className="profile-required-indicator">*</strong>
-              </span>
-              <input
-                className={shouldShowFieldMessage('full_name', fullNameError) ? 'profile-field-control profile-field-control--error' : 'profile-field-control'}
-                name="full_name"
-                value={formData.full_name}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="Enter your full name"
-                {...STANDARD_INPUT_PROPS.personName}
-                required
-              />
-              {shouldShowFieldMessage('full_name', fullNameError) ? (
-                <small className="profile-field-note profile-field-note-error">{fullNameError}</small>
-              ) : null}
-            </label>
-
-            <label className="profile-field">
-              <span>Phone number</span>
-              <div className="profile-input-with-icon">
-                <Phone size={16} />
+          {user ? (
+            <div className="profile-form-grid">
+              <label className="profile-field">
+                <span className="profile-label-row">
+                  Full name <strong className="profile-required-indicator">*</strong>
+                </span>
                 <input
-                  className={shouldShowFieldMessage('phone', phoneError) ? 'profile-field-control profile-field-control--error' : 'profile-field-control'}
-                  name="phone"
-                  value={formData.phone}
+                  className={shouldShowFieldMessage('full_name', fullNameError) ? 'profile-field-control profile-field-control--error' : 'profile-field-control'}
+                  name="full_name"
+                  value={formData.full_name}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  placeholder="Enter your phone number"
-                  {...STANDARD_INPUT_PROPS.phone}
+                  placeholder="Enter your full name"
+                  {...STANDARD_INPUT_PROPS.personName}
+                  required
                 />
-              </div>
-              {shouldShowFieldMessage('phone', phoneError) ? (
-                <small className="profile-field-note profile-field-note-error">{phoneError}</small>
-              ) : null}
-            </label>
-          </div>
+                {shouldShowFieldMessage('full_name', fullNameError) ? (
+                  <small className="profile-field-note profile-field-note-error">{fullNameError}</small>
+                ) : null}
+              </label>
+
+              <label className="profile-field">
+                <span>Phone number</span>
+                <div className="profile-input-with-icon">
+                  <Phone size={16} />
+                  <input
+                    className={shouldShowFieldMessage('phone', phoneError) ? 'profile-field-control profile-field-control--error' : 'profile-field-control'}
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Enter your phone number"
+                    {...STANDARD_INPUT_PROPS.phone}
+                  />
+                </div>
+                {shouldShowFieldMessage('phone', phoneError) ? (
+                  <small className="profile-field-note profile-field-note-error">{phoneError}</small>
+                ) : null}
+              </label>
+            </div>
+          ) : (
+            <div className="profile-form-grid">
+              {Array.from({ length: 2 }).map((_, index) => (
+                <div className="profile-field" key={`profile-field-skeleton-${index}`}>
+                  <div className="ui-skeleton ui-skeleton-text" style={{ width: '32%', height: 12 }} />
+                  <div className="ui-skeleton ui-skeleton-card" style={{ width: '100%', height: 48, borderRadius: 14 }} />
+                </div>
+              ))}
+            </div>
+          )}
 
           {isStudent ? (
             <>
@@ -411,61 +612,51 @@ const ProfilePage = () => {
           ) : null}
 
           <div className="profile-actions">
-            <button className="profile-save-button" type="submit" disabled={saving || !hasChanges}>
+            <button className="profile-save-button" type="submit" disabled={!user || saving || !hasChanges}>
               <Save size={18} />
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>
 
-        {isStudent ? (
+        {overviewCards.length > 0 ? (
           <div className="profile-section-card">
             <div className="profile-section-heading">
               <div>
-                <h3>Dining overview</h3>
-                <p>Live details from your current student account.</p>
+                <h3>{roleCopy.overviewTitle}</h3>
+                <p>{roleCopy.overviewDescription}</p>
               </div>
             </div>
 
             <div className="profile-dining-grid">
-              <div className="profile-dining-card">
-                <span className="profile-summary-icon">
-                  <Wallet size={16} />
-                </span>
-                <p>Mess account balance</p>
-                <strong>{messAccount ? formatCurrency(messAccount.balance) : 'Unavailable'}</strong>
-                <small>
-                  Last updated {messAccount ? formatDateTime(messAccount.last_updated) : 'Not available'}
-                </small>
-              </div>
-
-              <div className="profile-dining-card">
-                <span className="profile-summary-icon">
-                  <Building2 size={16} />
-                </span>
-                <p>Assigned dining hall</p>
-                <strong>{formData.hostel_name || 'Not selected'}</strong>
-              </div>
+              {overviewCards.map((card) => (
+                <div className="profile-dining-card" key={card.key}>
+                  <span className="profile-summary-icon">{card.icon}</span>
+                  <p>{card.label}</p>
+                  <strong>{card.value}</strong>
+                  {card.note ? <small>{card.note}</small> : null}
+                </div>
+              ))}
             </div>
           </div>
-        ) : null}
-
-        {isStaff ? (
+        ) : isUserLoading ? (
           <div className="profile-section-card">
             <div className="profile-section-heading">
               <div>
-                <h3>Work profile</h3>
-                <p>Your operational details remain linked to your current staff role.</p>
+                <div className="ui-skeleton ui-skeleton-text" style={{ width: '36%', height: 18, marginBottom: 8 }} />
+                <div className="ui-skeleton ui-skeleton-text" style={{ width: '72%', height: 12 }} />
               </div>
             </div>
 
-            <div className="profile-dining-card">
-              <span className="profile-summary-icon">
-                <ShieldCheck size={16} />
-              </span>
-              <p>Access type</p>
-              <strong>{user?.profile?.is_mess_staff ? 'Mess operations' : 'Canteen operations'}</strong>
-              <small>{user?.profile?.canteen ? `Assigned canteen ID: ${user.profile.canteen}` : 'No canteen linked'}</small>
+            <div className="profile-dining-grid">
+              {Array.from({ length: 2 }).map((_, index) => (
+                <div className="profile-dining-card" key={`profile-overview-skeleton-${index}`}>
+                  <span className="profile-summary-icon ui-skeleton ui-skeleton-circle" />
+                  <div className="ui-skeleton ui-skeleton-text" style={{ width: '42%', height: 12, marginBottom: 8 }} />
+                  <div className="ui-skeleton ui-skeleton-text" style={{ width: '68%', height: 18, marginBottom: 10 }} />
+                  <div className="ui-skeleton ui-skeleton-text" style={{ width: '82%', height: 12 }} />
+                </div>
+              ))}
             </div>
           </div>
         ) : null}

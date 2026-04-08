@@ -1,28 +1,41 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import AuthPage from './features/auth/pages/AuthPage';
-import ForgotPasswordPage from './features/auth/pages/ForgotPasswordPage';
-import StudentDashboard from './pages/StudentDashboard';
-import MessManagerDashboard from './pages/MessManagerDashboard';
-import CanteenManagerDashboard from './pages/CanteenManagerDashboard';
-import DeliveryDashboard from './pages/DeliveryDashboard';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { mlRoutes } from './features/ml/routes';
-import AdminManagerDashboard from './pages/AdminManagerDashboard';
-import ProfilePage from './pages/ProfilePage';
 import messRoutes from './features/mess/routes';
 import canteenRoutes from './features/canteen/routes';
 import './App.css';
 import { AuthLanding, ProtectedRoute, PublicOnlyRoute } from './components/RouteGuards';
+import { appQueryClient } from './lib/queryClient';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-    },
-  },
-});
+const AuthPage = React.lazy(() => import('./features/auth/pages/AuthPage'));
+const ForgotPasswordPage = React.lazy(() => import('./features/auth/pages/ForgotPasswordPage'));
+const StudentDashboard = React.lazy(() => import('./pages/StudentDashboard'));
+const MessManagerDashboard = React.lazy(() => import('./pages/MessManagerDashboard'));
+const CanteenManagerDashboard = React.lazy(() => import('./pages/CanteenManagerDashboard'));
+const DeliveryDashboard = React.lazy(() => import('./pages/DeliveryDashboard'));
+const AdminManagerDashboard = React.lazy(() => import('./pages/AdminManagerDashboard'));
+const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
+
+const RouteFallback = () => (
+  <div className="app-route-shell">
+    <div className="app-route-frame">
+      <div className="app-route-copy">
+        <div className="ui-skeleton ui-skeleton-text" style={{ width: '48%', height: 28, marginBottom: 12 }} />
+        <div className="ui-skeleton ui-skeleton-text" style={{ width: '72%', height: 14 }} />
+      </div>
+      <div className="app-route-grid">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={`route-skeleton-${index}`} className="ui-skeleton ui-skeleton-card app-route-card" />
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const withSuspense = (element) => (
+  <React.Suspense fallback={<RouteFallback />}>{element}</React.Suspense>
+);
 
 const protectRouteElements = (routeElements) =>
   React.Children.map(routeElements, (route) => {
@@ -31,13 +44,13 @@ const protectRouteElements = (routeElements) =>
     }
 
     return React.cloneElement(route, {
-      element: <ProtectedRoute>{route.props.element}</ProtectedRoute>,
+      element: <ProtectedRoute>{withSuspense(route.props.element)}</ProtectedRoute>,
     });
   });
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={appQueryClient}>
       <Router>
         <Routes>
           <Route path="/" element={<AuthLanding />} />
@@ -45,17 +58,17 @@ function App() {
             path="/auth"
             element={
               <PublicOnlyRoute>
-                <AuthPage />
+                {withSuspense(<AuthPage />)}
               </PublicOnlyRoute>
             }
           />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/dashboard" element={<ProtectedRoute><StudentDashboard /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-          <Route path="/manager/mess" element={<ProtectedRoute><MessManagerDashboard /></ProtectedRoute>} />
-          <Route path="/manager/canteen" element={<ProtectedRoute><CanteenManagerDashboard /></ProtectedRoute>} />
-          <Route path="/delivery" element={<ProtectedRoute><DeliveryDashboard /></ProtectedRoute>} />
-          <Route path="/manager/admin" element={<ProtectedRoute><AdminManagerDashboard /></ProtectedRoute>} />
+          <Route path="/forgot-password" element={withSuspense(<ForgotPasswordPage />)} />
+          <Route path="/dashboard" element={<ProtectedRoute>{withSuspense(<StudentDashboard />)}</ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute>{withSuspense(<ProfilePage />)}</ProtectedRoute>} />
+          <Route path="/manager/mess" element={<ProtectedRoute>{withSuspense(<MessManagerDashboard />)}</ProtectedRoute>} />
+          <Route path="/manager/canteen" element={<ProtectedRoute>{withSuspense(<CanteenManagerDashboard />)}</ProtectedRoute>} />
+          <Route path="/delivery" element={<ProtectedRoute>{withSuspense(<DeliveryDashboard />)}</ProtectedRoute>} />
+          <Route path="/manager/admin" element={<ProtectedRoute>{withSuspense(<AdminManagerDashboard />)}</ProtectedRoute>} />
           <Route path="/admin/managers" element={<Navigate to="/manager/admin" replace />} />
           {/* Mess feature routes (student, manager, worker) */}
           {protectRouteElements(messRoutes)}

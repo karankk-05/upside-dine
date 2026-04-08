@@ -1,16 +1,18 @@
-import { useEffect, useMemo, useState } from 'react';
-import axios from 'axios';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   LogOut,
   Plus,
   ShieldCheck,
   Store,
   Trash2,
+  User,
   UserCog,
   UtensilsCrossed,
   X,
 } from 'lucide-react';
+import api from '../lib/api';
 import { logoutUser } from '../lib/auth';
 import {
   STANDARD_INPUT_PROPS,
@@ -37,7 +39,6 @@ const TAB_META = {
     closeLabel: 'Close Form',
     emptyTitle: 'No managers found',
     emptyDescription: 'Create a manager account to get started.',
-    loadingText: 'Loading managers...',
   },
   messes: {
     title: 'Messes',
@@ -46,7 +47,6 @@ const TAB_META = {
     closeLabel: 'Close Form',
     emptyTitle: 'No messes found',
     emptyDescription: 'Create a mess to start assigning operations.',
-    loadingText: 'Loading messes...',
   },
   canteens: {
     title: 'Canteens',
@@ -55,9 +55,12 @@ const TAB_META = {
     closeLabel: 'Close Form',
     emptyTitle: 'No canteens found',
     emptyDescription: 'Create a canteen to make it available in the app.',
-    loadingText: 'Loading canteens...',
   },
 };
+
+const MANAGERS_QUERY_KEY = ['admin', 'managers'];
+const MESSES_QUERY_KEY = ['admin', 'messes'];
+const CANTEENS_QUERY_KEY = ['admin', 'canteens'];
 
 const formatRoleLabel = (value) => {
   if (value === 'mess_manager') return 'Mess Manager';
@@ -67,11 +70,7 @@ const formatRoleLabel = (value) => {
 };
 
 const getInactiveLabel = (type) => (type === 'managers' ? 'Frozen' : 'Inactive');
-
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('access_token');
-  return { Authorization: `Bearer ${token}` };
-};
+const normalizeList = (data) => (Array.isArray(data) ? data : []);
 
 const EmptyState = ({ title, description }) => (
   <div className="admin-empty-state">
@@ -91,8 +90,14 @@ const StatusBadge = ({ isActive, type }) => (
   </span>
 );
 
-const CompactEntityCard = ({ title, subtitle, isActive, onClick }) => (
-  <button type="button" className="admin-mini-card" onClick={onClick}>
+const CompactEntityCard = ({ title, subtitle, isActive, onClick, disabled = false }) => (
+  <button
+    type="button"
+    className="admin-mini-card"
+    onClick={onClick}
+    disabled={disabled}
+    style={disabled ? { cursor: 'default' } : undefined}
+  >
     <span
       className={`admin-status-dot ${
         isActive ? 'admin-status-dot--active' : 'admin-status-dot--inactive'
@@ -102,6 +107,59 @@ const CompactEntityCard = ({ title, subtitle, isActive, onClick }) => (
     <strong>{title}</strong>
     <span>{subtitle}</span>
   </button>
+);
+
+const EntitySectionSkeleton = ({ columns = 6 }) => (
+  <>
+    <div className="admin-mobile-grid">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div className="admin-mini-card" key={`admin-mobile-skeleton-${index}`}>
+          <span className="admin-status-dot ui-skeleton ui-skeleton-circle" />
+          <div
+            className="ui-skeleton ui-skeleton-text"
+            style={{ width: '74%', height: 18 }}
+          />
+          <div
+            className="ui-skeleton ui-skeleton-text"
+            style={{ width: '58%', height: 12 }}
+          />
+        </div>
+      ))}
+    </div>
+
+    <div className="admin-table-panel">
+      <div className="admin-table-scroll">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              {Array.from({ length: columns }).map((_, index) => (
+                <th key={`admin-header-skeleton-${index}`}>
+                  <div
+                    className="ui-skeleton ui-skeleton-text"
+                    style={{ width: '68%', height: 12 }}
+                  />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 4 }).map((_, rowIndex) => (
+              <tr key={`admin-row-skeleton-${rowIndex}`}>
+                {Array.from({ length: columns }).map((__, cellIndex) => (
+                  <td key={`admin-cell-skeleton-${rowIndex}-${cellIndex}`}>
+                    <div
+                      className="ui-skeleton ui-skeleton-text"
+                      style={{ width: cellIndex === columns - 1 ? '54%' : '82%', height: 14 }}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </>
 );
 
 const DetailSheet = ({
@@ -118,7 +176,6 @@ const DetailSheet = ({
   }
 
   const { type, item } = entity;
-
   let eyebrow = '';
   let title = '';
   let subtitle = '';
@@ -259,11 +316,8 @@ const DetailSheet = ({
 
 const AdminManagerDashboard = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('managers');
-  const [managers, setManagers] = useState([]);
-  const [messes, setMesses] = useState([]);
-  const [canteens, setCanteens] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showAddMessForm, setShowAddMessForm] = useState(false);
   const [showAddCanteenForm, setShowAddCanteenForm] = useState(false);
@@ -279,8 +333,46 @@ const AdminManagerDashboard = () => {
   const [messFormData, setMessFormData] = useState({ hall_name: '' });
   const [canteenFormData, setCanteenFormData] = useState({ name: '', location: '' });
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [availableCanteens, setAvailableCanteens] = useState([]);
-  const [availableMesses, setAvailableMesses] = useState([]);
+  const [submittingType, setSubmittingType] = useState('');
+
+  const shouldLoadManagers = activeTab === 'managers';
+  const shouldLoadMesses =
+    activeTab === 'messes' ||
+    (activeTab === 'managers' && showAddForm && formData.role_name === 'mess_manager');
+  const shouldLoadCanteens =
+    activeTab === 'canteens' ||
+    (activeTab === 'managers' && showAddForm && formData.role_name === 'canteen_manager');
+
+  const { data: managersQueryData = [], isLoading: isLoadingManagers } = useQuery({
+    queryKey: MANAGERS_QUERY_KEY,
+    queryFn: async () => {
+      const { data } = await api.get('/admin/managers/');
+      return normalizeList(data);
+    },
+    enabled: shouldLoadManagers,
+  });
+
+  const { data: messesQueryData = [], isLoading: isLoadingMesses } = useQuery({
+    queryKey: MESSES_QUERY_KEY,
+    queryFn: async () => {
+      const { data } = await api.get('/admin/messes/');
+      return normalizeList(data);
+    },
+    enabled: shouldLoadMesses,
+  });
+
+  const { data: canteensQueryData = [], isLoading: isLoadingCanteens } = useQuery({
+    queryKey: CANTEENS_QUERY_KEY,
+    queryFn: async () => {
+      const { data } = await api.get('/admin/canteens/');
+      return normalizeList(data);
+    },
+    enabled: shouldLoadCanteens,
+  });
+
+  const managers = managersQueryData;
+  const messes = messesQueryData;
+  const canteens = canteensQueryData;
 
   const counts = useMemo(
     () => ({
@@ -303,51 +395,18 @@ const AdminManagerDashboard = () => {
     setShowAddCanteenForm(false);
   };
 
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      navigate('/auth');
-      return;
-    }
-
-    Promise.allSettled([
-      axios.get('/api/admin/managers/', { headers: getAuthHeaders() }),
-      axios.get('/api/admin/messes/', { headers: getAuthHeaders() }),
-      axios.get('/api/admin/canteens/', { headers: getAuthHeaders() }),
-    ]).then(([managersResult, messesResult, canteensResult]) => {
-      if (managersResult.status === 'fulfilled') {
-        setManagers(Array.isArray(managersResult.value.data) ? managersResult.value.data : []);
-      }
-
-      if (messesResult.status === 'fulfilled') {
-        const nextMesses = Array.isArray(messesResult.value.data) ? messesResult.value.data : [];
-        setMesses(nextMesses);
-        setAvailableMesses(nextMesses);
-      }
-
-      if (canteensResult.status === 'fulfilled') {
-        const nextCanteens = Array.isArray(canteensResult.value.data)
-          ? canteensResult.value.data
-          : [];
-        setCanteens(nextCanteens);
-        setAvailableCanteens(nextCanteens);
-      }
-    });
-  }, [navigate]);
-
-  useEffect(() => {
-    if (activeTab === 'managers') {
-      fetchManagers();
-    }
-
-    if (activeTab === 'messes') {
-      fetchMesses();
-    }
-
-    if (activeTab === 'canteens') {
-      fetchCanteens();
-    }
-  }, [activeTab]);
+  const refreshManagers = useCallback(
+    async () => queryClient.invalidateQueries({ queryKey: MANAGERS_QUERY_KEY }),
+    [queryClient]
+  );
+  const refreshMesses = useCallback(
+    async () => queryClient.invalidateQueries({ queryKey: MESSES_QUERY_KEY }),
+    [queryClient]
+  );
+  const refreshCanteens = useCallback(
+    async () => queryClient.invalidateQueries({ queryKey: CANTEENS_QUERY_KEY }),
+    [queryClient]
+  );
 
   const updateManagerForm = (field, value) => {
     const nextValueByField = {
@@ -384,55 +443,9 @@ const AdminManagerDashboard = () => {
     setMessage({ type: '', text: '' });
   };
 
-  const fetchManagers = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get('/api/admin/managers/', {
-        headers: getAuthHeaders(),
-      });
-      setManagers(Array.isArray(response.data) ? response.data : []);
-    } catch {
-      setMessage({ type: 'error', text: 'Managers are not available right now.' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchMesses = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get('/api/admin/messes/', {
-        headers: getAuthHeaders(),
-      });
-      const nextMesses = Array.isArray(response.data) ? response.data : [];
-      setMesses(nextMesses);
-      setAvailableMesses(nextMesses);
-    } catch {
-      setMessage({ type: 'error', text: 'Messes are not available right now.' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchCanteens = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get('/api/admin/canteens/', {
-        headers: getAuthHeaders(),
-      });
-      const nextCanteens = Array.isArray(response.data) ? response.data : [];
-      setCanteens(nextCanteens);
-      setAvailableCanteens(nextCanteens);
-    } catch {
-      setMessage({ type: 'error', text: 'Canteens are not available right now.' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleAddManager = async (event) => {
     event.preventDefault();
-    setLoading(true);
+    setSubmittingType('manager');
     setMessage({ type: '', text: '' });
 
     try {
@@ -451,13 +464,10 @@ const AdminManagerDashboard = () => {
         payload.mess_id = parseInt(formData.mess_id, 10);
       }
 
-      const response = await axios.post('/api/admin/managers/', payload, {
-        headers: getAuthHeaders(),
-      });
-
+      const { data } = await api.post('/admin/managers/', payload);
       setMessage({
         type: 'success',
-        text: `Manager created. Email: ${response.data.email}, Employee Code: ${response.data.employee_code}.`,
+        text: `Manager created. Email: ${data.email}, Employee Code: ${data.employee_code}.`,
       });
       setFormData({
         email: '',
@@ -468,41 +478,39 @@ const AdminManagerDashboard = () => {
         mess_id: '',
       });
       setShowAddForm(false);
-      fetchManagers();
+      await refreshManagers();
     } catch (error) {
       const data = error.response?.data;
-      let errorMsg = 'Unable to create manager.';
+      let errorMessage = 'Unable to create manager.';
 
       if (data) {
-        if (data.email) errorMsg = `Email error: ${data.email[0] || data.email}`;
-        else if (data.phone) errorMsg = `Phone error: ${data.phone[0] || data.phone}`;
-        else if (data.full_name) errorMsg = `Name error: ${data.full_name[0] || data.full_name}`;
-        else if (data.role_name) errorMsg = `Role error: ${data.role_name[0] || data.role_name}`;
-        else if (data.canteen_id) errorMsg = `Canteen error: ${data.canteen_id[0] || data.canteen_id}`;
-        else if (data.mess_id) errorMsg = `Mess error: ${data.mess_id[0] || data.mess_id}`;
-        else if (data.detail) errorMsg = data.detail;
-        else if (typeof data === 'string') errorMsg = data;
+        if (data.email) errorMessage = `Email error: ${data.email[0] || data.email}`;
+        else if (data.phone) errorMessage = `Phone error: ${data.phone[0] || data.phone}`;
+        else if (data.full_name) errorMessage = `Name error: ${data.full_name[0] || data.full_name}`;
+        else if (data.role_name) errorMessage = `Role error: ${data.role_name[0] || data.role_name}`;
+        else if (data.canteen_id) errorMessage = `Canteen error: ${data.canteen_id[0] || data.canteen_id}`;
+        else if (data.mess_id) errorMessage = `Mess error: ${data.mess_id[0] || data.mess_id}`;
+        else if (data.detail) errorMessage = data.detail;
+        else if (typeof data === 'string') errorMessage = data;
       }
 
-      setMessage({ type: 'error', text: errorMsg });
+      setMessage({ type: 'error', text: errorMessage });
     } finally {
-      setLoading(false);
+      setSubmittingType('');
     }
   };
 
   const handleAddMess = async (event) => {
     event.preventDefault();
-    setLoading(true);
+    setSubmittingType('mess');
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await axios.post('/api/admin/messes/', messFormData, {
-        headers: getAuthHeaders(),
-      });
-      setMessage({ type: 'success', text: `Mess created: ${response.data.name}` });
+      const { data } = await api.post('/admin/messes/', messFormData);
+      setMessage({ type: 'success', text: `Mess created: ${data.name}` });
       setMessFormData({ hall_name: '' });
       setShowAddMessForm(false);
-      fetchMesses();
+      await refreshMesses();
     } catch (error) {
       const errorMessage =
         error.response?.data?.hall_name?.[0] ||
@@ -510,39 +518,36 @@ const AdminManagerDashboard = () => {
         'Unable to create mess.';
       setMessage({ type: 'error', text: errorMessage });
     } finally {
-      setLoading(false);
+      setSubmittingType('');
     }
   };
 
   const handleAddCanteen = async (event) => {
     event.preventDefault();
-    setLoading(true);
+    setSubmittingType('canteen');
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await axios.post('/api/admin/canteens/', canteenFormData, {
-        headers: getAuthHeaders(),
-      });
-      setMessage({ type: 'success', text: `Canteen created: ${response.data.name}` });
+      const { data } = await api.post('/admin/canteens/', canteenFormData);
+      setMessage({ type: 'success', text: `Canteen created: ${data.name}` });
       setCanteenFormData({ name: '', location: '' });
       setShowAddCanteenForm(false);
-      fetchCanteens();
-    } catch {
-      setMessage({ type: 'error', text: 'Unable to create canteen.' });
+      await refreshCanteens();
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error.response?.data?.detail || 'Unable to create canteen.',
+      });
     } finally {
-      setLoading(false);
+      setSubmittingType('');
     }
   };
 
   const handleToggleStatus = async (userId, currentStatus) => {
     try {
-      await axios.patch(
-        `/api/admin/managers/${userId}/`,
-        {},
-        { headers: getAuthHeaders() }
-      );
+      await api.patch(`/admin/managers/${userId}/`, {});
       setSelectedEntity(null);
-      fetchManagers();
+      await refreshManagers();
       setMessage({
         type: 'success',
         text: `Manager ${currentStatus ? 'frozen' : 'activated'} successfully.`,
@@ -554,13 +559,9 @@ const AdminManagerDashboard = () => {
 
   const handleToggleMess = async (messId, currentStatus) => {
     try {
-      await axios.patch(
-        `/api/admin/messes/${messId}/`,
-        {},
-        { headers: getAuthHeaders() }
-      );
+      await api.patch(`/admin/messes/${messId}/`, {});
       setSelectedEntity(null);
-      fetchMesses();
+      await refreshMesses();
       setMessage({
         type: 'success',
         text: `Mess ${currentStatus ? 'frozen' : 'activated'} successfully.`,
@@ -576,11 +577,9 @@ const AdminManagerDashboard = () => {
     }
 
     try {
-      await axios.delete(`/api/admin/messes/${messId}/`, {
-        headers: getAuthHeaders(),
-      });
+      await api.delete(`/admin/messes/${messId}/`);
       setSelectedEntity(null);
-      fetchMesses();
+      await refreshMesses();
       setMessage({ type: 'success', text: 'Mess deleted successfully.' });
     } catch {
       setMessage({ type: 'error', text: 'Unable to delete mess.' });
@@ -589,13 +588,9 @@ const AdminManagerDashboard = () => {
 
   const handleToggleCanteen = async (canteenId, currentStatus) => {
     try {
-      await axios.patch(
-        `/api/admin/canteens/${canteenId}/`,
-        {},
-        { headers: getAuthHeaders() }
-      );
+      await api.patch(`/admin/canteens/${canteenId}/`, {});
       setSelectedEntity(null);
-      fetchCanteens();
+      await refreshCanteens();
       setMessage({
         type: 'success',
         text: `Canteen ${currentStatus ? 'frozen' : 'activated'} successfully.`,
@@ -611,11 +606,9 @@ const AdminManagerDashboard = () => {
     }
 
     try {
-      await axios.delete(`/api/admin/canteens/${canteenId}/`, {
-        headers: getAuthHeaders(),
-      });
+      await api.delete(`/admin/canteens/${canteenId}/`);
       setSelectedEntity(null);
-      fetchCanteens();
+      await refreshCanteens();
       setMessage({ type: 'success', text: 'Canteen deleted successfully.' });
     } catch {
       setMessage({ type: 'error', text: 'Unable to delete canteen.' });
@@ -638,9 +631,17 @@ const AdminManagerDashboard = () => {
     setMessage({ type: '', text: '' });
   };
 
-  const handleRefresh = async () => {
-    await Promise.all([fetchManagers(), fetchMesses(), fetchCanteens()]);
-  };
+  const handleRefresh = useCallback(async () => {
+    if (activeTab === 'managers') {
+      await refreshManagers();
+      return;
+    }
+    if (activeTab === 'messes') {
+      await refreshMesses();
+      return;
+    }
+    await refreshCanteens();
+  }, [activeTab, refreshCanteens, refreshManagers, refreshMesses]);
 
   const toggleCurrentForm = () => {
     setSelectedEntity(null);
@@ -666,8 +667,8 @@ const AdminManagerDashboard = () => {
   };
 
   const renderManagerSection = () => {
-    if (loading && !showAddForm) {
-      return <div className="admin-loading">{TAB_META.managers.loadingText}</div>;
+    if (isLoadingManagers && managers.length === 0 && !showAddForm) {
+      return <EntitySectionSkeleton columns={7} />;
     }
 
     if (managers.length === 0) {
@@ -727,9 +728,7 @@ const AdminManagerDashboard = () => {
                               ? 'admin-action-button--danger'
                               : 'admin-action-button--success'
                           }`}
-                          onClick={() =>
-                            handleToggleStatus(manager.id, manager.is_active)
-                          }
+                          onClick={() => handleToggleStatus(manager.id, manager.is_active)}
                         >
                           {manager.is_active ? 'Freeze' : 'Activate'}
                         </button>
@@ -746,8 +745,8 @@ const AdminManagerDashboard = () => {
   };
 
   const renderMessSection = () => {
-    if (loading && !showAddMessForm) {
-      return <div className="admin-loading">{TAB_META.messes.loadingText}</div>;
+    if (isLoadingMesses && messes.length === 0 && !showAddMessForm) {
+      return <EntitySectionSkeleton columns={4} />;
     }
 
     if (messes.length === 0) {
@@ -825,8 +824,8 @@ const AdminManagerDashboard = () => {
   };
 
   const renderCanteenSection = () => {
-    if (loading && !showAddCanteenForm) {
-      return <div className="admin-loading">{TAB_META.canteens.loadingText}</div>;
+    if (isLoadingCanteens && canteens.length === 0 && !showAddCanteenForm) {
+      return <EntitySectionSkeleton columns={4} />;
     }
 
     if (canteens.length === 0) {
@@ -880,9 +879,7 @@ const AdminManagerDashboard = () => {
                               ? 'admin-action-button--danger'
                               : 'admin-action-button--success'
                           }`}
-                          onClick={() =>
-                            handleToggleCanteen(canteen.id, canteen.is_active)
-                          }
+                          onClick={() => handleToggleCanteen(canteen.id, canteen.is_active)}
                         >
                           {canteen.is_active ? 'Freeze' : 'Activate'}
                         </button>
@@ -909,278 +906,306 @@ const AdminManagerDashboard = () => {
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="admin-dashboard">
         <div className="admin-layout">
-        <aside className="admin-sidebar">
-          <div className="admin-sidebar__brand">
-            <span className="admin-sidebar__eyebrow">Admin Manager</span>
-            <h1>Control Panel</h1>
-            <p>Manage campus operations from one place.</p>
-          </div>
-
-          <nav className="admin-sidebar__nav">
-            {TAB_ITEMS.map((tab) => {
-              const TabIcon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  className={`admin-sidebar__nav-button ${
-                    isActive ? 'admin-sidebar__nav-button--active' : ''
-                  }`}
-                  onClick={() => handleTabChange(tab.id)}
-                >
-                  <span className="admin-sidebar__nav-content">
-                    <TabIcon size={18} />
-                    <span>{tab.label}</span>
-                  </span>
-                  <span className="admin-nav-count">{counts[tab.id]}</span>
-                </button>
-              );
-            })}
-          </nav>
-
-          <button
-            type="button"
-            className="admin-sidebar__logout"
-            onClick={handleLogout}
-          >
-            <LogOut size={18} />
-            Log Out
-          </button>
-        </aside>
-
-        <main className="admin-main">
-          <header className="admin-topbar">
-            <div className="admin-topbar__copy">
-              <h2>{activeMeta.title}</h2>
-              <p>{activeMeta.description}</p>
+          <aside className="admin-sidebar">
+            <div className="admin-sidebar__brand">
+              <span className="admin-sidebar__eyebrow">Admin Manager</span>
+              <h1>Control Panel</h1>
+              <p>Manage campus operations from one place.</p>
             </div>
 
-            <div className="admin-topbar__actions">
-              <button
-                type="button"
-                className="admin-primary-button"
-                onClick={toggleCurrentForm}
-              >
-                {isCurrentFormOpen ? <X size={16} /> : <Plus size={16} />}
-                {isCurrentFormOpen ? activeMeta.closeLabel : activeMeta.addLabel}
-              </button>
+            <nav className="admin-sidebar__nav">
+              {TAB_ITEMS.map((tab) => {
+                const TabIcon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={`admin-sidebar__nav-button ${
+                      isActive ? 'admin-sidebar__nav-button--active' : ''
+                    }`}
+                    onClick={() => handleTabChange(tab.id)}
+                  >
+                    <span className="admin-sidebar__nav-content">
+                      <TabIcon size={18} />
+                      <span>{tab.label}</span>
+                    </span>
+                    <span className="admin-nav-count">{counts[tab.id]}</span>
+                  </button>
+                );
+              })}
+            </nav>
 
-              <button
-                type="button"
-                className="admin-icon-button admin-mobile-logout"
-                onClick={handleLogout}
-                aria-label="Log out"
-              >
-                <LogOut size={18} />
-              </button>
-            </div>
-          </header>
-
-          {message.text ? (
-            <div
-              className={`admin-banner ${
-                message.type === 'success'
-                  ? 'admin-banner--success'
-                  : 'admin-banner--error'
-              }`}
+            <button
+              type="button"
+              className="admin-sidebar__profile"
+              onClick={() => navigate('/profile')}
             >
-              {message.text}
-            </div>
-          ) : null}
+              <User size={18} />
+              My Profile
+            </button>
 
-          <section className="admin-panel">
-            {activeTab === 'managers' && showAddForm ? (
-              <form className="admin-form-panel" onSubmit={handleAddManager} noValidate>
-                <div className="admin-form-grid">
-                  <label className="admin-field">
-                    <span>Full Name *</span>
-                    <input
-                      className="admin-input"
-                      placeholder="Enter full name"
-                      value={formData.full_name}
-                      onChange={(event) =>
-                        updateManagerForm('full_name', event.target.value)
-                      }
-                      {...STANDARD_INPUT_PROPS.personName}
-                      required
-                    />
-                  </label>
+            <button
+              type="button"
+              className="admin-sidebar__logout"
+              onClick={handleLogout}
+            >
+              <LogOut size={18} />
+              Log Out
+            </button>
+          </aside>
 
-                  <label className="admin-field">
-                    <span>Email *</span>
-                    <input
-                      className="admin-input"
-                      placeholder="Enter email"
-                      value={formData.email}
-                      onChange={(event) =>
-                        updateManagerForm('email', event.target.value)
-                      }
-                      {...STANDARD_INPUT_PROPS.email}
-                      required
-                    />
-                  </label>
+          <main className="admin-main">
+            <header className="admin-topbar">
+              <div className="admin-topbar__copy">
+                <h2>{activeMeta.title}</h2>
+                <p>{activeMeta.description}</p>
+              </div>
 
-                  <label className="admin-field">
-                    <span>Phone *</span>
-                    <input
-                      className="admin-input"
-                      placeholder="10-digit phone number"
-                      value={formData.phone}
-                      onChange={(event) =>
-                        updateManagerForm('phone', event.target.value)
-                      }
-                      {...STANDARD_INPUT_PROPS.phone}
-                      required
-                    />
-                  </label>
+              <div className="admin-topbar__actions">
+                <button
+                  type="button"
+                  className="admin-icon-button"
+                  onClick={() => navigate('/profile')}
+                  aria-label="Open profile"
+                >
+                  <User size={18} />
+                </button>
 
-                  <label className="admin-field">
-                    <span>Role *</span>
-                    <select
-                      className="admin-select"
-                      value={formData.role_name}
-                      onChange={(event) =>
-                        setFormData((current) => ({
-                          ...current,
-                          role_name: event.target.value,
-                          canteen_id: '',
-                          mess_id: '',
-                        }))
-                      }
+                <button
+                  type="button"
+                  className="admin-primary-button"
+                  onClick={toggleCurrentForm}
+                >
+                  {isCurrentFormOpen ? <X size={16} /> : <Plus size={16} />}
+                  {isCurrentFormOpen ? activeMeta.closeLabel : activeMeta.addLabel}
+                </button>
+
+                <button
+                  type="button"
+                  className="admin-icon-button admin-mobile-logout"
+                  onClick={handleLogout}
+                  aria-label="Log out"
+                >
+                  <LogOut size={18} />
+                </button>
+              </div>
+            </header>
+
+            {message.text ? (
+              <div
+                className={`admin-banner ${
+                  message.type === 'success'
+                    ? 'admin-banner--success'
+                    : 'admin-banner--error'
+                }`}
+              >
+                {message.text}
+              </div>
+            ) : null}
+
+            <section className="admin-panel">
+              {activeTab === 'managers' && showAddForm ? (
+                <form className="admin-form-panel" onSubmit={handleAddManager} noValidate>
+                  <div className="admin-form-grid">
+                    <label className="admin-field">
+                      <span>Full Name *</span>
+                      <input
+                        className="admin-input"
+                        placeholder="Enter full name"
+                        value={formData.full_name}
+                        onChange={(event) => updateManagerForm('full_name', event.target.value)}
+                        {...STANDARD_INPUT_PROPS.personName}
+                        required
+                      />
+                    </label>
+
+                    <label className="admin-field">
+                      <span>Email *</span>
+                      <input
+                        className="admin-input"
+                        placeholder="Enter email"
+                        value={formData.email}
+                        onChange={(event) => updateManagerForm('email', event.target.value)}
+                        {...STANDARD_INPUT_PROPS.email}
+                        required
+                      />
+                    </label>
+
+                    <label className="admin-field">
+                      <span>Phone *</span>
+                      <input
+                        className="admin-input"
+                        placeholder="10-digit phone number"
+                        value={formData.phone}
+                        onChange={(event) => updateManagerForm('phone', event.target.value)}
+                        {...STANDARD_INPUT_PROPS.phone}
+                        required
+                      />
+                    </label>
+
+                    <label className="admin-field">
+                      <span>Role *</span>
+                      <select
+                        className="admin-select"
+                        value={formData.role_name}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            role_name: event.target.value,
+                            canteen_id: '',
+                            mess_id: '',
+                          }))
+                        }
+                      >
+                        <option value="mess_manager">Mess Manager</option>
+                        <option value="canteen_manager">Canteen Manager</option>
+                      </select>
+                    </label>
+
+                    {formData.role_name === 'canteen_manager' ? (
+                      <label className="admin-field admin-field--full">
+                        <span>Assign Canteen *</span>
+                        <select
+                          className="admin-select"
+                          value={formData.canteen_id}
+                          onChange={(event) =>
+                            setFormData((current) => ({
+                              ...current,
+                              canteen_id: event.target.value,
+                            }))
+                          }
+                          required
+                        >
+                          <option value="">
+                            {isLoadingCanteens && canteens.length === 0
+                              ? 'Loading canteens...'
+                              : 'Select canteen'}
+                          </option>
+                          {canteens.map((canteen) => (
+                            <option key={canteen.id} value={canteen.id}>
+                              {canteen.name} ({canteen.location})
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : null}
+
+                    {formData.role_name === 'mess_manager' ? (
+                      <label className="admin-field admin-field--full">
+                        <span>Assign Mess *</span>
+                        <select
+                          className="admin-select"
+                          value={formData.mess_id}
+                          onChange={(event) =>
+                            setFormData((current) => ({
+                              ...current,
+                              mess_id: event.target.value,
+                            }))
+                          }
+                          required
+                        >
+                          <option value="">
+                            {isLoadingMesses && messes.length === 0
+                              ? 'Loading messes...'
+                              : 'Select mess'}
+                          </option>
+                          {messes.map((mess) => (
+                            <option key={mess.id} value={mess.id}>
+                              {mess.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : null}
+                  </div>
+
+                  <div className="admin-form-actions">
+                    <button
+                      type="submit"
+                      className="admin-primary-button"
+                      disabled={submittingType === 'manager'}
                     >
-                      <option value="mess_manager">Mess Manager</option>
-                      <option value="canteen_manager">Canteen Manager</option>
-                    </select>
-                  </label>
+                      {submittingType === 'manager' ? 'Creating...' : 'Create Manager'}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
 
-                  {formData.role_name === 'canteen_manager' ? (
+              {activeTab === 'messes' && showAddMessForm ? (
+                <form className="admin-form-panel" onSubmit={handleAddMess} noValidate>
+                  <div className="admin-form-grid admin-form-grid--single">
                     <label className="admin-field admin-field--full">
-                      <span>Assign Canteen *</span>
-                      <select
-                        className="admin-select"
-                        value={formData.canteen_id}
-                        onChange={(event) =>
-                          setFormData((current) => ({
-                            ...current,
-                            canteen_id: event.target.value,
-                          }))
-                        }
+                      <span>Hall Name *</span>
+                      <input
+                        className="admin-input"
+                        placeholder="For example: Hall 15"
+                        value={messFormData.hall_name}
+                        onChange={(event) => updateMessForm('hall_name', event.target.value)}
+                        maxLength={120}
                         required
-                      >
-                        <option value="">Select canteen</option>
-                        {availableCanteens.map((canteen) => (
-                          <option key={canteen.id} value={canteen.id}>
-                            {canteen.name} ({canteen.location})
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </label>
-                  ) : null}
+                  </div>
 
-                  {formData.role_name === 'mess_manager' ? (
-                    <label className="admin-field admin-field--full">
-                      <span>Assign Mess *</span>
-                      <select
-                        className="admin-select"
-                        value={formData.mess_id}
-                        onChange={(event) =>
-                          setFormData((current) => ({
-                            ...current,
-                            mess_id: event.target.value,
-                          }))
-                        }
+                  <div className="admin-form-actions">
+                    <button
+                      type="submit"
+                      className="admin-primary-button"
+                      disabled={submittingType === 'mess'}
+                    >
+                      {submittingType === 'mess' ? 'Creating...' : 'Create Mess'}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
+
+              {activeTab === 'canteens' && showAddCanteenForm ? (
+                <form className="admin-form-panel" onSubmit={handleAddCanteen} noValidate>
+                  <div className="admin-form-grid">
+                    <label className="admin-field">
+                      <span>Name *</span>
+                      <input
+                        className="admin-input"
+                        placeholder="Enter canteen name"
+                        value={canteenFormData.name}
+                        onChange={(event) => updateCanteenForm('name', event.target.value)}
+                        maxLength={120}
                         required
-                      >
-                        <option value="">Select mess</option>
-                        {availableMesses.map((mess) => (
-                          <option key={mess.id} value={mess.id}>
-                            {mess.name}
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </label>
-                  ) : null}
-                </div>
 
-                <div className="admin-form-actions">
-                  <button type="submit" className="admin-primary-button" disabled={loading}>
-                    {loading ? 'Creating...' : 'Create Manager'}
-                  </button>
-                </div>
-              </form>
-            ) : null}
+                    <label className="admin-field">
+                      <span>Location *</span>
+                      <input
+                        className="admin-input"
+                        placeholder="Enter location"
+                        value={canteenFormData.location}
+                        onChange={(event) =>
+                          updateCanteenForm('location', event.target.value)
+                        }
+                        maxLength={200}
+                        required
+                      />
+                    </label>
+                  </div>
 
-            {activeTab === 'messes' && showAddMessForm ? (
-              <form className="admin-form-panel" onSubmit={handleAddMess} noValidate>
-                <div className="admin-form-grid admin-form-grid--single">
-                  <label className="admin-field admin-field--full">
-                    <span>Hall Name *</span>
-                    <input
-                      className="admin-input"
-                      placeholder="For example: Hall 15"
-                      value={messFormData.hall_name}
-                      onChange={(event) =>
-                        updateMessForm('hall_name', event.target.value)
-                      }
-                      maxLength={120}
-                      required
-                    />
-                  </label>
-                </div>
+                  <div className="admin-form-actions">
+                    <button
+                      type="submit"
+                      className="admin-primary-button"
+                      disabled={submittingType === 'canteen'}
+                    >
+                      {submittingType === 'canteen' ? 'Creating...' : 'Create Canteen'}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
 
-                <div className="admin-form-actions">
-                  <button type="submit" className="admin-primary-button" disabled={loading}>
-                    {loading ? 'Creating...' : 'Create Mess'}
-                  </button>
-                </div>
-              </form>
-            ) : null}
-
-            {activeTab === 'canteens' && showAddCanteenForm ? (
-              <form className="admin-form-panel" onSubmit={handleAddCanteen} noValidate>
-                <div className="admin-form-grid">
-                  <label className="admin-field">
-                    <span>Name *</span>
-                    <input
-                      className="admin-input"
-                      placeholder="Enter canteen name"
-                      value={canteenFormData.name}
-                      onChange={(event) =>
-                        updateCanteenForm('name', event.target.value)
-                      }
-                      maxLength={120}
-                      required
-                    />
-                  </label>
-
-                  <label className="admin-field">
-                    <span>Location *</span>
-                    <input
-                      className="admin-input"
-                      placeholder="Enter location"
-                      value={canteenFormData.location}
-                      onChange={(event) =>
-                        updateCanteenForm('location', event.target.value)
-                      }
-                      maxLength={200}
-                      required
-                    />
-                  </label>
-                </div>
-
-                <div className="admin-form-actions">
-                  <button type="submit" className="admin-primary-button" disabled={loading}>
-                    {loading ? 'Creating...' : 'Create Canteen'}
-                  </button>
-                </div>
-              </form>
-            ) : null}
-
-            {activeTab === 'managers' ? renderManagerSection() : null}
-            {activeTab === 'messes' ? renderMessSection() : null}
-            {activeTab === 'canteens' ? renderCanteenSection() : null}
-          </section>
+              {activeTab === 'managers' ? renderManagerSection() : null}
+              {activeTab === 'messes' ? renderMessSection() : null}
+              {activeTab === 'canteens' ? renderCanteenSection() : null}
+            </section>
           </main>
         </div>
 

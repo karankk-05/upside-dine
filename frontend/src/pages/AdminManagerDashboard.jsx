@@ -20,6 +20,7 @@ import {
   sanitizePersonName,
   sanitizePhone,
 } from '../lib/formValidation';
+import PullToRefresh from '../components/PullToRefresh';
 import './AdminManagerDashboard.css';
 
 const TAB_ITEMS = [
@@ -637,6 +638,10 @@ const AdminManagerDashboard = () => {
     setMessage({ type: '', text: '' });
   };
 
+  const handleRefresh = async () => {
+    await Promise.all([fetchManagers(), fetchMesses(), fetchCanteens()]);
+  };
+
   const toggleCurrentForm = () => {
     setSelectedEntity(null);
     setMessage({ type: '', text: '' });
@@ -901,8 +906,9 @@ const AdminManagerDashboard = () => {
   };
 
   return (
-    <div className="admin-dashboard">
-      <div className="admin-layout">
+    <PullToRefresh onRefresh={handleRefresh}>
+      <div className="admin-dashboard">
+        <div className="admin-layout">
         <aside className="admin-sidebar">
           <div className="admin-sidebar__brand">
             <span className="admin-sidebar__eyebrow">Admin Manager</span>
@@ -1175,39 +1181,40 @@ const AdminManagerDashboard = () => {
             {activeTab === 'messes' ? renderMessSection() : null}
             {activeTab === 'canteens' ? renderCanteenSection() : null}
           </section>
-        </main>
+          </main>
+        </div>
+
+        <nav className="admin-bottom-nav">
+          {TAB_ITEMS.map((tab) => {
+            const TabIcon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                className={`admin-bottom-nav__button ${
+                  isActive ? 'admin-bottom-nav__button--active' : ''
+                }`}
+                onClick={() => handleTabChange(tab.id)}
+              >
+                <TabIcon size={18} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <DetailSheet
+          entity={selectedEntity}
+          onClose={() => setSelectedEntity(null)}
+          onToggleManager={handleToggleStatus}
+          onToggleMess={handleToggleMess}
+          onToggleCanteen={handleToggleCanteen}
+          onDeleteMess={handleDeleteMess}
+          onDeleteCanteen={handleDeleteCanteen}
+        />
       </div>
-
-      <nav className="admin-bottom-nav">
-        {TAB_ITEMS.map((tab) => {
-          const TabIcon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              className={`admin-bottom-nav__button ${
-                isActive ? 'admin-bottom-nav__button--active' : ''
-              }`}
-              onClick={() => handleTabChange(tab.id)}
-            >
-              <TabIcon size={18} />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </nav>
-
-      <DetailSheet
-        entity={selectedEntity}
-        onClose={() => setSelectedEntity(null)}
-        onToggleManager={handleToggleStatus}
-        onToggleMess={handleToggleMess}
-        onToggleCanteen={handleToggleCanteen}
-        onDeleteMess={handleDeleteMess}
-        onDeleteCanteen={handleDeleteCanteen}
-      />
-    </div>
+    </PullToRefresh>
   );
 };
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import PullToRefresh from '../components/PullToRefresh';
 import '../features/canteen/canteen.css';
 
 const DeliveryDashboard = () => {
@@ -48,6 +49,10 @@ const DeliveryDashboard = () => {
       setProfile(res.data);
     } catch {}
   }, [token]);
+
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([fetchData(), fetchProfile()]);
+  }, [fetchData, fetchProfile]);
 
   useEffect(() => {
     fetchData();
@@ -113,8 +118,9 @@ const DeliveryDashboard = () => {
 
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff', paddingBottom: 80 }}>
-      <div style={{ maxWidth: 428, margin: '0 auto', background: '#000', minHeight: '100vh', position: 'relative' }}>
+    <PullToRefresh onRefresh={handleRefresh}>
+      <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff', paddingBottom: 80 }}>
+        <div style={{ maxWidth: 428, margin: '0 auto', background: '#000', minHeight: '100vh', position: 'relative' }}>
 
         {/* Header */}
         <div style={{ padding: '40px 20px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -406,8 +412,9 @@ const DeliveryDashboard = () => {
             <span style={{ fontSize: 20 }}>👤</span>Profile
           </button>
         </nav>
+        </div>
       </div>
-    </div>
+    </PullToRefresh>
   );
 };
 

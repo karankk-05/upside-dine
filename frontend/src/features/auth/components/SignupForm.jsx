@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import {
   getInlineValidationMessage,
@@ -40,7 +40,7 @@ const EyeIcon = ({ isVisible }) => (
 
 const SignupForm = ({ selectedRole }) => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1); // 1: Basic Info, 2: OTP Verification
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -61,6 +61,7 @@ const SignupForm = ({ selectedRole }) => {
   const [error, setError] = useState('');
   const [availableHalls, setAvailableHalls] = useState([]);
   const [blurredFields, setBlurredFields] = useState({});
+  const step = searchParams.get('step') === 'verify' ? 2 : 1;
 
   // Fetch available halls for student registration
   useEffect(() => {
@@ -77,6 +78,12 @@ const SignupForm = ({ selectedRole }) => {
       fetchHalls();
     }
   }, [selectedRole]);
+
+  useEffect(() => {
+    if (step === 2 && !formData.email) {
+      setSearchParams({ mode: 'signup' }, { replace: true });
+    }
+  }, [formData.email, setSearchParams, step]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -184,7 +191,7 @@ const SignupForm = ({ selectedRole }) => {
       const response = await axios.post('/api/auth/register/', payload);
       console.log('Registration response:', response.data);
       setBlurredFields({});
-      setStep(2); // Move to OTP verification
+      setSearchParams({ mode: 'signup', step: 'verify' });
     } catch (err) {
       console.error('Registration error:', err.response?.data);
       const errorMessage = 
@@ -291,7 +298,7 @@ const SignupForm = ({ selectedRole }) => {
           className="btn-secondary"
           onClick={() => {
             setBlurredFields({});
-            setStep(1);
+            setSearchParams({ mode: 'signup' });
           }}
         >
           Back to Registration

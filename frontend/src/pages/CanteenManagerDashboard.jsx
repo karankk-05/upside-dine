@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Store, ClipboardList, Package, Users, Settings, Plus, Trash2, ToggleLeft, ToggleRight, LogOut, X, User, BarChart, CreditCard, Upload } from 'lucide-react';
+import PullToRefresh from '../components/PullToRefresh';
 import {
   STANDARD_INPUT_PROPS,
   sanitizeEmail,
@@ -178,8 +179,20 @@ const CanteenManagerDashboard = () => {
     { id: 'profile', icon: <User size={20} />, label: 'Profile' },
   ];
 
+  const handleRefresh = async () => {
+    if (activeTab === 'delivery') {
+      await fetchDeliveryPersonnel();
+      return;
+    }
+
+    if (activeTab === 'payment') {
+      await fetchPaymentConfig();
+    }
+  };
+
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff', display: 'flex' }}>
+    <PullToRefresh onRefresh={handleRefresh}>
+      <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff', display: 'flex' }}>
 
       {/* Desktop Sidebar (≥768px) */}
       <aside style={{
@@ -460,14 +473,15 @@ const CanteenManagerDashboard = () => {
       </nav>
 
       {/* Responsive CSS */}
-      <style>{`
-        @media (max-width: 767px) {
-          .mgr-sidebar { display: none !important; }
-          .mgr-main { margin-left: 0 !important; padding-bottom: 80px !important; }
-          .mgr-bottombar { display: flex !important; }
-        }
-      `}</style>
-    </div>
+        <style>{`
+          @media (max-width: 767px) {
+            .mgr-sidebar { display: none !important; }
+            .mgr-main { margin-left: 0 !important; padding-bottom: 80px !important; }
+            .mgr-bottombar { display: flex !important; }
+          }
+        `}</style>
+      </div>
+    </PullToRefresh>
   );
 };
 

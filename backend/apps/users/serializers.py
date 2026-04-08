@@ -717,3 +717,58 @@ Upside Dine Team'''
             'temp_password': temp_password,
             'employee_code': employee_code,
         }
+
+
+class UpdateMessWorkerSerializer(serializers.Serializer):
+    """Serializer for mess managers to update worker contact details."""
+    full_name = serializers.CharField(required=False, max_length=100)
+    email = serializers.EmailField(required=False)
+    phone = serializers.CharField(required=False, allow_blank=True, max_length=20)
+
+    def validate(self, attrs):
+        allowed_fields = set(self.fields.keys())
+        unknown_fields = set(self.initial_data.keys()) - allowed_fields
+        if unknown_fields:
+            raise serializers.ValidationError(
+                {field: ["This field cannot be updated."] for field in sorted(unknown_fields)}
+            )
+
+        if not attrs:
+            raise serializers.ValidationError("Provide at least one field to update.")
+
+        return attrs
+
+    def validate_full_name(self, value):
+        normalized_value = " ".join(value.split())
+        if not normalized_value:
+            raise serializers.ValidationError("Full name cannot be blank.")
+        return normalized_value
+
+    def validate_email(self, value):
+        normalized_value = value.lower()
+        existing_users = User.objects.filter(email=normalized_value)
+        if self.instance is not None:
+            existing_users = existing_users.exclude(pk=self.instance.pk)
+        if existing_users.exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return normalized_value
+
+    def validate_phone(self, value):
+        return value.strip()
+
+    def update(self, instance, validated_data):
+        user_fields = []
+        for field in ("email", "phone"):
+            if field in validated_data:
+                setattr(instance, field, validated_data[field])
+                user_fields.append(field)
+
+        if user_fields:
+            instance.save(update_fields=user_fields)
+
+        if "full_name" in validated_data:
+            staff_profile = instance.staff_profile
+            staff_profile.full_name = validated_data["full_name"]
+            staff_profile.save(update_fields=["full_name"])
+
+        return instance

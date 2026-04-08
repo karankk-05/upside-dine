@@ -22,6 +22,7 @@ from .views import (
     AvailableHallsView,
     PublicCanteensView,
     MessWorkerManagementView,
+    MessWorkerDetailView,
     ToggleMessWorkerStatusView,
 )
 
@@ -47,5 +48,6 @@ urlpatterns = [
     path("public/halls/", AvailableHallsView.as_view(), name="public-halls"),
     path("public/canteens/", PublicCanteensView.as_view(), name="public-canteens"),
     path("manager/mess-workers/", MessWorkerManagementView.as_view(), name="mess-worker-management"),
+    path("manager/mess-workers/<int:user_id>/", MessWorkerDetailView.as_view(), name="mess-worker-detail"),
     path("manager/mess-workers/<int:user_id>/toggle/", ToggleMessWorkerStatusView.as_view(), name="toggle-mess-worker-status"),
 ]

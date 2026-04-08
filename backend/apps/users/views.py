@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.utils import timezone
 from django.core.cache import cache
 from rest_framework import status
@@ -289,15 +290,12 @@ class ToggleDeliveryPersonStatusView(GenericAPIView):
     """View for canteen managers to activate/deactivate delivery personnel"""
     permission_classes = [IsAuthenticated]
 
-    def patch(self, request, user_id):
-        """Toggle delivery person active status"""
-        # Check if user is canteen manager
+    def _get_delivery_person(self, request, user_id):
         if not hasattr(request.user, 'staff_profile') or request.user.role.role_name != 'canteen_manager':
-            return Response({"detail": "Only canteen managers can manage delivery personnel."}, status=status.HTTP_403_FORBIDDEN)
+            return None, Response({"detail": "Only canteen managers can manage delivery personnel."}, status=status.HTTP_403_FORBIDDEN)
 
         canteen = request.user.staff_profile.canteen
 
-        # Get delivery person
         try:
             delivery_person = User.objects.select_related('staff_profile', 'role').get(
                 id=user_id,
@@ -305,7 +303,15 @@ class ToggleDeliveryPersonStatusView(GenericAPIView):
                 staff_profile__canteen=canteen
             )
         except User.DoesNotExist:
-            return Response({"detail": "Delivery person not found."}, status=status.HTTP_404_NOT_FOUND)
+            return None, Response({"detail": "Delivery person not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        return delivery_person, None
+
+    def patch(self, request, user_id):
+        """Toggle delivery person active status"""
+        delivery_person, error = self._get_delivery_person(request, user_id)
+        if error:
+            return error
 
         # Toggle active status
         delivery_person.is_active = not delivery_person.is_active
@@ -316,6 +322,52 @@ class ToggleDeliveryPersonStatusView(GenericAPIView):
             "detail": f"Delivery person {status_text} successfully.",
             "is_active": delivery_person.is_active
         })
+
+    @transaction.atomic
+    def delete(self, request, user_id):
+        """Delete a delivery person account and release assigned active orders."""
+        delivery_person, error = self._get_delivery_person(request, user_id)
+        if error:
+            return error
+
+        from apps.orders.models import CanteenOrder
+
+        active_delivery_statuses = [
+            CanteenOrder.STATUS_CONFIRMED,
+            CanteenOrder.STATUS_PREPARING,
+            CanteenOrder.STATUS_READY,
+            CanteenOrder.STATUS_OUT_FOR_DELIVERY,
+        ]
+        reopened_statuses = [CanteenOrder.STATUS_OUT_FOR_DELIVERY]
+        now = timezone.now()
+
+        assigned_orders = CanteenOrder.objects.filter(
+            delivery_person=delivery_person,
+            status__in=active_delivery_statuses,
+        )
+        reopened_count = assigned_orders.filter(status__in=reopened_statuses).update(
+            status=CanteenOrder.STATUS_READY,
+            delivery_person=None,
+            delivery_accepted_at=None,
+            updated_at=now,
+        )
+        released_count = assigned_orders.exclude(status__in=reopened_statuses).update(
+            delivery_person=None,
+            delivery_accepted_at=None,
+            updated_at=now,
+        )
+
+        delivery_person_email = delivery_person.email
+        delivery_person.delete()
+
+        detail = f"Delivery person {delivery_person_email} deleted successfully."
+        if reopened_count or released_count:
+            detail += (
+                f" {reopened_count} active delivery order(s) were moved back to ready,"
+                f" and {released_count} assigned order(s) were released for reassignment."
+            )
+
+        return Response({"detail": detail})
 
 
 

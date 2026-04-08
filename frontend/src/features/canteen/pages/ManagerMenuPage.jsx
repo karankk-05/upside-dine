@@ -12,6 +12,17 @@ import {
 } from '../../../lib/formValidation';
 import '../canteen.css';
 
+const CATEGORY_OPTIONS = ['snacks', 'beverages', 'meals', 'desserts'];
+
+const normalizeCategorySelection = (item) => {
+  const categoryValue =
+    item?.category_name ||
+    item?._categoryName ||
+    '';
+  const normalizedCategory = categoryValue.trim().toLowerCase();
+  return CATEGORY_OPTIONS.includes(normalizedCategory) ? normalizedCategory : 'snacks';
+};
+
 export default function ManagerMenuPage() {
   const navigate = useNavigate();
   const { menuItems = [], isLoading, addItem, updateItem, deleteItem } = useManagerMenu();
@@ -54,7 +65,15 @@ export default function ManagerMenuPage() {
   const startEdit = (item) => {
     shouldScrollToFormRef.current = true;
     setEditing(item.id);
-    setFormData({ item_name: item.item_name, description: item.description || '', price: String(item.price), category: item.category || 'snacks', is_veg: item.is_veg, preparation_time_mins: item.preparation_time_mins || 10, is_available: item.is_available });
+    setFormData({
+      item_name: item.item_name,
+      description: item.description || '',
+      price: String(item.price),
+      category: normalizeCategorySelection(item),
+      is_veg: item.is_veg,
+      preparation_time_mins: item.preparation_time_mins || 10,
+      is_available: item.is_available,
+    });
     setShowForm(true);
   };
 

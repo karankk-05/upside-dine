@@ -2,6 +2,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PullToRefresh from '../components/PullToRefresh';
+import InfiniteScrollSentinel from '../components/InfiniteScrollSentinel';
+import { useIncrementalList } from '../hooks/useIncrementalList';
 import api from '../lib/api';
 import { logoutUser } from '../lib/auth';
 import '../features/canteen/canteen.css';
@@ -127,6 +129,42 @@ const DeliveryDashboard = () => {
     isLoadingMyOrders &&
     availableOrders.length === 0 &&
     allOrdersData.length === 0;
+  const {
+    visibleItems: visibleActiveDeliveries,
+    hasMore: hasMoreActiveDeliveries,
+    loadMore: loadMoreActiveDeliveries,
+  } = useIncrementalList(myOrders, {
+    initialCount: 2,
+    step: 2,
+    resetKey: myOrders.length,
+  });
+  const {
+    visibleItems: visibleAssignedPending,
+    hasMore: hasMoreAssignedPending,
+    loadMore: loadMoreAssignedPending,
+  } = useIncrementalList(assignedPending, {
+    initialCount: 3,
+    step: 3,
+    resetKey: assignedPending.length,
+  });
+  const {
+    visibleItems: visibleAvailableOrders,
+    hasMore: hasMoreAvailableOrders,
+    loadMore: loadMoreAvailableOrders,
+  } = useIncrementalList(availableOrders, {
+    initialCount: 4,
+    step: 4,
+    resetKey: availableOrders.length,
+  });
+  const {
+    visibleItems: visibleCompletedOrders,
+    hasMore: hasMoreCompletedOrders,
+    loadMore: loadMoreCompletedOrders,
+  } = useIncrementalList(completedOrders, {
+    initialCount: 5,
+    step: 4,
+    resetKey: completedOrders.length,
+  });
 
   const handleRefresh = useCallback(async () => {
     await refreshDeliveryData();
@@ -321,7 +359,7 @@ const DeliveryDashboard = () => {
                 >
                   🚴 Active Deliveries <span style={{ color: '#b566ff' }}>({myOrders.length})</span>
                 </h3>
-                {myOrders.map((activeDelivery) => {
+                {visibleActiveDeliveries.map((activeDelivery) => {
                   const otp = deliveryOtps[activeDelivery.id] || '';
                   const errorMessage = otpErrors[activeDelivery.id] || '';
 
@@ -545,6 +583,12 @@ const DeliveryDashboard = () => {
                     </div>
                   );
                 })}
+                <InfiniteScrollSentinel
+                  hasMore={hasMoreActiveDeliveries}
+                  onLoadMore={loadMoreActiveDeliveries}
+                  skeletonCount={1}
+                  minHeight={128}
+                />
               </div>
             ) : isLoadingMyOrders && allOrdersData.length === 0 ? (
               <div style={{ marginBottom: 24 }}>
@@ -562,7 +606,7 @@ const DeliveryDashboard = () => {
                   ⏳ Assigned – Waiting for Food
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {assignedPending.map((order) => (
+                  {visibleAssignedPending.map((order) => (
                     <div
                       key={order.id}
                       style={{
@@ -616,6 +660,12 @@ const DeliveryDashboard = () => {
                     </div>
                   ))}
                 </div>
+                <InfiniteScrollSentinel
+                  hasMore={hasMoreAssignedPending}
+                  onLoadMore={loadMoreAssignedPending}
+                  skeletonCount={1}
+                  minHeight={90}
+                />
               </div>
             ) : null}
 
@@ -646,7 +696,7 @@ const DeliveryDashboard = () => {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {availableOrders.map((order) => (
+                  {visibleAvailableOrders.map((order) => (
                     <div
                       key={order.id}
                       style={{
@@ -750,6 +800,12 @@ const DeliveryDashboard = () => {
                       </p>
                     </div>
                   ))}
+                  <InfiniteScrollSentinel
+                    hasMore={hasMoreAvailableOrders}
+                    onLoadMore={loadMoreAvailableOrders}
+                    skeletonCount={2}
+                    minHeight={144}
+                  />
                 </div>
               )}
             </div>
@@ -760,7 +816,7 @@ const DeliveryDashboard = () => {
                   ✅ Completed ({completedOrders.length})
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {completedOrders.slice(0, 5).map((order) => (
+                  {visibleCompletedOrders.map((order) => (
                     <div
                       key={order.id}
                       style={{
@@ -792,6 +848,12 @@ const DeliveryDashboard = () => {
                     </div>
                   ))}
                 </div>
+                <InfiniteScrollSentinel
+                  hasMore={hasMoreCompletedOrders}
+                  onLoadMore={loadMoreCompletedOrders}
+                  skeletonCount={1}
+                  minHeight={72}
+                />
               </div>
             ) : null}
           </div>

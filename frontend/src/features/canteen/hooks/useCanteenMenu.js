@@ -1,6 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
 import api from "../../../lib/api";
 
+const normalizeVegFlag = (value) => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    return value.trim().toLowerCase() === 'true';
+  }
+
+  if (typeof value === 'number') {
+    return value === 1;
+  }
+
+  return false;
+};
+
 export const useCanteenMenu = (canteenId) => {
   return useQuery({
     queryKey: ["menu", canteenId],
@@ -13,8 +29,11 @@ export const useCanteenMenu = (canteenId) => {
       const items = [];
 
       if (Array.isArray(data)) {
-        // If it's already a flat array, return as-is
-        return data;
+        return data.map((item) => ({
+          ...item,
+          is_veg: normalizeVegFlag(item.is_veg),
+          _categoryName: item.category_name || item._categoryName || 'Other',
+        }));
       }
 
       // Flatten categorized items
@@ -22,7 +41,11 @@ export const useCanteenMenu = (canteenId) => {
         for (const cat of data.categories) {
           if (cat.items) {
             for (const item of cat.items) {
-              items.push({ ...item, _categoryName: cat.category_name });
+              items.push({
+                ...item,
+                is_veg: normalizeVegFlag(item.is_veg),
+                _categoryName: cat.category_name,
+              });
             }
           }
         }
@@ -31,7 +54,11 @@ export const useCanteenMenu = (canteenId) => {
       // Add uncategorized items
       if (data.uncategorized_items) {
         for (const item of data.uncategorized_items) {
-          items.push({ ...item, _categoryName: 'Other' });
+          items.push({
+            ...item,
+            is_veg: normalizeVegFlag(item.is_veg),
+            _categoryName: 'Other',
+          });
         }
       }
 

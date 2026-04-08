@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import InfiniteScrollSentinel from '../../../components/InfiniteScrollSentinel';
+import { useIncrementalList } from '../../../hooks/useIncrementalList';
 import { useMyBookings } from '../hooks/useMyBookings';
 import '../mess.css';
 
@@ -16,6 +18,16 @@ const MyBookingsPage = () => {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState('');
   const { data: bookings, isLoading, isError } = useMyBookings(statusFilter ? { status: statusFilter } : {});
+  const filteredBookings = (bookings || []).filter((booking) => !statusFilter || booking.status === statusFilter);
+  const {
+    visibleItems: visibleBookings,
+    hasMore,
+    loadMore,
+  } = useIncrementalList(filteredBookings, {
+    initialCount: 8,
+    step: 6,
+    resetKey: statusFilter,
+  });
 
   return (
     <div className="mess-page">
@@ -42,13 +54,14 @@ const MyBookingsPage = () => {
           </div>
         ) : isError ? (
           <div className="mess-error">Bookings currently not available. Please try again.</div>
-        ) : (bookings || []).filter(b => !statusFilter || b.status === statusFilter).length === 0 ? (
+        ) : filteredBookings.length === 0 ? (
           <div className="mess-empty">
             <div className="mess-empty-icon">📋</div>
             <div>No bookings found</div>
           </div>
         ) : (
-          (bookings || []).filter(b => !statusFilter || b.status === statusFilter).map((booking) => (
+          <>
+          {visibleBookings.map((booking) => (
             <div key={booking.id} className="mess-booking-card" onClick={() => navigate(`/mess/bookings/${booking.id}`)} id={`booking-card-${booking.id}`}>
               <div className="mess-booking-header">
                 <span className="mess-booking-id">{booking.booking_reference || `#${booking.id}`}</span>
@@ -61,6 +74,14 @@ const MyBookingsPage = () => {
               </div>
             </div>
           ))
+          }
+          <InfiniteScrollSentinel
+            hasMore={hasMore}
+            onLoadMore={loadMore}
+            skeletonCount={2}
+            minHeight={112}
+          />
+          </>
         )}
       </div>
     </div>

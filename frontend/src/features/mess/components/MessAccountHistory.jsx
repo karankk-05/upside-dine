@@ -1,3 +1,5 @@
+import InfiniteScrollSentinel from '../../../components/InfiniteScrollSentinel';
+import { useIncrementalList } from '../../../hooks/useIncrementalList';
 import { useMyBookings } from '../hooks/useMyBookings';
 
 const MessAccountHistory = () => {
@@ -13,6 +15,15 @@ const MessAccountHistory = () => {
   }
 
   const transactions = (bookings || []).filter((b) => b.status === 'redeemed' || b.status === 'pending');
+  const {
+    visibleItems: visibleTransactions,
+    hasMore,
+    loadMore,
+  } = useIncrementalList(transactions, {
+    initialCount: 6,
+    step: 4,
+    resetKey: transactions.length,
+  });
 
   if (transactions.length === 0) {
     return (
@@ -26,7 +37,7 @@ const MessAccountHistory = () => {
   return (
     <div>
       <div className="mess-section-title" style={{ marginBottom: 12 }}>Transaction History</div>
-      {transactions.map((tx) => (
+      {visibleTransactions.map((tx) => (
         <div key={tx.id} className="mess-transaction">
           <div className="mess-transaction-info">
             <div className="mess-transaction-name">{tx.menu_item?.item_name}</div>
@@ -37,6 +48,12 @@ const MessAccountHistory = () => {
           <div className="mess-transaction-amount">+₹{tx.total_price}</div>
         </div>
       ))}
+      <InfiniteScrollSentinel
+        hasMore={hasMore}
+        onLoadMore={loadMore}
+        skeletonCount={2}
+        minHeight={72}
+      />
     </div>
   );
 };

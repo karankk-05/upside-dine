@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, ChefHat, Package, Truck, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
+import InfiniteScrollSentinel from '../../../components/InfiniteScrollSentinel';
+import { useIncrementalList } from '../../../hooks/useIncrementalList';
 import { useManagerOrders } from '../hooks/useManagerOrders';
 import { useUpdateOrderStatus } from '../hooks/useUpdateOrderStatus';
 import { formatDistanceToNow } from 'date-fns';
@@ -43,6 +45,15 @@ export default function ManagerOrdersPage() {
     const pb = priority[b.status] ?? 99;
     if (pa !== pb) return pa - pb;
     return new Date(b.created_at) - new Date(a.created_at);
+  });
+  const {
+    visibleItems: visibleOrders,
+    hasMore,
+    loadMore,
+  } = useIncrementalList(sorted, {
+    initialCount: 6,
+    step: 4,
+    resetKey: filter,
   });
 
   const handleStatusUpdate = async (e, id, newStatus) => {
@@ -116,7 +127,7 @@ export default function ManagerOrdersPage() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {sorted.map((order, idx) => {
+            {visibleOrders.map((order, idx) => {
               const cfg = statusConfig[order.status] || statusConfig.pending;
 
               return (
@@ -252,6 +263,12 @@ export default function ManagerOrdersPage() {
                 </motion.div>
               );
             })}
+            <InfiniteScrollSentinel
+              hasMore={hasMore}
+              onLoadMore={loadMore}
+              skeletonCount={2}
+              minHeight={186}
+            />
           </div>
         )}
       </div>

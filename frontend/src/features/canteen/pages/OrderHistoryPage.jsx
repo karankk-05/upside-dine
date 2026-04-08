@@ -1,6 +1,9 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import InfiniteScrollSentinel from '../../../components/InfiniteScrollSentinel';
+import { useIncrementalList } from '../../../hooks/useIncrementalList';
 import { useOrderHistory } from '../hooks/useOrderHistory';
 import { formatDistanceToNow } from 'date-fns';
 import '../canteen.css';
@@ -13,6 +16,19 @@ const badgeClass = (status) => {
 export default function OrderHistoryPage() {
   const navigate = useNavigate();
   const { data: orders = [], isLoading } = useOrderHistory();
+  const normalizedOrders = useMemo(
+    () => (Array.isArray(orders) ? orders : orders?.results || []),
+    [orders]
+  );
+  const {
+    visibleItems: visibleOrders,
+    hasMore,
+    loadMore,
+  } = useIncrementalList(normalizedOrders, {
+    initialCount: 8,
+    step: 6,
+    resetKey: normalizedOrders.length,
+  });
 
   return (
     <div className="canteen-page">
@@ -24,10 +40,11 @@ export default function OrderHistoryPage() {
       <div style={{ padding: 20, paddingBottom: 100 }}>
         {isLoading ? (
           <div className="canteen-loading"><div className="canteen-loading-spinner" /></div>
-        ) : orders.length === 0 ? (
+        ) : normalizedOrders.length === 0 ? (
           <div className="canteen-empty"><div className="canteen-empty__icon">📦</div><p className="canteen-empty__text">No orders yet</p></div>
         ) : (
-          orders.map((order, idx) => (
+          <>
+          {visibleOrders.map((order, idx) => (
             <motion.div
               key={order.id}
               className="canteen-order-card"
@@ -52,6 +69,14 @@ export default function OrderHistoryPage() {
               </p>
             </motion.div>
           ))
+          }
+          <InfiniteScrollSentinel
+            hasMore={hasMore}
+            onLoadMore={loadMore}
+            skeletonCount={2}
+            minHeight={116}
+          />
+          </>
         )}
       </div>
     </div>

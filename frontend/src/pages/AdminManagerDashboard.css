@@ -77,6 +77,7 @@
 .admin-icon-button,
 .admin-primary-button,
 .admin-action-button,
+.admin-sidebar__profile,
 .admin-sidebar__logout,
 .admin-mini-card {
   transition:
@@ -126,6 +127,7 @@
   font-weight: 700;
 }
 
+.admin-sidebar__profile,
 .admin-sidebar__logout,
 .admin-primary-button {
   min-height: 48px;
@@ -139,9 +141,18 @@
   cursor: pointer;
 }
 
+.admin-sidebar__profile,
 .admin-sidebar__logout {
-  margin-top: auto;
   background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-sidebar__profile {
+  margin-top: auto;
+  color: #f3f3f3;
+}
+
+.admin-sidebar__logout {
   color: #ffb6b6;
   border: 1px solid rgba(255, 129, 129, 0.28);
 }
@@ -541,6 +552,7 @@
 }
 
 .admin-sidebar__nav-button:hover,
+.admin-sidebar__profile:hover,
 .admin-sidebar__logout:hover,
 .admin-primary-button:hover:not(:disabled),
 .admin-icon-button:hover,

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { appQueryClient } from './queryClient';
 
 const STORAGE_KEYS = {
   access: 'access_token',
@@ -29,6 +30,16 @@ export const getDefaultRouteForRole = (role = getStoredRole()) =>
   ROLE_ROUTES[normalizeRole(role)] || '/dashboard';
 
 export const setAuthSession = ({ access, refresh, role }) => {
+  const previousAccess = localStorage.getItem(STORAGE_KEYS.access);
+  const previousRefresh = localStorage.getItem(STORAGE_KEYS.refresh);
+  const isSwitchingSession =
+    (access && previousAccess && previousAccess !== access) ||
+    (refresh && previousRefresh && previousRefresh !== refresh);
+
+  if (isSwitchingSession) {
+    appQueryClient.clear();
+  }
+
   if (access) {
     localStorage.setItem(STORAGE_KEYS.access, access);
   }
@@ -42,6 +53,7 @@ export const setAuthSession = ({ access, refresh, role }) => {
 
 export const clearAuthSession = () => {
   Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
+  appQueryClient.clear();
 };
 
 const redirectToAuth = () => {

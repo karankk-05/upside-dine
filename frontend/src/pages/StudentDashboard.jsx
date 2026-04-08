@@ -1,61 +1,58 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { STANDARD_INPUT_PROPS, sanitizeSearchText } from '../lib/formValidation';
 import PullToRefresh from '../components/PullToRefresh';
+import api from '../lib/api';
+import { CURRENT_USER_QUERY_KEY, useCurrentUser } from '../hooks/useCurrentUser';
 import '../features/mess/mess.css';
+
+const PUBLIC_CANTEENS_QUERY_KEY = ['public-canteens'];
+const MESS_LIST_QUERY_KEY = ['mess', 'list'];
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
-  const [userName, setUserName] = useState('');
-  const [canteens, setCanteens] = useState([]);
-  const [mess, setMess] = useState(null);
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
+
+  const { data: currentUser } = useCurrentUser();
+  const { data: canteens = [], isLoading: isLoadingCanteens } = useQuery({
+    queryKey: PUBLIC_CANTEENS_QUERY_KEY,
+    queryFn: async () => {
+      const { data } = await api.get('/public/canteens/');
+      return Array.isArray(data) ? data : [];
+    },
+  });
+  const { data: messes = [], isLoading: isLoadingMesses } = useQuery({
+    queryKey: MESS_LIST_QUERY_KEY,
+    queryFn: async () => {
+      const { data } = await api.get('/mess/');
+      return Array.isArray(data) ? data : [];
+    },
+  });
 
   const loadDashboard = useCallback(async () => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      navigate('/auth');
-      return;
-    }
-
-    const headers = { Authorization: `Bearer ${token}` };
-
-    setLoading(true);
-
-    try {
-      const [userRes, canteenRes, messRes] = await Promise.all([
-        axios.get('/api/users/me/', { headers }),
-        axios.get('/api/public/canteens/'),
-        axios.get('/api/mess/', { headers }),
-      ]);
-
-      const profile = userRes.data.profile;
-      setUserName(profile?.full_name || userRes.data.email.split('@')[0]);
-      setCanteens(canteenRes.data || []);
-
-      const messes = messRes.data || [];
-      const studentHostel = profile?.hostel_name || '';
-      const myMess = messes.find(
-        (m) => m.hall_name?.toLowerCase() === studentHostel.toLowerCase()
-      );
-      setMess(myMess || messes[0] || null);
-    } catch (err) {
-      console.error('Dashboard load error:', err);
-      if (err.response?.status === 401) {
-        navigate('/auth');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [navigate]);
-
-  useEffect(() => {
-    loadDashboard();
-  }, [loadDashboard]);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: PUBLIC_CANTEENS_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: MESS_LIST_QUERY_KEY }),
+    ]);
+  }, [queryClient]);
 
   const canteenEmojis = ['🍕', '🍔', '🥡', '☕', '🍜', '🧁', '🥪', '🍩'];
+  const userName =
+    currentUser?.profile?.full_name || currentUser?.email?.split('@')[0] || '';
+  const mess = useMemo(() => {
+    if (!currentUser) {
+      return null;
+    }
+
+    const studentHostel = currentUser.profile?.hostel_name || '';
+    const myMess = messes.find(
+      (item) => item.hall_name?.toLowerCase() === studentHostel.toLowerCase()
+    );
+    return myMess || messes[0] || null;
+  }, [currentUser, messes]);
 
   // Filter canteens & mess by search
   const q = searchQuery.toLowerCase();
@@ -76,19 +73,6 @@ const StudentDashboard = () => {
 
   // Logout is now handled in ProfilePage
 
-  if (loading) {
-    return (
-      <div className="mess-page">
-        <div className="mess-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-          <div className="mess-loading">
-            <div className="mess-loading-spinner" />
-            <span className="mess-loading-text">Loading dashboard...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <PullToRefresh onRefresh={loadDashboard}>
       <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff' }}>
@@ -98,13 +82,22 @@ const StudentDashboard = () => {
         <div style={{ padding: '40px 20px 0 20px', background: 'linear-gradient(180deg, #000 0%, #0a0a0a 100%)' }}>
           <div style={{ marginBottom: 24 }}>
             <div>
-              <h1 style={{
-                fontSize: 24, fontWeight: 700, color: '#d55555',
-                textShadow: '0 0 4px rgba(232,85,85,0.12), 0 0 8px rgba(232,85,85,0.12)',
-              }}>
-                Hey, {userName}!
-              </h1>
-              <p style={{ color: '#999', fontSize: 13, marginTop: 4 }}>What would you like to eat today?</p>
+              {currentUser ? (
+                <>
+                  <h1 style={{
+                    fontSize: 24, fontWeight: 700, color: '#d55555',
+                    textShadow: '0 0 4px rgba(232,85,85,0.12), 0 0 8px rgba(232,85,85,0.12)',
+                  }}>
+                    Hey, {userName}!
+                  </h1>
+                  <p style={{ color: '#999', fontSize: 13, marginTop: 4 }}>What would you like to eat today?</p>
+                </>
+              ) : (
+                <>
+                  <div className="ui-skeleton ui-skeleton-text" style={{ width: '56%', height: 30, marginBottom: 8 }} />
+                  <div className="ui-skeleton ui-skeleton-text" style={{ width: '42%', height: 14 }} />
+                </>
+              )}
             </div>
           </div>
 
@@ -127,7 +120,7 @@ const StudentDashboard = () => {
         </div>
 
         {/* Mess Section */}
-        {showMess && mess && (
+        {showMess && mess ? (
           <div style={{ padding: '24px 20px 0 20px' }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: '#fff' }}>{mess.name}</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -165,7 +158,15 @@ const StudentDashboard = () => {
               </div>
             </div>
           </div>
-        )}
+        ) : isLoadingMesses ? (
+          <div style={{ padding: '24px 20px 0 20px' }}>
+            <div className="ui-skeleton ui-skeleton-text" style={{ width: '42%', height: 22, marginBottom: 16 }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="ui-skeleton ui-skeleton-card" style={{ aspectRatio: '1 / 1' }} />
+              <div className="ui-skeleton ui-skeleton-card" style={{ aspectRatio: '1 / 1' }} />
+            </div>
+          </div>
+        ) : null}
 
         {/* Canteens Section */}
         <div style={{ padding: '24px 20px 120px 20px' }}>
@@ -203,7 +204,17 @@ const StudentDashboard = () => {
               </div>
             ))}
 
-            {filteredCanteens.length === 0 && (
+            {filteredCanteens.length === 0 && isLoadingCanteens
+              ? Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={`canteen-skeleton-${index}`}
+                    className="ui-skeleton ui-skeleton-card"
+                    style={{ aspectRatio: '4 / 5' }}
+                  />
+                ))
+              : null}
+
+            {filteredCanteens.length === 0 && !isLoadingCanteens && (
               <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#666', padding: 40 }}>No canteens found.</p>
             )}
           </div>

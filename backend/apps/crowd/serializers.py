@@ -5,6 +5,7 @@ from .models import CameraFeed, CrowdMetric
 
 class CameraFeedSerializer(serializers.ModelSerializer):
     mess_name = serializers.SerializerMethodField()
+    feed_number = serializers.SerializerMethodField()
 
     def get_mess_name(self, obj):
         from apps.mess.models import Mess
@@ -13,10 +14,34 @@ class CameraFeedSerializer(serializers.ModelSerializer):
         except Mess.DoesNotExist:
             return f"Mess {obj.mess_id}"
 
+    def get_feed_number(self, obj):
+        feed_number_map = self.context.get("feed_number_map") or {}
+        if obj.id in feed_number_map:
+            return feed_number_map[obj.id]
+
+        ordered_feed_ids = list(
+            CameraFeed.objects.filter(mess_id=obj.mess_id)
+            .order_by("created_at", "id")
+            .values_list("id", flat=True)
+        )
+        try:
+            return ordered_feed_ids.index(obj.id) + 1
+        except ValueError:
+            return None
+
     class Meta:
         model = CameraFeed
-        fields = ["id", "mess_id", "mess_name", "camera_url", "is_active", "location_description", "created_at"]
-        read_only_fields = ["id", "created_at"]
+        fields = [
+            "id",
+            "feed_number",
+            "mess_id",
+            "mess_name",
+            "camera_url",
+            "is_active",
+            "location_description",
+            "created_at",
+        ]
+        read_only_fields = ["id", "feed_number", "created_at"]
 
 
 class CrowdMetricSerializer(serializers.ModelSerializer):

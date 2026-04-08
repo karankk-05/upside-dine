@@ -61,7 +61,20 @@ export default function CameraFeedStatus({ filterMessId, messesList = [] }) {
     );
   }
 
-  const feeds = filterMessId ? allFeeds.filter(f => f.mess_id === Number(filterMessId)) : allFeeds;
+  const scopedFeeds = filterMessId
+    ? allFeeds.filter((feed) => feed.mess_id === Number(filterMessId))
+    : allFeeds;
+
+  const feeds = [...scopedFeeds].sort((left, right) => {
+    const messDelta = Number(left.mess_id) - Number(right.mess_id);
+    if (messDelta !== 0) return messDelta;
+
+    const feedNumberDelta =
+      Number(left.feed_number ?? left.id) - Number(right.feed_number ?? right.id);
+    if (feedNumberDelta !== 0) return feedNumberDelta;
+
+    return Number(left.id) - Number(right.id);
+  });
 
   if (!feeds.length) {
     return (
@@ -113,7 +126,7 @@ export default function CameraFeedStatus({ filterMessId, messesList = [] }) {
                 {isActive ? 'Active' : 'Offline'}
               </div>
             </div>
-            <div className="camera-feed-card__title">Feed #{feed.id}</div>
+            <div className="camera-feed-card__title">Feed #{feed.feed_number ?? idx + 1}</div>
             {editingId === feed.id ? (
               <div style={{ marginTop: 8, marginBottom: 8 }}>
                 <input 

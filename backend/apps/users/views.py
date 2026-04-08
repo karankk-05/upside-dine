@@ -36,6 +36,32 @@ def _natural_sort_key(value):
     return [int(part) if part.isdigit() else part.lower() for part in parts]
 
 
+def _get_managed_mess_worker(request, user_id):
+    if not hasattr(request.user, 'role') or request.user.role.role_name != 'mess_manager':
+        return None, Response({"detail": "Only mess managers can manage workers."}, status=status.HTTP_403_FORBIDDEN)
+
+    manager_staff = getattr(request.user, 'staff_profile', None)
+    if manager_staff is None:
+        return None, Response({"detail": "Mess manager profile not found."}, status=status.HTTP_403_FORBIDDEN)
+
+    from apps.mess.models import MessStaffAssignment
+
+    manager_assignment = MessStaffAssignment.objects.filter(
+        staff=manager_staff, assignment_role='manager', is_active=True
+    ).first()
+    if not manager_assignment:
+        return None, Response({"detail": "You are not assigned to any mess."}, status=status.HTTP_403_FORBIDDEN)
+
+    worker_assignment = MessStaffAssignment.objects.filter(
+        mess=manager_assignment.mess, assignment_role='worker', staff__user_id=user_id
+    ).select_related('staff__user').first()
+
+    if not worker_assignment:
+        return None, Response({"detail": "Worker not found in your mess."}, status=status.HTTP_404_NOT_FOUND)
+
+    return worker_assignment.staff.user, None
+
+
 class RegisterView(GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = RegisterSerializer
@@ -705,31 +731,31 @@ class MessWorkerManagementView(GenericAPIView):
         }, status=status.HTTP_201_CREATED)
 
 
+class MessWorkerDetailView(GenericAPIView):
+    """View for mess managers to update worker details."""
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, user_id):
+        worker, error = _get_managed_mess_worker(request, user_id)
+        if error:
+            return error
+
+        from .serializers import MessWorkerSerializer, UpdateMessWorkerSerializer
+
+        serializer = UpdateMessWorkerSerializer(worker, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        updated_worker = serializer.save()
+
+        return Response(MessWorkerSerializer(updated_worker).data, status=status.HTTP_200_OK)
+
+
 class ToggleMessWorkerStatusView(GenericAPIView):
     """View for mess managers to toggle or delete mess workers"""
     permission_classes = [IsAuthenticated]
 
     def _get_worker(self, request, user_id):
         """Helper to validate manager and find the worker"""
-        if not hasattr(request.user, 'role') or request.user.role.role_name != 'mess_manager':
-            return None, Response({"detail": "Only mess managers can manage workers."}, status=status.HTTP_403_FORBIDDEN)
-
-        from apps.mess.models import MessStaffAssignment
-        manager_assignment = MessStaffAssignment.objects.filter(
-            staff=request.user.staff_profile, assignment_role='manager', is_active=True
-        ).first()
-        if not manager_assignment:
-            return None, Response({"detail": "You are not assigned to any mess."}, status=status.HTTP_403_FORBIDDEN)
-
-        # Ensure the worker belongs to the same mess
-        worker_assignment = MessStaffAssignment.objects.filter(
-            mess=manager_assignment.mess, assignment_role='worker', staff__user_id=user_id
-        ).select_related('staff__user').first()
-
-        if not worker_assignment:
-            return None, Response({"detail": "Worker not found in your mess."}, status=status.HTTP_404_NOT_FOUND)
-
-        return worker_assignment.staff.user, None
+        return _get_managed_mess_worker(request, user_id)
 
     def patch(self, request, user_id):
         """Toggle worker active status (freeze/unfreeze)"""

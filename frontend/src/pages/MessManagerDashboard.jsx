@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ClipboardList,
   LogOut,
+  Pencil,
   Plus,
   Settings,
   ToggleLeft,
@@ -26,6 +27,7 @@ import {
 import '../features/mess/mess.css';
 
 const MESS_MANAGER_WORKERS_QUERY_KEY = ['mess-manager', 'workers'];
+const EMPTY_WORKER_FORM = { full_name: '', email: '', phone: '' };
 
 const WorkerListSkeleton = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -64,7 +66,8 @@ const MessManagerDashboard = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('mess');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [addForm, setAddForm] = useState({ full_name: '', email: '', phone: '' });
+  const [editingWorker, setEditingWorker] = useState(null);
+  const [addForm, setAddForm] = useState(EMPTY_WORKER_FORM);
   const [addResult, setAddResult] = useState(null);
   const [addError, setAddError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -96,6 +99,14 @@ const MessManagerDashboard = () => {
     setAddError('');
   };
 
+  const resetWorkerForm = useCallback(() => {
+    setShowAddForm(false);
+    setEditingWorker(null);
+    setAddForm(EMPTY_WORKER_FORM);
+    setAddResult(null);
+    setAddError('');
+  }, []);
+
   const refreshWorkers = useCallback(
     async () => queryClient.invalidateQueries({ queryKey: MESS_MANAGER_WORKERS_QUERY_KEY }),
     [queryClient]
@@ -105,22 +116,43 @@ const MessManagerDashboard = () => {
     event.preventDefault();
     setSubmitting(true);
     setAddError('');
-    setAddResult(null);
+    if (!editingWorker) {
+      setAddResult(null);
+    }
 
     try {
-      const { data } = await api.post('/manager/mess-workers/', addForm);
-      setAddResult(data);
-      setAddForm({ full_name: '', email: '', phone: '' });
+      if (editingWorker) {
+        await api.patch(`/manager/mess-workers/${editingWorker.id}/`, addForm);
+        resetWorkerForm();
+      } else {
+        const { data } = await api.post('/manager/mess-workers/', addForm);
+        setAddResult(data);
+        setAddForm(EMPTY_WORKER_FORM);
+      }
       await refreshWorkers();
     } catch (error) {
       setAddError(
         error.response?.data?.detail ||
           error.response?.data?.email?.[0] ||
-          'Unable to create worker.'
+          error.response?.data?.full_name?.[0] ||
+          error.response?.data?.phone?.[0] ||
+          'Unable to save worker.'
       );
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleEditWorker = (worker) => {
+    setEditingWorker(worker);
+    setAddForm({
+      full_name: worker.full_name || '',
+      email: worker.email || '',
+      phone: worker.phone || '',
+    });
+    setAddResult(null);
+    setAddError('');
+    setShowAddForm(true);
   };
 
   const handleToggle = async (userId) => {
@@ -188,8 +220,7 @@ const MessManagerDashboard = () => {
     }
 
     setActiveTab(item.id);
-    setAddResult(null);
-    setAddError('');
+    resetWorkerForm();
   };
 
   const handleRefresh = useCallback(async () => {
@@ -358,9 +389,15 @@ const MessManagerDashboard = () => {
                 <h1 style={{ fontSize: 24, fontWeight: 700 }}>Manage Workers</h1>
                 <button
                   onClick={() => {
-                    setShowAddForm(!showAddForm);
-                    setAddResult(null);
-                    setAddError('');
+                    if (showAddForm) {
+                      resetWorkerForm();
+                    } else {
+                      setEditingWorker(null);
+                      setAddForm(EMPTY_WORKER_FORM);
+                      setAddResult(null);
+                      setAddError('');
+                      setShowAddForm(true);
+                    }
                   }}
                   style={{
                     padding: '10px 20px',
@@ -398,7 +435,9 @@ const MessManagerDashboard = () => {
                     marginBottom: 24,
                   }}
                 >
-                  <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>New Worker</h3>
+                  <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>
+                    {editingWorker ? 'Edit Worker' : 'New Worker'}
+                  </h3>
                   <form
                     onSubmit={handleAddWorker}
                     noValidate
@@ -463,7 +502,13 @@ const MessManagerDashboard = () => {
                         opacity: submitting ? 0.6 : 1,
                       }}
                     >
-                      {submitting ? 'Creating...' : 'Create Worker'}
+                      {submitting
+                        ? editingWorker
+                          ? 'Saving...'
+                          : 'Creating...'
+                        : editingWorker
+                          ? 'Save Changes'
+                          : 'Create Worker'}
                     </button>
                   </form>
 
@@ -483,7 +528,7 @@ const MessManagerDashboard = () => {
                     </div>
                   ) : null}
 
-                  {addResult ? (
+                  {addResult && !editingWorker ? (
                     <div
                       style={{
                         marginTop: 12,
@@ -576,6 +621,24 @@ const MessManagerDashboard = () => {
                         </p>
                       </div>
                       <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          onClick={() => handleEditWorker(worker)}
+                          title="Edit"
+                          style={{
+                            width: 36,
+                            height: 36,
+                            background: '#2a2a2a',
+                            border: '1px solid #444',
+                            borderRadius: 8,
+                            color: '#66aaff',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Pencil size={16} />
+                        </button>
                         <button
                           onClick={() => handleToggle(worker.id)}
                           title={worker.is_active ? 'Freeze' : 'Activate'}

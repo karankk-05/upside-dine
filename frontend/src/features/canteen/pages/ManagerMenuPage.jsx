@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Edit2, Trash2, Save, X } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -18,6 +18,23 @@ export default function ManagerMenuPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({ item_name: '', description: '', price: '', category: 'snacks', is_veg: true, preparation_time_mins: 10, is_available: true });
+  const formRef = useRef(null);
+  const itemNameInputRef = useRef(null);
+  const shouldScrollToFormRef = useRef(false);
+
+  useEffect(() => {
+    if (!showForm || !shouldScrollToFormRef.current) {
+      return;
+    }
+
+    shouldScrollToFormRef.current = false;
+
+    window.requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      itemNameInputRef.current?.focus({ preventScroll: true });
+      itemNameInputRef.current?.select?.();
+    });
+  }, [showForm, editing]);
 
   const handleSubmit = async () => {
     try {
@@ -35,6 +52,7 @@ export default function ManagerMenuPage() {
   };
 
   const startEdit = (item) => {
+    shouldScrollToFormRef.current = true;
     setEditing(item.id);
     setFormData({ item_name: item.item_name, description: item.description || '', price: String(item.price), category: item.category || 'snacks', is_veg: item.is_veg, preparation_time_mins: item.preparation_time_mins || 10, is_available: item.is_available });
     setShowForm(true);
@@ -67,16 +85,22 @@ export default function ManagerMenuPage() {
 
       <div style={{ padding: 20, paddingBottom: 100 }}>
         {/* Add Button */}
-        <button className="canteen-btn-small canteen-btn-small--primary" onClick={() => { setShowForm(!showForm); setEditing(null); }} style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px' }}>
+        <button className="canteen-btn-small canteen-btn-small--primary" onClick={() => { shouldScrollToFormRef.current = false; setShowForm(!showForm); setEditing(null); }} style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px' }}>
           {showForm ? <X size={14} /> : <Plus size={14} />} {showForm ? 'Cancel' : 'Add Item'}
         </button>
 
         {/* Add/Edit Form */}
         {showForm && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="canteen-checkout__section" style={{ marginBottom: 20 }}>
+          <motion.div
+            ref={formRef}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="canteen-checkout__section"
+            style={{ marginBottom: 20, scrollMarginTop: 16 }}
+          >
             <p className="canteen-checkout__section-title">{editing ? 'Edit Item' : 'New Item'}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <input className="canteen-checkout__input" placeholder="Item name" value={formData.item_name} onChange={(e) => updateFormField('item_name', e.target.value)} maxLength={FIELD_LIMITS.entityName} />
+              <input ref={itemNameInputRef} className="canteen-checkout__input" placeholder="Item name" value={formData.item_name} onChange={(e) => updateFormField('item_name', e.target.value)} maxLength={FIELD_LIMITS.entityName} />
               <textarea className="canteen-checkout__input" placeholder="Description" value={formData.description} onChange={(e) => updateFormField('description', e.target.value)} rows={2} maxLength={FIELD_LIMITS.description} style={{ resize: 'none' }} />
               <div style={{ display: 'flex', gap: 12 }}>
                 <input className="canteen-checkout__input" type="number" placeholder="Price" value={formData.price} onChange={(e) => updateFormField('price', e.target.value)} {...STANDARD_INPUT_PROPS.price} style={{ flex: 1 }} />

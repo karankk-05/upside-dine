@@ -7,6 +7,9 @@ import InfiniteScrollSentinel from '../components/InfiniteScrollSentinel';
 import api from '../lib/api';
 import { CURRENT_USER_QUERY_KEY, useCurrentUser } from '../hooks/useCurrentUser';
 import { useIncrementalList } from '../hooks/useIncrementalList';
+import { compareNaturalText } from '../lib/naturalSort';
+import { canteenDetailQueryKey, fetchCanteenDetail } from '../features/canteen/hooks/useCanteenDetail';
+import { canteenMenuQueryKey, fetchCanteenMenu } from '../features/canteen/hooks/useCanteenMenu';
 import '../features/mess/mess.css';
 
 const PUBLIC_CANTEENS_QUERY_KEY = ['public-canteens'];
@@ -54,6 +57,17 @@ const StudentDashboard = () => {
     ]);
   }, [queryClient]);
 
+  const primeCanteenPage = useCallback((canteenId) => {
+    void queryClient.prefetchQuery({
+      queryKey: canteenDetailQueryKey(canteenId),
+      queryFn: () => fetchCanteenDetail(canteenId),
+    });
+    void queryClient.prefetchQuery({
+      queryKey: canteenMenuQueryKey(canteenId),
+      queryFn: () => fetchCanteenMenu(canteenId),
+    });
+  }, [queryClient]);
+
   const canteenEmojis = ['🍕', '🍔', '🥡', '☕', '🍜', '🧁', '🥪', '🍩'];
   const userName =
     currentUser?.profile?.full_name || currentUser?.email?.split('@')[0] || '';
@@ -81,7 +95,7 @@ const StudentDashboard = () => {
     const isBHall = bName.includes('hall') || bName.includes('gh1') || bName.includes('ght2');
     if (isAHall && !isBHall) return 1;
     if (!isAHall && isBHall) return -1;
-    return aName.localeCompare(bName);
+    return compareNaturalText(a.name, b.name);
   });
   const showMess =
     mess && (mess.name?.toLowerCase().includes(q) || mess.hall_name?.toLowerCase().includes(q) || !q);
@@ -179,13 +193,17 @@ const StudentDashboard = () => {
                   {visibleSearchItems.map((item) => (
                     <div
                       key={`${item.canteen_id}-${item.id}`}
-                      onClick={() =>
+                      onClick={() => {
+                        primeCanteenPage(item.canteen_id);
                         navigate(`/canteens/${item.canteen_id}`, {
                           state: {
                             highlightItemId: item.id,
                           },
-                        })
-                      }
+                        });
+                      }}
+                      onMouseEnter={() => primeCanteenPage(item.canteen_id)}
+                      onTouchStart={() => primeCanteenPage(item.canteen_id)}
+                      onFocus={() => primeCanteenPage(item.canteen_id)}
                       style={{
                         background: '#1a1a1a',
                         border: '1px solid #333',
@@ -338,7 +356,13 @@ const StudentDashboard = () => {
             {visibleCanteens.map((canteen, idx) => (
               <div
                 key={canteen.id}
-                onClick={() => navigate(`/canteens/${canteen.id}`)}
+                onClick={() => {
+                  primeCanteenPage(canteen.id);
+                  navigate(`/canteens/${canteen.id}`);
+                }}
+                onMouseEnter={() => primeCanteenPage(canteen.id)}
+                onTouchStart={() => primeCanteenPage(canteen.id)}
+                onFocus={() => primeCanteenPage(canteen.id)}
                 style={{
                   background: '#1a1a1a', border: '1px solid #333', borderRadius: 16,
                   padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',

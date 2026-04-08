@@ -10,7 +10,7 @@
   max-width: 428px;
   margin: 0 auto;
   min-height: 100vh;
-  padding: 32px 20px 48px;
+  padding: 32px 20px calc(136px + env(safe-area-inset-bottom, 0px));
 }
 
 .profile-page-header {
@@ -325,7 +325,7 @@
 
 .profile-logout-button {
   width: 100%;
-  margin-top: 8px;
+  margin-top: 12px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: #ffb6b6;

@@ -55,9 +55,24 @@ class CanteenListSerializer(serializers.ModelSerializer):
 
 class CanteenDetailSerializer(CanteenListSerializer):
     categories = CanteenMenuCategorySerializer(many=True, read_only=True)
+    payment_config = serializers.SerializerMethodField()
 
     class Meta(CanteenListSerializer.Meta):
-        fields = CanteenListSerializer.Meta.fields + ["categories"]
+        fields = CanteenListSerializer.Meta.fields + ["categories", "payment_config"]
+
+    def get_payment_config(self, obj):
+        config = getattr(obj, "payment_config", None)
+        if not config:
+            return {
+                "payment_mode": CanteenPaymentConfig.PAYMENT_MODE_BOTH,
+                "upi_id": "",
+                "qr_image_url": "",
+            }
+        return {
+            "payment_mode": config.payment_mode,
+            "upi_id": config.upi_id,
+            "qr_image_url": config.qr_image_url,
+        }
 
 
 class CategoryWithItemsSerializer(serializers.ModelSerializer):

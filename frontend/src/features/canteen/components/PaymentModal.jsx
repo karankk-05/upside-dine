@@ -14,7 +14,16 @@ const loadRazorpay = () =>
     document.body.appendChild(script);
   });
 
-export default function PaymentModal({ amount, orderId, onSuccess, onClose }) {
+const getPaymentErrorMessage = (error, fallback) =>
+  error?.response?.data?.detail || fallback;
+
+const normalizeCheckoutLanguage = (language) => {
+  const normalized = String(language || 'en').trim().toLowerCase();
+  const supportedLanguages = new Set(['en', 'hi', 'ben', 'mar', 'guj', 'tam', 'tel']);
+  return supportedLanguages.has(normalized) ? normalized : 'en';
+};
+
+export default function PaymentModal({ amount, orderId, language = 'en', user = null, onSuccess, onClose }) {
   const [loading, setLoading] = useState(false);
   const { mutateAsync: createPayment } = useCreatePayment();
   const { mutateAsync: verifyPayment } = useVerifyPayment();
@@ -28,6 +37,7 @@ export default function PaymentModal({ amount, orderId, onSuccess, onClose }) {
       const res = await createPayment({ order_id: orderId, amount });
       const rzpOrderId = res.payment?.razorpay_order_id || res.razorpay_order?.id;
       const rzpAmount = res.razorpay_order?.amount || amount * 100;
+      const selectedLanguage = normalizeCheckoutLanguage(language);
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID || res.razorpay_key_id,
         amount: rzpAmount,
@@ -35,6 +45,16 @@ export default function PaymentModal({ amount, orderId, onSuccess, onClose }) {
         name: 'Upside Dine',
         description: 'Canteen Order Payment',
         order_id: rzpOrderId,
+        prefill: {
+          name: user?.profile?.full_name || user?.email?.split('@')[0] || 'Student',
+          email: user?.email || '',
+          contact: user?.phone || '',
+        },
+        config: {
+          display: {
+            language: selectedLanguage,
+          },
+        },
         handler: async (response) => {
           try {
             await verifyPayment({
@@ -43,14 +63,16 @@ export default function PaymentModal({ amount, orderId, onSuccess, onClose }) {
               razorpay_signature: response.razorpay_signature,
             });
             onSuccess();
-          } catch { alert('Payment verification failed'); }
+          } catch (error) {
+            alert(getPaymentErrorMessage(error, 'Payment verification failed'));
+          }
         },
         modal: { ondismiss: () => setLoading(false) },
         theme: { color: '#d45555' },
       };
       new window.Razorpay(options).open();
-    } catch {
-      alert('Payment initiation failed');
+    } catch (error) {
+      alert(getPaymentErrorMessage(error, 'Payment initiation failed'));
       setLoading(false);
     }
   };

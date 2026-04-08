@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
+import { logoutUser } from '../lib/auth';
 
 const AdminManagerDashboard = () => {
   const navigate = useNavigate();
@@ -266,10 +268,50 @@ const AdminManagerDashboard = () => {
     }
   };
 
+  const handleLogout = async () => {
+    if (!window.confirm('Do you want to logout?')) {
+      return;
+    }
+
+    await logoutUser();
+    navigate('/auth');
+  };
+
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff', padding: '10px' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <h1 style={{ color: '#d63434', marginBottom: '20px', fontSize: 'clamp(1.5rem, 5vw, 2rem)' }}>Admin Manager Dashboard</h1>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'wrap',
+          marginBottom: '20px',
+        }}>
+          <h1 style={{ color: '#d63434', fontSize: 'clamp(1.5rem, 5vw, 2rem)', margin: 0 }}>
+            Admin Manager Dashboard
+          </h1>
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: '10px 16px',
+              background: 'transparent',
+              color: '#d63434',
+              border: '1px solid #333',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              fontSize: '0.95rem',
+              fontWeight: 600,
+            }}
+          >
+            <LogOut size={16} />
+            Log Out
+          </button>
+        </div>
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '5px', marginBottom: '20px', borderBottom: '2px solid #333', overflowX: 'auto' }}>

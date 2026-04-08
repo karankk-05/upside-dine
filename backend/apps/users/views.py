@@ -14,6 +14,7 @@ from .serializers import (
     VerifyOTPSerializer,
     LoginSerializer,
     UserSerializer,
+    UserProfileUpdateSerializer,
     MessAccountSerializer,
     RefreshTokenSerializer,
     ForgotPasswordSerializer,
@@ -193,7 +194,11 @@ class ResetPasswordView(GenericAPIView):
 
 class MeView(GenericAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = UserSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return UserProfileUpdateSerializer
+        return UserSerializer
 
     def get(self, request):
         return Response(self.get_serializer(request.user).data)
@@ -202,7 +207,7 @@ class MeView(GenericAPIView):
         serializer = self.get_serializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data)
+        return Response(UserSerializer(request.user).data)
 
 
 class DeleteAccountView(GenericAPIView):
@@ -712,4 +717,3 @@ class ToggleMessWorkerStatusView(GenericAPIView):
         worker_email = worker.email
         worker.delete()
         return Response({"detail": f"Worker {worker_email} deleted successfully."})
-

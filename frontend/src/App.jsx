@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AuthPage from './features/auth/pages/AuthPage';
 import ForgotPasswordPage from './features/auth/pages/ForgotPasswordPage';
@@ -12,6 +13,7 @@ import ProfilePage from './pages/ProfilePage';
 import messRoutes from './features/mess/routes';
 import canteenRoutes from './features/canteen/routes';
 import './App.css';
+import { AuthLanding, ProtectedRoute, PublicOnlyRoute } from './components/RouteGuards';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,26 +24,44 @@ const queryClient = new QueryClient({
   },
 });
 
+const protectRouteElements = (routeElements) =>
+  React.Children.map(routeElements, (route) => {
+    if (!React.isValidElement(route)) {
+      return route;
+    }
+
+    return React.cloneElement(route, {
+      element: <ProtectedRoute>{route.props.element}</ProtectedRoute>,
+    });
+  });
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
         <Routes>
-          <Route path="/" element={<Navigate to="/auth" replace />} />
-          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/" element={<AuthLanding />} />
+          <Route
+            path="/auth"
+            element={
+              <PublicOnlyRoute>
+                <AuthPage />
+              </PublicOnlyRoute>
+            }
+          />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/dashboard" element={<StudentDashboard />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/manager/mess" element={<MessManagerDashboard />} />
-          <Route path="/manager/canteen" element={<CanteenManagerDashboard />} />
-          <Route path="/delivery" element={<DeliveryDashboard />} />
-          <Route path="/admin/managers" element={<AdminManagerDashboard />} />
+          <Route path="/dashboard" element={<ProtectedRoute><StudentDashboard /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+          <Route path="/manager/mess" element={<ProtectedRoute><MessManagerDashboard /></ProtectedRoute>} />
+          <Route path="/manager/canteen" element={<ProtectedRoute><CanteenManagerDashboard /></ProtectedRoute>} />
+          <Route path="/delivery" element={<ProtectedRoute><DeliveryDashboard /></ProtectedRoute>} />
+          <Route path="/admin/managers" element={<ProtectedRoute><AdminManagerDashboard /></ProtectedRoute>} />
           {/* Mess feature routes (student, manager, worker) */}
-          {messRoutes}
+          {protectRouteElements(messRoutes)}
           {/* Canteen feature routes (student, manager) */}
-          {canteenRoutes}
+          {protectRouteElements(canteenRoutes)}
           {/* ML routes for crowd monitoring UI */}
-          {mlRoutes}
+          {protectRouteElements(mlRoutes.props.children)}
         </Routes>
       </Router>
     </QueryClientProvider>

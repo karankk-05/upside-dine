@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 const MAX_PULL_DISTANCE = 120;
 const REFRESH_TRIGGER_DISTANCE = 84;
 const REFRESH_HOLD_DISTANCE = 56;
+const MIN_REFRESH_SPINNER_MS = 350;
+const MAX_REFRESH_SPINNER_MS = 1600;
 
 const PullToRefresh = ({ onRefresh, children, disabled = false, className = '', style }) => {
   const containerRef = useRef(null);
@@ -19,6 +21,7 @@ const PullToRefresh = ({ onRefresh, children, disabled = false, className = '', 
 
   const indicatorVisible = pullDistance > 0 || refreshing;
   const progress = Math.min(1, pullDistance / REFRESH_TRIGGER_DISTANCE);
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   const resetPullState = () => {
     isTrackingRef.current = false;
@@ -115,10 +118,18 @@ const PullToRefresh = ({ onRefresh, children, disabled = false, className = '', 
 
       setRefreshing(true);
       setPullDistance(REFRESH_HOLD_DISTANCE);
+      const refreshStartedAt = Date.now();
 
       try {
-        await onRefreshRef.current();
+        await Promise.race([
+          Promise.resolve().then(() => onRefreshRef.current?.()),
+          wait(MAX_REFRESH_SPINNER_MS),
+        ]);
       } finally {
+        const elapsed = Date.now() - refreshStartedAt;
+        if (elapsed < MIN_REFRESH_SPINNER_MS) {
+          await wait(MIN_REFRESH_SPINNER_MS - elapsed);
+        }
         setRefreshing(false);
         setPullDistance(0);
       }

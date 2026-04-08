@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api';
+import { compareNaturalText } from '../lib/naturalSort';
 
 export const CURRENT_USER_QUERY_KEY = ['current-user'];
 export const PUBLIC_HALLS_QUERY_KEY = ['public-halls'];
@@ -19,7 +20,8 @@ export const usePublicHalls = (options = {}) =>
     queryKey: PUBLIC_HALLS_QUERY_KEY,
     queryFn: async () => {
       const { data } = await api.get('/public/halls/');
-      return Array.isArray(data) ? data : [];
+      const halls = Array.isArray(data) ? data : [];
+      return halls.sort(compareNaturalText);
     },
     ...options,
   });

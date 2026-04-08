@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   LogOut,
+  Pencil,
   Plus,
   ShieldCheck,
   Store,
@@ -22,8 +23,11 @@ import {
   sanitizePersonName,
   sanitizePhone,
 } from '../lib/formValidation';
+import { compareNaturalText } from '../lib/naturalSort';
 import PullToRefresh from '../components/PullToRefresh';
 import './AdminManagerDashboard.css';
+
+const INITIAL_MESS_FORM_DATA = { hall_name: '', location: '' };
 
 const TAB_ITEMS = [
   { id: 'managers', label: 'Managers', icon: UserCog },
@@ -165,6 +169,7 @@ const EntitySectionSkeleton = ({ columns = 6 }) => (
 const DetailSheet = ({
   entity,
   onClose,
+  onEditMess,
   onToggleManager,
   onToggleMess,
   onToggleCanteen,
@@ -182,6 +187,7 @@ const DetailSheet = ({
   let details = [];
   let primaryAction = null;
   let secondaryAction = null;
+  let tertiaryAction = null;
 
   if (type === 'managers') {
     eyebrow = 'Manager';
@@ -209,6 +215,7 @@ const DetailSheet = ({
     subtitle = item.hall_display || 'Hall not set';
     details = [
       { label: 'Hall', value: item.hall_display || 'Not set' },
+      { label: 'Location', value: item.location || 'Not set' },
       { label: 'Status', value: item.is_active ? 'Active' : 'Inactive' },
     ];
     primaryAction = {
@@ -220,6 +227,12 @@ const DetailSheet = ({
       icon: ShieldCheck,
     };
     secondaryAction = {
+      label: 'Edit Mess',
+      className: 'admin-action-button',
+      onClick: () => onEditMess(item),
+      icon: Pencil,
+    };
+    tertiaryAction = {
       label: 'Delete Mess',
       className: 'admin-action-button admin-action-button--ghost',
       onClick: () => onDeleteMess(item.id),
@@ -253,6 +266,7 @@ const DetailSheet = ({
 
   const PrimaryIcon = primaryAction?.icon;
   const SecondaryIcon = secondaryAction?.icon;
+  const TertiaryIcon = tertiaryAction?.icon;
 
   return (
     <div className="admin-detail-backdrop" onClick={onClose}>
@@ -308,6 +322,17 @@ const DetailSheet = ({
               {secondaryAction.label}
             </button>
           ) : null}
+
+          {tertiaryAction ? (
+            <button
+              type="button"
+              className={tertiaryAction.className}
+              onClick={tertiaryAction.onClick}
+            >
+              {TertiaryIcon ? <TertiaryIcon size={16} /> : null}
+              {tertiaryAction.label}
+            </button>
+          ) : null}
         </div>
       </div>
     </div>
@@ -330,7 +355,8 @@ const AdminManagerDashboard = () => {
     canteen_id: '',
     mess_id: '',
   });
-  const [messFormData, setMessFormData] = useState({ hall_name: '' });
+  const [messFormData, setMessFormData] = useState(INITIAL_MESS_FORM_DATA);
+  const [editingMessId, setEditingMessId] = useState(null);
   const [canteenFormData, setCanteenFormData] = useState({ name: '', location: '' });
   const [message, setMessage] = useState({ type: '', text: '' });
   const [submittingType, setSubmittingType] = useState('');
@@ -371,7 +397,13 @@ const AdminManagerDashboard = () => {
   });
 
   const managers = managersQueryData;
-  const messes = messesQueryData;
+  const messes = useMemo(
+    () =>
+      [...messesQueryData].sort((left, right) =>
+        compareNaturalText(left.hall_name || left.name, right.hall_name || right.name)
+      ),
+    [messesQueryData]
+  );
   const canteens = canteensQueryData;
 
   const counts = useMemo(
@@ -391,8 +423,10 @@ const AdminManagerDashboard = () => {
 
   const closeAllForms = () => {
     setShowAddForm(false);
-    setShowAddMessForm(false);
     setShowAddCanteenForm(false);
+    setShowAddMessForm(false);
+    setEditingMessId(null);
+    setMessFormData(INITIAL_MESS_FORM_DATA);
   };
 
   const refreshManagers = useCallback(
@@ -423,9 +457,14 @@ const AdminManagerDashboard = () => {
   };
 
   const updateMessForm = (field, value) => {
+    const nextValueByField = {
+      hall_name: sanitizeEntityName(value, 120),
+      location: sanitizeLocationText(value, 200),
+    };
+
     setMessFormData((current) => ({
       ...current,
-      [field]: sanitizeEntityName(value, 120),
+      [field]: nextValueByField[field] ?? value,
     }));
     setMessage({ type: '', text: '' });
   };
@@ -500,23 +539,56 @@ const AdminManagerDashboard = () => {
     }
   };
 
-  const handleAddMess = async (event) => {
+  const resetMessForm = () => {
+    setMessFormData(INITIAL_MESS_FORM_DATA);
+    setEditingMessId(null);
+    setShowAddMessForm(false);
+  };
+
+  const getMessErrorMessage = (error, fallbackMessage) =>
+    error.response?.data?.hall_name?.[0] ||
+    error.response?.data?.hall_name ||
+    error.response?.data?.location?.[0] ||
+    error.response?.data?.location ||
+    error.response?.data?.detail ||
+    fallbackMessage;
+
+  const handleEditMess = (mess) => {
+    setSelectedEntity(null);
+    setMessage({ type: '', text: '' });
+    setEditingMessId(mess.id);
+    setMessFormData({
+      hall_name: mess.hall_name || '',
+      location: mess.location || '',
+    });
+    setShowAddForm(false);
+    setShowAddCanteenForm(false);
+    setShowAddMessForm(true);
+  };
+
+  const handleSaveMess = async (event) => {
     event.preventDefault();
     setSubmittingType('mess');
     setMessage({ type: '', text: '' });
 
     try {
-      const { data } = await api.post('/admin/messes/', messFormData);
-      setMessage({ type: 'success', text: `Mess created: ${data.name}` });
-      setMessFormData({ hall_name: '' });
-      setShowAddMessForm(false);
+      const { data } = editingMessId
+        ? await api.put(`/admin/messes/${editingMessId}/`, messFormData)
+        : await api.post('/admin/messes/', messFormData);
+      setMessage({
+        type: 'success',
+        text: editingMessId ? `Mess updated: ${data.name}` : `Mess created: ${data.name}`,
+      });
+      resetMessForm();
       await refreshMesses();
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.hall_name?.[0] ||
-        error.response?.data?.detail ||
-        'Unable to create mess.';
-      setMessage({ type: 'error', text: errorMessage });
+      setMessage({
+        type: 'error',
+        text: getMessErrorMessage(
+          error,
+          editingMessId ? 'Unable to update mess.' : 'Unable to create mess.'
+        ),
+      });
     } finally {
       setSubmittingType('');
     }
@@ -562,6 +634,9 @@ const AdminManagerDashboard = () => {
       await api.patch(`/admin/messes/${messId}/`, {});
       setSelectedEntity(null);
       await refreshMesses();
+      if (editingMessId === messId) {
+        resetMessForm();
+      }
       setMessage({
         type: 'success',
         text: `Mess ${currentStatus ? 'frozen' : 'activated'} successfully.`,
@@ -580,6 +655,9 @@ const AdminManagerDashboard = () => {
       await api.delete(`/admin/messes/${messId}/`);
       setSelectedEntity(null);
       await refreshMesses();
+      if (editingMessId === messId) {
+        resetMessForm();
+      }
       setMessage({ type: 'success', text: 'Mess deleted successfully.' });
     } catch {
       setMessage({ type: 'error', text: 'Unable to delete mess.' });
@@ -655,7 +733,13 @@ const AdminManagerDashboard = () => {
     }
 
     if (activeTab === 'messes') {
-      setShowAddMessForm((current) => !current);
+      if (showAddMessForm) {
+        resetMessForm();
+      } else {
+        setEditingMessId(null);
+        setMessFormData(INITIAL_MESS_FORM_DATA);
+        setShowAddMessForm(true);
+      }
       setShowAddForm(false);
       setShowAddCanteenForm(false);
       return;
@@ -779,6 +863,7 @@ const AdminManagerDashboard = () => {
                 <tr>
                   <th>Mess Name</th>
                   <th>Hall</th>
+                  <th>Location</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -788,11 +873,19 @@ const AdminManagerDashboard = () => {
                   <tr key={mess.id}>
                     <td>{mess.name}</td>
                     <td>{mess.hall_display}</td>
+                    <td>{mess.location || 'Not set'}</td>
                     <td>
                       <StatusBadge isActive={mess.is_active} type="messes" />
                     </td>
                     <td>
                       <div className="admin-action-row admin-action-row--desktop">
+                        <button
+                          type="button"
+                          className="admin-action-button"
+                          onClick={() => handleEditMess(mess)}
+                        >
+                          Edit
+                        </button>
                         <button
                           type="button"
                           className={`admin-action-button ${
@@ -1133,9 +1226,9 @@ const AdminManagerDashboard = () => {
               ) : null}
 
               {activeTab === 'messes' && showAddMessForm ? (
-                <form className="admin-form-panel" onSubmit={handleAddMess} noValidate>
-                  <div className="admin-form-grid admin-form-grid--single">
-                    <label className="admin-field admin-field--full">
+                <form className="admin-form-panel" onSubmit={handleSaveMess} noValidate>
+                  <div className="admin-form-grid">
+                    <label className="admin-field">
                       <span>Hall Name *</span>
                       <input
                         className="admin-input"
@@ -1146,6 +1239,17 @@ const AdminManagerDashboard = () => {
                         required
                       />
                     </label>
+
+                    <label className="admin-field">
+                      <span>Location</span>
+                      <input
+                        className="admin-input"
+                        placeholder="Optional location"
+                        value={messFormData.location}
+                        onChange={(event) => updateMessForm('location', event.target.value)}
+                        maxLength={200}
+                      />
+                    </label>
                   </div>
 
                   <div className="admin-form-actions">
@@ -1154,7 +1258,13 @@ const AdminManagerDashboard = () => {
                       className="admin-primary-button"
                       disabled={submittingType === 'mess'}
                     >
-                      {submittingType === 'mess' ? 'Creating...' : 'Create Mess'}
+                      {submittingType === 'mess'
+                        ? editingMessId
+                          ? 'Saving...'
+                          : 'Creating...'
+                        : editingMessId
+                          ? 'Save Changes'
+                          : 'Create Mess'}
                     </button>
                   </div>
                 </form>
@@ -1232,6 +1342,7 @@ const AdminManagerDashboard = () => {
         <DetailSheet
           entity={selectedEntity}
           onClose={() => setSelectedEntity(null)}
+          onEditMess={handleEditMess}
           onToggleManager={handleToggleStatus}
           onToggleMess={handleToggleMess}
           onToggleCanteen={handleToggleCanteen}

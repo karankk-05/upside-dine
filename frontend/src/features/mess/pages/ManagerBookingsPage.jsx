@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import InfiniteScrollSentinel from '../../../components/InfiniteScrollSentinel';
+import { useIncrementalList } from '../../../hooks/useIncrementalList';
 import { useManagerBookings } from '../hooks/useManagerBookings';
 import '../mess.css';
 
@@ -21,6 +23,15 @@ const ManagerBookingsPage = () => {
   const { data, isLoading, isError } = useManagerBookings(filters);
   const stats = data?.stats || {};
   const bookings = data?.results || [];
+  const {
+    visibleItems: visibleBookings,
+    hasMore,
+    loadMore,
+  } = useIncrementalList(bookings, {
+    initialCount: 8,
+    step: 6,
+    resetKey: statusFilter,
+  });
 
   return (
     <div className="mess-page">
@@ -54,7 +65,8 @@ const ManagerBookingsPage = () => {
         ) : bookings.length === 0 ? (
           <div className="mess-empty"><div className="mess-empty-icon">📋</div><div>No bookings found</div></div>
         ) : (
-          bookings.map((booking) => (
+          <>
+          {visibleBookings.map((booking) => (
             <div key={booking.id} className="mess-booking-card" style={{ cursor: 'default' }}>
               <div className="mess-booking-header">
                 <span className="mess-booking-id">#{booking.id}</span>
@@ -67,6 +79,14 @@ const ManagerBookingsPage = () => {
               </div>
             </div>
           ))
+          }
+          <InfiniteScrollSentinel
+            hasMore={hasMore}
+            onLoadMore={loadMore}
+            skeletonCount={2}
+            minHeight={112}
+          />
+          </>
         )}
       </div>
     </div>

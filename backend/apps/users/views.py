@@ -1,3 +1,5 @@
+import re
+
 from django.db import transaction
 from django.utils import timezone
 from django.core.cache import cache
@@ -27,6 +29,11 @@ from .services import generate_otp, verify_otp, send_otp_email, record_otp_attem
 
 def _get_client_ip(request):
     return request.META.get("REMOTE_ADDR")
+
+
+def _natural_sort_key(value):
+    parts = re.split(r"(\d+)", value or "")
+    return [int(part) if part.isdigit() else part.lower() for part in parts]
 
 
 class RegisterView(GenericAPIView):
@@ -489,7 +496,7 @@ class AdminMessManagementView(GenericAPIView):
 
         from apps.mess.models import Mess
         from .serializers import MessListSerializer
-        messes = Mess.objects.all()
+        messes = sorted(Mess.objects.all(), key=lambda mess: _natural_sort_key(mess.hall_name))
         serializer = MessListSerializer(messes, many=True)
         return Response(serializer.data)
 
@@ -509,33 +516,52 @@ class AdminMessManagementView(GenericAPIView):
             "id": mess.id,
             "name": mess.name,
             "hall_name": mess.hall_name,
+            "location": mess.location,
         }, status=status.HTTP_201_CREATED)
 
 
 class AdminMessDetailView(GenericAPIView):
-    """View to toggle status or delete a mess"""
+    """View to update, toggle status, or delete a mess"""
     permission_classes = [IsAuthenticated]
 
-    def patch(self, request, mess_id):
+    def put(self, request, pk):
         if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
             return Response({"detail": "Only admin managers can access this."}, status=status.HTTP_403_FORBIDDEN)
-        
-        from apps.mess.models import Mess
+
+        from .serializers import UpdateMessSerializer, MessListSerializer
         try:
-            mess = Mess.objects.get(id=mess_id)
+            mess = Mess.objects.get(id=pk)
+        except Mess.DoesNotExist:
+            return Response({"detail": "Mess not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = UpdateMessSerializer(mess, data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        updated_mess = serializer.save()
+        return Response({
+            "detail": f"Mess updated successfully: {updated_mess.name}",
+            **MessListSerializer(updated_mess).data,
+        })
+
+    def patch(self, request, pk):
+        if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
+            return Response({"detail": "Only admin managers can access this."}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            mess = Mess.objects.get(id=pk)
             mess.is_active = not mess.is_active
             mess.save()
             return Response({"detail": f"Mess {'activated' if mess.is_active else 'frozen'} successfully.", "is_active": mess.is_active})
         except Mess.DoesNotExist:
             return Response({"detail": "Mess not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    def delete(self, request, mess_id):
+    def delete(self, request, pk):
         if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
             return Response({"detail": "Only admin managers can access this."}, status=status.HTTP_403_FORBIDDEN)
-        
-        from apps.mess.models import Mess
+
         try:
-            mess = Mess.objects.get(id=mess_id)
+            mess = Mess.objects.get(id=pk)
             mess_name = mess.name
             mess.delete()
             return Response({"detail": f"Mess {mess_name} deleted successfully."})
@@ -553,7 +579,13 @@ class AdminCanteenManagementView(GenericAPIView):
 
         from apps.canteen.models import Canteen
         from .serializers import CanteenListSerializer
-        canteens = Canteen.objects.all().order_by('-is_active', 'name')
+        canteens = sorted(
+            Canteen.objects.all(),
+            key=lambda canteen: (
+                not canteen.is_active,
+                _natural_sort_key(canteen.name),
+            ),
+        )
         return Response(CanteenListSerializer(canteens, many=True).data)
 
     def post(self, request):
@@ -607,7 +639,10 @@ class AvailableHallsView(GenericAPIView):
     permission_classes = [AllowAny]
     
     def get(self, request):
-        halls = Mess.objects.filter(is_active=True).values_list('hall_name', flat=True).distinct()
+        halls = sorted(
+            Mess.objects.filter(is_active=True).values_list('hall_name', flat=True).distinct(),
+            key=_natural_sort_key,
+        )
         return Response(list(halls))
 
 
@@ -617,7 +652,10 @@ class PublicCanteensView(GenericAPIView):
 
     def get(self, request):
         from apps.canteen.models import Canteen
-        canteens = Canteen.objects.filter(is_active=True).order_by('name').values('id', 'name', 'location')
+        canteens = sorted(
+            Canteen.objects.filter(is_active=True).values('id', 'name', 'location'),
+            key=lambda canteen: _natural_sort_key(canteen["name"]),
+        )
         return Response(list(canteens))
 
 

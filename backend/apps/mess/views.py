@@ -1,3 +1,4 @@
+import re
 from decimal import Decimal
 
 from django.core.cache import cache
@@ -30,6 +31,11 @@ from .services import QRGenerationError, build_booking_qr_payload, generate_book
 
 WORKER_SCAN_HISTORY_TTL_SECONDS = 2 * 60 * 60
 WORKER_SCAN_HISTORY_LIMIT = 20
+
+
+def _natural_sort_key(value):
+    parts = re.split(r"(\d+)", value or "")
+    return [int(part) if part.isdigit() else part.lower() for part in parts]
 
 
 def _get_student_from_request(request):
@@ -187,7 +193,10 @@ class StudentMessListView(generics.ListAPIView):
     serializer_class = MessSerializer
 
     def get_queryset(self):
-        return Mess.objects.filter(is_active=True).order_by("name")
+        return sorted(
+            Mess.objects.filter(is_active=True),
+            key=lambda mess: _natural_sort_key(mess.hall_name or mess.name),
+        )
 
 
 class StudentMessMenuListView(generics.ListAPIView):

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 
-export default function CanteenCard({ canteen, index = 0, onClick }) {
+export default function CanteenCard({ canteen, index = 0, onClick, ...props }) {
   const getTimeInfo = () => {
     if (!canteen.opening_time || !canteen.closing_time) {
       return { isOpen: true, text: '' };
@@ -33,6 +33,7 @@ export default function CanteenCard({ canteen, index = 0, onClick }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.06 }}
       onClick={onClick}
+      {...props}
       style={{
         background: '#1a1a1a', border: '1px solid #333', borderRadius: 16,
         padding: 16, display: 'flex', gap: 12, cursor: 'pointer',

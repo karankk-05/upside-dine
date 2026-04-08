@@ -1,11 +1,22 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import InfiniteScrollSentinel from '../../../components/InfiniteScrollSentinel';
+import { useIncrementalList } from '../../../hooks/useIncrementalList';
 import { useScanHistory } from '../hooks/useScanHistory';
 import '../mess.css';
 
 const ScanHistoryPage = () => {
   const navigate = useNavigate();
   const { data: scans, isLoading, isError } = useScanHistory();
+  const {
+    visibleItems: visibleScans,
+    hasMore,
+    loadMore,
+  } = useIncrementalList(scans || [], {
+    initialCount: 8,
+    step: 6,
+    resetKey: (scans || []).length,
+  });
 
   return (
     <div className="mess-page">
@@ -24,7 +35,8 @@ const ScanHistoryPage = () => {
         ) : (scans || []).length === 0 ? (
           <div className="mess-empty"><div className="mess-empty-icon">📷</div><div>No scans yet in this session</div></div>
         ) : (
-          (scans || []).map((scan) => (
+          <>
+          {visibleScans.map((scan) => (
             <div key={scan.id} className="mess-booking-card" style={{ cursor: 'default' }}>
               <div className="mess-booking-header">
                 <span className="mess-booking-id">{scan.booking_reference || `#${scan.id}`}</span>
@@ -37,6 +49,14 @@ const ScanHistoryPage = () => {
               </div>
             </div>
           ))
+          }
+          <InfiniteScrollSentinel
+            hasMore={hasMore}
+            onLoadMore={loadMore}
+            skeletonCount={2}
+            minHeight={112}
+          />
+          </>
         )}
       </div>
     </div>

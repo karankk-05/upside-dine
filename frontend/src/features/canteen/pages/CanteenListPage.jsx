@@ -1,15 +1,20 @@
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { Search, ArrowLeft } from 'lucide-react';
 import CanteenCard from '../components/CanteenCard';
+import InfiniteScrollSentinel from '../../../components/InfiniteScrollSentinel';
+import { useIncrementalList } from '../../../hooks/useIncrementalList';
 import { STANDARD_INPUT_PROPS, sanitizeSearchText } from '../../../lib/formValidation';
+import { compareNaturalText } from '../../../lib/naturalSort';
+import { canteenDetailQueryKey, fetchCanteenDetail } from '../hooks/useCanteenDetail';
+import { canteenMenuQueryKey, fetchCanteenMenu } from '../hooks/useCanteenMenu';
 import '../canteen.css';
 
 export default function CanteenListPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
 
   const { data: canteens = [], isLoading } = useQuery({
@@ -30,8 +35,28 @@ export default function CanteenListPage() {
     const isBHall = bName.includes('hall') || bName.includes('gh1') || bName.includes('ght2');
     if (isAHall && !isBHall) return 1;
     if (!isAHall && isBHall) return -1;
-    return aName.localeCompare(bName);
+    return compareNaturalText(a.name, b.name);
   });
+  const {
+    visibleItems: visibleCanteens,
+    hasMore,
+    loadMore,
+  } = useIncrementalList(filtered, {
+    initialCount: 8,
+    step: 6,
+    resetKey: search.trim().toLowerCase(),
+  });
+
+  const primeCanteenPage = (canteenId) => {
+    void queryClient.prefetchQuery({
+      queryKey: canteenDetailQueryKey(canteenId),
+      queryFn: () => fetchCanteenDetail(canteenId),
+    });
+    void queryClient.prefetchQuery({
+      queryKey: canteenMenuQueryKey(canteenId),
+      queryFn: () => fetchCanteenMenu(canteenId),
+    });
+  };
 
   return (
     <div className="canteen-page">
@@ -52,9 +77,26 @@ export default function CanteenListPage() {
           <div className="canteen-empty"><div className="canteen-empty__icon">🍽️</div><p className="canteen-empty__text">No canteens found</p></div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {filtered.map((c, i) => (
-              <CanteenCard key={c.id} canteen={c} index={i} onClick={() => navigate(`/canteens/${c.id}`)} />
+            {visibleCanteens.map((c, i) => (
+              <CanteenCard
+                key={c.id}
+                canteen={c}
+                index={i}
+                onClick={() => {
+                  primeCanteenPage(c.id);
+                  navigate(`/canteens/${c.id}`);
+                }}
+                onMouseEnter={() => primeCanteenPage(c.id)}
+                onTouchStart={() => primeCanteenPage(c.id)}
+                onFocus={() => primeCanteenPage(c.id)}
+              />
             ))}
+            <InfiniteScrollSentinel
+              hasMore={hasMore}
+              onLoadMore={loadMore}
+              skeletonCount={2}
+              minHeight={96}
+            />
           </div>
         )}
       </div>

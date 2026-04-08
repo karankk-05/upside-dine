@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate
+from django.db import IntegrityError, transaction
 from rest_framework import serializers
 
 from .models import User, Role, Student, Staff, MessAccount
@@ -18,6 +19,8 @@ class RegisterSerializer(serializers.Serializer):
     room_number = serializers.CharField(required=False, allow_blank=True)
     employee_code = serializers.CharField(required=False, allow_blank=True)
 
+    STAFF_ROLE_NAMES = {"mess_manager", "mess_worker", "canteen_manager", "delivery_person"}
+
     def validate_email(self, value):
         value = value.lower()
         role_name = self.initial_data.get("role_name")
@@ -27,57 +30,119 @@ class RegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError("A verified account with this email already exists.")
         return value
 
+    def validate(self, attrs):
+        role_name = attrs.get("role_name")
+        email = attrs.get("email", "").lower()
+        attrs["email"] = email
+
+        existing_user = (
+            User.objects.filter(email=email)
+            .select_related("student_profile", "staff_profile")
+            .first()
+        )
+
+        if role_name == "student":
+            roll_number = attrs.get("roll_number") or email.split("@")[0]
+            conflicting_students = Student.objects.filter(roll_number=roll_number)
+            if existing_user and hasattr(existing_user, "student_profile"):
+                conflicting_students = conflicting_students.exclude(pk=existing_user.student_profile.pk)
+            if conflicting_students.exists():
+                raise serializers.ValidationError(
+                    {"roll_number": ["This roll number is already associated with another student account."]}
+                )
+        elif role_name in self.STAFF_ROLE_NAMES:
+            employee_code = (attrs.get("employee_code") or "").strip()
+            if employee_code:
+                conflicting_staff = Staff.objects.filter(employee_code=employee_code)
+                if existing_user and hasattr(existing_user, "staff_profile"):
+                    conflicting_staff = conflicting_staff.exclude(pk=existing_user.staff_profile.pk)
+                if conflicting_staff.exists():
+                    raise serializers.ValidationError(
+                        {"employee_code": ["This employee code is already associated with another staff account."]}
+                    )
+
+        return attrs
+
+    @transaction.atomic
     def create(self, validated_data):
         role_name = validated_data.pop("role_name", None)
         role = None
         if role_name:
             role, _ = Role.objects.get_or_create(role_name=role_name)
 
-        user, created = User.objects.get_or_create(
-            email=validated_data["email"], defaults={"role": role}
-        )
-        user.phone = validated_data.get("phone", user.phone)
-        if role:
-            user.role = role
-        user.set_password(validated_data["password"])
-        user.is_active = False
-        user.is_verified = False
-        user.save()
+        try:
+            user, _ = User.objects.get_or_create(
+                email=validated_data["email"], defaults={"role": role}
+            )
+            user.phone = validated_data.get("phone", user.phone)
+            if role:
+                user.role = role
+            user.set_password(validated_data["password"])
+            user.is_active = False
+            user.is_verified = False
+            user.save()
 
-        # Create role-specific profiles
-        if role and role.role_name == "student":
-            roll_number = validated_data.get("roll_number") or validated_data["email"].split("@")[0]
-            full_name = validated_data.get("full_name") or validated_data["email"].split("@")[0]
-            student, student_created = Student.objects.get_or_create(
-                user=user,
-                defaults={
+            if role and role.role_name == "student":
+                roll_number = validated_data.get("roll_number") or validated_data["email"].split("@")[0]
+                full_name = validated_data.get("full_name") or validated_data["email"].split("@")[0]
+                student_defaults = {
                     "roll_number": roll_number,
                     "full_name": full_name,
                     "hostel_name": validated_data.get("hostel_name", ""),
                     "room_number": validated_data.get("room_number", ""),
-                },
-            )
-            if student_created:
+                }
+                student, student_created = Student.objects.get_or_create(
+                    user=user,
+                    defaults=student_defaults,
+                )
+                if not student_created:
+                    student_fields = []
+                    for field, value in student_defaults.items():
+                        if getattr(student, field) != value:
+                            setattr(student, field, value)
+                            student_fields.append(field)
+                    if student_fields:
+                        student.save(update_fields=student_fields)
+
                 MessAccount.objects.get_or_create(student=student)
-                # Auto-assign student to the mess matching their hall
+
                 hostel = validated_data.get("hostel_name", "")
                 if hostel:
-                    mess = Mess.objects.filter(hall_name=hostel, is_active=True).first()
-                    # Mess may not exist yet; assignment happens when it does
+                    Mess.objects.filter(hall_name=hostel, is_active=True).first()
 
-        elif role and role.role_name in ["mess_manager", "mess_worker", "canteen_manager", "delivery_person"]:
-            employee_code = validated_data.get("employee_code") or f"EMP-{user.id}"
-            full_name = validated_data.get("full_name") or validated_data["email"].split("@")[0]
-            Staff.objects.get_or_create(
-                user=user,
-                defaults={
+            elif role and role.role_name in self.STAFF_ROLE_NAMES:
+                employee_code = validated_data.get("employee_code") or f"EMP-{user.id}"
+                full_name = validated_data.get("full_name") or validated_data["email"].split("@")[0]
+                staff_defaults = {
                     "employee_code": employee_code,
                     "full_name": full_name,
                     "is_mess_staff": role.role_name in ["mess_manager", "mess_worker"],
-                },
-            )
+                }
+                staff, staff_created = Staff.objects.get_or_create(
+                    user=user,
+                    defaults=staff_defaults,
+                )
+                if not staff_created:
+                    staff_fields = []
+                    for field, value in staff_defaults.items():
+                        if getattr(staff, field) != value:
+                            setattr(staff, field, value)
+                            staff_fields.append(field)
+                    if staff_fields:
+                        staff.save(update_fields=staff_fields)
 
-        return user
+            return user
+        except IntegrityError as exc:
+            error_text = str(exc)
+            if "users_student_roll_number_key" in error_text:
+                raise serializers.ValidationError(
+                    {"roll_number": ["This roll number is already associated with another student account."]}
+                ) from exc
+            if "users_staff_employee_code_key" in error_text:
+                raise serializers.ValidationError(
+                    {"employee_code": ["This employee code is already associated with another staff account."]}
+                ) from exc
+            raise
 
 
 class VerifyOTPSerializer(serializers.Serializer):
@@ -472,17 +537,48 @@ class ManagerSerializer(serializers.ModelSerializer):
 class CreateMessSerializer(serializers.Serializer):
     """Serializer for admin manager to create a mess for a hall"""
     hall_name = serializers.CharField()
+    location = serializers.CharField(required=False, allow_blank=True)
 
     def validate_hall_name(self, value):
-        if Mess.objects.filter(hall_name=value).exists():
-            raise serializers.ValidationError(f"A mess for {value} already exists.")
-        return value
+        normalized_value = " ".join(value.split())
+        if not normalized_value:
+            raise serializers.ValidationError("Hall name cannot be blank.")
+        if Mess.objects.filter(hall_name__iexact=normalized_value).exists():
+            raise serializers.ValidationError(f"A mess for {normalized_value} already exists.")
+        return normalized_value
+
+    def validate_location(self, value):
+        return " ".join(value.split())
 
     def create(self, validated_data):
         mess = Mess.objects.create(
             hall_name=validated_data['hall_name'],
+            location=validated_data.get('location', ''),
         )
         return mess
+
+
+class UpdateMessSerializer(serializers.ModelSerializer):
+    """Serializer for admin manager to update mess details"""
+
+    class Meta:
+        model = Mess
+        fields = ['hall_name', 'location']
+
+    def validate_hall_name(self, value):
+        normalized_value = " ".join(value.split())
+        if not normalized_value:
+            raise serializers.ValidationError("Hall name cannot be blank.")
+
+        existing_messes = Mess.objects.filter(hall_name__iexact=normalized_value)
+        if self.instance is not None:
+            existing_messes = existing_messes.exclude(pk=self.instance.pk)
+        if existing_messes.exists():
+            raise serializers.ValidationError(f"A mess for {normalized_value} already exists.")
+        return normalized_value
+
+    def validate_location(self, value):
+        return " ".join(value.split())
 
 
 class MessListSerializer(serializers.ModelSerializer):
@@ -491,7 +587,7 @@ class MessListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Mess
-        fields = ['id', 'name', 'hall_name', 'hall_display', 'is_active', 'created_at']
+        fields = ['id', 'name', 'hall_name', 'hall_display', 'location', 'is_active', 'created_at']
         read_only_fields = fields
 
     def get_hall_display(self, obj):

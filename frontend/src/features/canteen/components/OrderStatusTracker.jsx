@@ -20,12 +20,13 @@ const DELIVERY_STEPS = [
 export default function OrderStatusTracker({ status, orderType = 'pickup', timestamps = {} }) {
   const steps = orderType === 'delivery' ? DELIVERY_STEPS : PICKUP_STEPS;
 
-  // Handle cancelled/rejected as special cases
   if (status === 'cancelled' || status === 'rejected') {
     return (
       <div className="canteen-order-timeline" style={{ padding: '20px' }}>
         <div className="canteen-timeline-item canteen-timeline-item--active">
-          <div className="canteen-timeline-dot" style={{ background: '#ff3333', borderColor: '#ff3333' }}>✕</div>
+          <div className="canteen-timeline-dot" style={{ background: '#ff3333', borderColor: '#ff3333' }}>
+            ✕
+          </div>
           <div className="canteen-timeline-content">
             <h3 className="canteen-timeline-title" style={{ color: '#ff3333' }}>
               {status === 'cancelled' ? 'Order Cancelled' : 'Order Rejected'}
@@ -36,43 +37,54 @@ export default function OrderStatusTracker({ status, orderType = 'pickup', times
     );
   }
 
-  const statusOrder = steps.map((s) => s.key);
+  const statusOrder = steps.map((step) => step.key);
   const currentIdx = statusOrder.indexOf(status);
+  const isTerminalStatus = currentIdx === steps.length - 1;
 
   return (
     <div className="canteen-order-timeline" style={{ padding: '20px' }}>
       {steps.map((step, idx) => {
         const isDone = idx < currentIdx;
-        const isCurrent = idx === currentIdx;
-        const isPending = idx > currentIdx;
+        const isCompletedCurrent = idx === currentIdx && isTerminalStatus;
+        const isCurrent = idx === currentIdx && !isTerminalStatus;
+        const isActive = isDone || isCurrent || isCompletedCurrent;
+        const statusLabel = isCurrent ? '● In Progress' : isDone || isCompletedCurrent ? 'Completed' : 'Pending';
 
         return (
-          <div
-            key={step.key}
-            className={`canteen-timeline-item ${isDone || isCurrent ? 'canteen-timeline-item--active' : ''}`}
-          >
+          <div key={step.key} className={`canteen-timeline-item ${isActive ? 'canteen-timeline-item--active' : ''}`}>
             <div
               className="canteen-timeline-dot"
-              style={isCurrent ? {
-                boxShadow: '0 0 12px rgba(212, 85, 85, 0.6)',
-                animation: 'canteen-pulse 2s ease-in-out infinite',
-              } : {}}
+              style={
+                isCurrent
+                  ? {
+                      boxShadow: '0 0 12px rgba(212, 85, 85, 0.6)',
+                      animation: 'canteen-pulse 2s ease-in-out infinite',
+                    }
+                  : {}
+              }
             >
-              {isDone ? '✓' : step.icon}
+              {isDone || isCompletedCurrent ? '✓' : step.icon}
             </div>
             <div className="canteen-timeline-content">
-              <h3 className="canteen-timeline-title" style={{
-                color: isDone ? '#aaa' : isCurrent ? '#fff' : '#555',
-                fontWeight: isCurrent ? 700 : 500,
-              }}>
+              <h3
+                className="canteen-timeline-title"
+                style={{
+                  color: isDone ? '#aaa' : isCurrent || isCompletedCurrent ? '#fff' : '#555',
+                  fontWeight: isCurrent || isCompletedCurrent ? 700 : 500,
+                }}
+              >
                 {step.label}
               </h3>
-              <p className="canteen-timeline-time" style={{
-                color: isCurrent ? '#d45555' : isDone ? '#666' : '#444',
-                fontSize: 11,
-              }}>
-                {isCurrent ? '● In Progress' : isDone ? 'Completed' : 'Pending'}
-                {timestamps[step.key] && ` · ${new Date(timestamps[step.key]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+              <p
+                className="canteen-timeline-time"
+                style={{
+                  color: isCurrent ? '#d45555' : isDone || isCompletedCurrent ? '#666' : '#444',
+                  fontSize: 11,
+                }}
+              >
+                {statusLabel}
+                {timestamps[step.key] &&
+                  ` · ${new Date(timestamps[step.key]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
               </p>
             </div>
           </div>

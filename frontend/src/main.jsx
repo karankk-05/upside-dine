@@ -1,26 +1,32 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import axios from 'axios';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App.jsx';
 import { configureAxiosAuth } from './lib/auth';
 import './index.css';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-
 configureAxiosAuth(axios);
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+const rootElement = document.getElementById('root');
+const bootSplash = document.getElementById('app-boot-splash');
+
+const dismissBootSplash = () => {
+  if (!bootSplash) {
+    return;
+  }
+
+  bootSplash.classList.add('app-boot-splash--hidden');
+  window.setTimeout(() => {
+    bootSplash.remove();
+  }, 260);
+};
+
+ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
+    <App />
   </React.StrictMode>
 );
+
+window.requestAnimationFrame(() => {
+  window.requestAnimationFrame(dismissBootSplash);
+});

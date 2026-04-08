@@ -656,26 +656,29 @@ class AdminCanteenDetailView(GenericAPIView):
     """View to toggle status or delete a canteen"""
     permission_classes = [IsAuthenticated]
 
-    def patch(self, request, canteen_id):
+    def _get_canteen(self, pk):
+        from apps.canteen.models import Canteen
+
+        return Canteen.objects.get(id=pk)
+
+    def patch(self, request, pk):
         if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
             return Response({"detail": "Only admin managers can access this."}, status=status.HTTP_403_FORBIDDEN)
-        
-        from apps.canteen.models import Canteen
+
         try:
-            canteen = Canteen.objects.get(id=canteen_id)
+            canteen = self._get_canteen(pk)
             canteen.is_active = not canteen.is_active
             canteen.save()
             return Response({"detail": f"Canteen {'activated' if canteen.is_active else 'frozen'} successfully.", "is_active": canteen.is_active})
         except Canteen.DoesNotExist:
             return Response({"detail": "Canteen not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    def delete(self, request, canteen_id):
+    def delete(self, request, pk):
         if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
             return Response({"detail": "Only admin managers can access this."}, status=status.HTTP_403_FORBIDDEN)
-        
-        from apps.canteen.models import Canteen
+
         try:
-            canteen = Canteen.objects.get(id=canteen_id)
+            canteen = self._get_canteen(pk)
             canteen_name = canteen.name
             canteen.delete()
             return Response({"detail": f"Canteen {canteen_name} deleted successfully."})

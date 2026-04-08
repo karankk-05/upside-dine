@@ -8,8 +8,10 @@ const MenuItemCard = forwardRef(function MenuItemCard(
   { item, canteenId, index = 0, isHighlighted = false },
   ref
 ) {
-  const { cart, addItem, updateQuantity } = useCartStore();
-  const quantity = cart.find((i) => i.id === item.id)?.quantity || 0;
+  const cart = useCartStore((state) => state.getCart(canteenId));
+  const addItem = useCartStore((state) => state.addItem);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const quantity = cart.find((cartItem) => cartItem.id === item.id)?.quantity || 0;
   const isVeg = item.is_veg;
   const isAvailable = item.is_available && item.available_quantity > 0;
 
@@ -19,7 +21,7 @@ const MenuItemCard = forwardRef(function MenuItemCard(
   };
 
   const handleDecrement = () => {
-    updateQuantity(item.id, quantity <= 1 ? 0 : quantity - 1);
+    updateQuantity(canteenId, item.id, quantity <= 1 ? 0 : quantity - 1);
   };
 
   return (

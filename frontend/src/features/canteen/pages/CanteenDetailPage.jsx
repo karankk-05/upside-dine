@@ -85,6 +85,7 @@ const MenuItemSkeletonCard = ({ index = 0 }) => (
 
 export default function CanteenDetailPage() {
   const { id } = useParams();
+  const canteenId = Number(id);
   const navigate = useNavigate();
   const location = useLocation();
   const [cartOpen, setCartOpen] = useState(false);
@@ -98,9 +99,8 @@ export default function CanteenDetailPage() {
   });
   const { data: canteen, isLoading: loadingCanteen } = useCanteenDetail(id);
   const { data: menuItems = [], isLoading: loadingMenu } = useCanteenMenu(id);
-  const { getTotal, getItemCount } = useCartStore();
-  const itemCount = getItemCount();
-  const total = getTotal();
+  const itemCount = useCartStore((state) => state.getItemCount(canteenId));
+  const total = useCartStore((state) => state.getTotal(canteenId));
   const isCanteenLoading = loadingCanteen && !canteen;
   const isMenuLoading = loadingMenu && menuItems.length === 0;
 
@@ -226,7 +226,6 @@ export default function CanteenDetailPage() {
 
   return (
     <div className="canteen-page">
-      {/* Header */}
       <div className="canteen-page-header">
         <button className="canteen-back-btn" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
         <h1 className="canteen-page-title">
@@ -234,18 +233,17 @@ export default function CanteenDetailPage() {
         </h1>
       </div>
 
-      {/* Canteen Info */}
       {isCanteenLoading ? (
         <CanteenHeroSkeleton />
       ) : (
         <div className="canteen-detail-header">
           <div className="canteen-detail-hero">
-            <div className="canteen-detail-icon">{emojis[Number(id) % emojis.length]}</div>
+            <div className="canteen-detail-icon">{emojis[canteenId % emojis.length]}</div>
             <div className="canteen-detail-meta">
               <h2 className="canteen-detail-name">{canteen?.name}</h2>
               <div className="canteen-detail-status">
                 <span style={{ width: 8, height: 8, background: '#00ff00', borderRadius: '50%', boxShadow: '0 0 8px #00ff00' }} />
-                <span>Open Now{canteen?.opening_time ? ` • ${canteen.opening_time.slice(0,5)} - ${canteen.closing_time?.slice(0,5)}` : ''}</span>
+                <span>Open Now{canteen?.opening_time ? ` • ${canteen.opening_time.slice(0, 5)} - ${canteen.closing_time?.slice(0, 5)}` : ''}</span>
               </div>
               <div className="canteen-detail-rating">
                 ⭐ {canteen?.rating || '4.0'} • {canteen?.location || ''}
@@ -255,7 +253,6 @@ export default function CanteenDetailPage() {
         </div>
       )}
 
-      {/* Menu */}
       <div className="canteen-menu">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
           <div>
@@ -308,12 +305,12 @@ export default function CanteenDetailPage() {
           <div className="canteen-empty"><div className="canteen-empty__icon">🥗</div><p className="canteen-empty__text">No items match this filter</p></div>
         ) : (
           <>
-            {visibleMenuItems.map((item, i) => (
+            {visibleMenuItems.map((item, index) => (
               <MenuItemCard
                 key={item.id}
                 item={item}
-                canteenId={Number(id)}
-                index={i}
+                canteenId={canteenId}
+                index={index}
                 isHighlighted={highlightedItemId === item.id}
               />
             ))}
@@ -327,7 +324,6 @@ export default function CanteenDetailPage() {
         )}
       </div>
 
-      {/* Cart Bar */}
       {itemCount > 0 && (
         <div className="canteen-cart-bar">
           <button className="canteen-cart-bar__btn" onClick={() => setCartOpen(true)}>
@@ -347,8 +343,15 @@ export default function CanteenDetailPage() {
         </div>
       )}
 
-      {/* Cart Drawer */}
-      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} onCheckout={() => { setCartOpen(false); navigate('/checkout'); }} />
+      <CartDrawer
+        canteenId={canteenId}
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        onCheckout={() => {
+          setCartOpen(false);
+          navigate(`/checkout?canteen=${canteenId}`);
+        }}
+      />
 
       {showFilters ? (
         <div

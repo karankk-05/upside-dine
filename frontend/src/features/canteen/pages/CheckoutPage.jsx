@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useCartStore } from '../../../stores/cartStore';
 import { usePlaceOrder } from '../hooks/usePlaceOrder';
@@ -14,7 +14,9 @@ import '../canteen.css';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  const { cart, clearCart, getTotal } = useCartStore();
+  const [searchParams] = useSearchParams();
+  const cartCanteenIds = useCartStore((state) => state.getCartCanteenIds());
+  const clearCart = useCartStore((state) => state.clearCart);
   const { mutateAsync: placeOrder } = usePlaceOrder();
   const [orderType, setOrderType] = useState('pickup');
   const [address, setAddress] = useState('');
@@ -25,19 +27,28 @@ export default function CheckoutPage() {
   const [orderData, setOrderData] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const total = getTotal();
+  const canteenParam = searchParams.get('canteen');
+  const parsedCanteenId = canteenParam ? Number(canteenParam) : null;
+  const canteenId =
+    Number.isInteger(parsedCanteenId) && parsedCanteenId > 0
+      ? parsedCanteenId
+      : cartCanteenIds.length === 1
+        ? cartCanteenIds[0]
+        : null;
+  const cart = useCartStore((state) => (canteenId ? state.getCart(canteenId) : []));
+  const total = useCartStore((state) => (canteenId ? state.getTotal(canteenId) : 0));
 
   const handlePlaceOrder = async () => {
     setSubmitting(true);
     try {
-      if (!cart[0]?.canteen_id) {
-        alert('Your cart format is outdated. Please clear the cart and add the items again!');
+      if (!canteenId || cart.length === 0) {
+        alert('Select a canteen cart before placing an order.');
         setSubmitting(false);
         return;
       }
 
       const payload = {
-        canteen_id: cart[0].canteen_id,
+        canteen_id: canteenId,
         items: cart.map((item) => ({ menu_item: item.id, quantity: item.quantity })),
         order_type: orderType === 'prebook' ? 'prebooking' : orderType,
         delivery_address: orderType === 'delivery' ? address : '',
@@ -58,13 +69,27 @@ export default function CheckoutPage() {
     }
   };
 
+  if (!canteenId && cartCanteenIds.length > 1) {
+    return (
+      <div className="canteen-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="canteen-empty">
+          <div className="canteen-empty__icon">ðŸ›’</div>
+          <p className="canteen-empty__text">Open checkout from a specific canteen cart.</p>
+          <button className="canteen-btn-small canteen-btn-small--primary" onClick={() => navigate('/canteens')} style={{ marginTop: 16 }}>
+            Browse Canteens
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (cart.length === 0 && !orderPlaced) {
     return (
       <div className="canteen-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="canteen-empty">
           <div className="canteen-empty__icon">🛒</div>
           <p className="canteen-empty__text">Cart is empty</p>
-          <button className="canteen-btn-small canteen-btn-small--primary" onClick={() => navigate(-1)} style={{ marginTop: 16 }}>Browse Menu</button>
+          <button className="canteen-btn-small canteen-btn-small--primary" onClick={() => navigate(canteenId ? `/canteens/${canteenId}` : '/canteens')} style={{ marginTop: 16 }}>Browse Menu</button>
         </div>
       </div>
     );
@@ -134,7 +159,7 @@ export default function CheckoutPage() {
 
       {/* Payment Modal */}
       {paymentOpen && orderData && (
-        <PaymentModal amount={orderData.total_amount} orderId={orderData.id} onSuccess={() => { setPaymentOpen(false); setOrderPlaced(true); clearCart(); }} onClose={() => setPaymentOpen(false)} />
+        <PaymentModal amount={orderData.total_amount} orderId={orderData.id} onSuccess={() => { setPaymentOpen(false); setOrderPlaced(true); clearCart(canteenId); }} onClose={() => setPaymentOpen(false)} />
       )}
 
       {/* Confirmation */}

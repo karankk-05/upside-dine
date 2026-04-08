@@ -15,6 +15,13 @@ import {
 } from 'lucide-react';
 import api from '../lib/api';
 import { getDefaultRouteForRole, logoutUser, setAuthSession } from '../lib/auth';
+import {
+  getInlineValidationMessage,
+  STANDARD_INPUT_PROPS,
+  sanitizePersonName,
+  sanitizePhone,
+  sanitizeRoomNumber,
+} from '../lib/formValidation';
 import './ProfilePage.css';
 
 const EMPTY_FORM = {
@@ -77,6 +84,7 @@ const ProfilePage = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [blurredFields, setBlurredFields] = useState({});
 
   useEffect(() => {
     let cancelled = false;
@@ -175,17 +183,48 @@ const ProfilePage = () => {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
+    const nextValueByField = {
+      full_name: sanitizePersonName(value),
+      phone: sanitizePhone(value),
+      room_number: sanitizeRoomNumber(value),
+    };
+
     setFormData((current) => ({
       ...current,
-      [name]: value,
+      [name]: nextValueByField[name] ?? value,
     }));
     setSuccessMessage('');
     setError('');
   };
 
+  const handleBlur = (event) => {
+    const { name } = event.target;
+    setBlurredFields((current) => ({ ...current, [name]: true }));
+  };
+
+  const fullNameError = getInlineValidationMessage('personName', formData.full_name, {
+    required: true,
+  });
+  const phoneError = getInlineValidationMessage('phone', formData.phone);
+  const roomNumberError = getInlineValidationMessage('roomNumber', formData.room_number);
+
+  const shouldShowFieldMessage = (fieldName, message) =>
+    Boolean(message) && blurredFields[fieldName];
+
   const handleSave = async (event) => {
     event.preventDefault();
     if (!user) {
+      return;
+    }
+
+    if (fullNameError || phoneError || roomNumberError) {
+      setBlurredFields((current) => ({
+        ...current,
+        ...(fullNameError ? { full_name: true } : {}),
+        ...(phoneError ? { phone: true } : {}),
+        ...(roomNumberError ? { room_number: true } : {}),
+      }));
+      setError('Please correct the highlighted fields before saving.');
       return;
     }
 
@@ -207,6 +246,7 @@ const ProfilePage = () => {
       const response = await api.patch('/users/me/', payload);
       setUser(response.data);
       setFormData(toProfileForm(response.data));
+      setBlurredFields({});
       setSuccessMessage('Your profile settings have been saved.');
     } catch (saveError) {
       const firstFieldError = Object.values(saveError.response?.data || {}).find((value) =>
@@ -287,7 +327,7 @@ const ProfilePage = () => {
           ))}
         </div>
 
-        <form className="profile-section-card" onSubmit={handleSave}>
+        <form className="profile-section-card" onSubmit={handleSave} noValidate>
           <div className="profile-section-heading">
             <div>
               <h3>Personal details</h3>
@@ -297,14 +337,22 @@ const ProfilePage = () => {
 
           <div className="profile-form-grid">
             <label className="profile-field">
-              <span>Full name</span>
+              <span className="profile-label-row">
+                Full name <strong className="profile-required-indicator">*</strong>
+              </span>
               <input
+                className={shouldShowFieldMessage('full_name', fullNameError) ? 'profile-field-control profile-field-control--error' : 'profile-field-control'}
                 name="full_name"
                 value={formData.full_name}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 placeholder="Enter your full name"
+                {...STANDARD_INPUT_PROPS.personName}
                 required
               />
+              {shouldShowFieldMessage('full_name', fullNameError) ? (
+                <small className="profile-field-note profile-field-note-error">{fullNameError}</small>
+              ) : null}
             </label>
 
             <label className="profile-field">
@@ -312,12 +360,18 @@ const ProfilePage = () => {
               <div className="profile-input-with-icon">
                 <Phone size={16} />
                 <input
+                  className={shouldShowFieldMessage('phone', phoneError) ? 'profile-field-control profile-field-control--error' : 'profile-field-control'}
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   placeholder="Enter your phone number"
+                  {...STANDARD_INPUT_PROPS.phone}
                 />
               </div>
+              {shouldShowFieldMessage('phone', phoneError) ? (
+                <small className="profile-field-note profile-field-note-error">{phoneError}</small>
+              ) : null}
             </label>
           </div>
 
@@ -351,12 +405,18 @@ const ProfilePage = () => {
                   <div className="profile-input-with-icon">
                     <BedDouble size={16} />
                     <input
+                      className={shouldShowFieldMessage('room_number', roomNumberError) ? 'profile-field-control profile-field-control--error' : 'profile-field-control'}
                       name="room_number"
                       value={formData.room_number}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder="Enter your room number"
+                      {...STANDARD_INPUT_PROPS.roomNumber}
                     />
                   </div>
+                  {shouldShowFieldMessage('room_number', roomNumberError) ? (
+                    <small className="profile-field-note profile-field-note-error">{roomNumberError}</small>
+                  ) : null}
                 </label>
               </div>
             </>

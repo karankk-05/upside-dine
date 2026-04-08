@@ -226,6 +226,17 @@
   color: #d7d7d7;
 }
 
+.profile-label-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.profile-required-indicator {
+  color: #ff7f7f;
+  font-size: 14px;
+}
+
 .profile-field input,
 .profile-field select {
   width: 100%;
@@ -239,10 +250,26 @@
   font-size: 14px;
 }
 
+.profile-field-control--error {
+  border-color: rgba(255, 115, 115, 0.68) !important;
+  box-shadow: 0 0 0 1px rgba(255, 115, 115, 0.18);
+}
+
 .profile-field input:focus,
 .profile-field select:focus {
   border-color: rgba(212, 85, 85, 0.7);
   box-shadow: 0 0 0 3px rgba(212, 85, 85, 0.14);
+}
+
+.profile-field-note {
+  margin-top: -2px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #7f7f7f;
+}
+
+.profile-field-note-error {
+  color: #ff9a9a;
 }
 
 .profile-input-with-icon {

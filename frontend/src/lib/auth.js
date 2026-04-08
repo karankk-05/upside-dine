@@ -12,7 +12,7 @@ const ROLE_ROUTES = {
   mess_worker: '/worker/scan',
   canteen_manager: '/manager/canteen',
   delivery_person: '/delivery',
-  admin_manager: '/admin/managers',
+  admin_manager: '/manager/admin',
   superadmin: '/admin',
 };
 

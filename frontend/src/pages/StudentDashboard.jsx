@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { STANDARD_INPUT_PROPS, sanitizeSearchText } from '../lib/formValidation';
 import '../features/mess/mess.css';
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
   const [userName, setUserName] = useState('');
-  const [hostelName, setHostelName] = useState('');
   const [canteens, setCanteens] = useState([]);
   const [mess, setMess] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,7 +30,6 @@ const StudentDashboard = () => {
       .then(([userRes, canteenRes, messRes]) => {
         const profile = userRes.data.profile;
         setUserName(profile?.full_name || userRes.data.email.split('@')[0]);
-        setHostelName(profile?.hostel_name || '');
 
         setCanteens(canteenRes.data || []);
 
@@ -89,7 +88,7 @@ const StudentDashboard = () => {
 
         {/* Header */}
         <div style={{ padding: '40px 20px 0 20px', background: 'linear-gradient(180deg, #000 0%, #0a0a0a 100%)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <div style={{ marginBottom: 24 }}>
             <div>
               <h1 style={{
                 fontSize: 24, fontWeight: 700, color: '#d55555',
@@ -99,25 +98,15 @@ const StudentDashboard = () => {
               </h1>
               <p style={{ color: '#999', fontSize: 13, marginTop: 4 }}>What would you like to eat today?</p>
             </div>
-            <div
-              onClick={() => navigate('/profile')}
-              style={{
-                width: 40, height: 40, background: '#2a2a2a', border: '2px solid #d55555',
-                borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', boxShadow: '0 0 10px rgba(232,85,85,0.12)', fontSize: 20,
-              }}
-            >
-              👤
-            </div>
           </div>
 
           {/* Search */}
           <div style={{ position: 'relative', marginBottom: 24 }}>
             <input
-              type="text"
+              {...STANDARD_INPUT_PROPS.search}
               placeholder="Search for food, canteens..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(sanitizeSearchText(e.target.value))}
               style={{
                 width: '100%', padding: '14px 44px 14px 16px', background: '#1a1a1a',
                 border: '1px solid #333', borderRadius: 12, color: '#fff', fontSize: 14,
@@ -132,7 +121,7 @@ const StudentDashboard = () => {
         {/* Mess Section */}
         {showMess && mess && (
           <div style={{ padding: '24px 20px 0 20px' }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>{mess.name}</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: '#fff' }}>{mess.name}</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               {/* Book Extras Option */}
               <div
@@ -140,11 +129,12 @@ const StudentDashboard = () => {
                 style={{
                   background: '#1a1a1a', border: '1px solid #d55555', borderRadius: 16,
                   padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                  color: '#fff',
                   boxShadow: '0 0 15px rgba(232,85,85,0.12)', transition: 'transform 0.2s', aspectRatio: '1/1',
                 }}
               >
                 <div style={{ fontSize: 32, marginBottom: 12 }}>🍽️</div>
-                <h3 style={{ fontSize: 14, fontWeight: 700, textAlign: 'center' }}>Book Extras</h3>
+                <h3 style={{ fontSize: 14, fontWeight: 700, textAlign: 'center', color: '#fff' }}>Book Extras</h3>
                 <div style={{ fontSize: 11, color: '#00ff00', marginTop: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span style={{ width: 6, height: 6, background: '#00ff00', borderRadius: '50%', boxShadow: '0 0 6px #00ff00' }} />
                   Available Now
@@ -157,11 +147,12 @@ const StudentDashboard = () => {
                 style={{
                   background: '#1a1a1a', border: '1px solid #333', borderRadius: 16,
                   padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                  color: '#fff',
                   transition: 'transform 0.2s', aspectRatio: '1/1',
                 }}
               >
                 <div style={{ fontSize: 32, marginBottom: 12 }}>👥</div>
-                <h3 style={{ fontSize: 14, fontWeight: 700, textAlign: 'center' }}>Crowd Density</h3>
+                <h3 style={{ fontSize: 14, fontWeight: 700, textAlign: 'center', color: '#fff' }}>Crowd Density</h3>
                 <div style={{ fontSize: 11, color: '#999', marginTop: 8 }}>Live View</div>
               </div>
             </div>
@@ -171,7 +162,7 @@ const StudentDashboard = () => {
         {/* Canteens Section */}
         <div style={{ padding: '24px 20px 120px 20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700 }}>Canteens</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>Canteens</h2>
             <a onClick={(e) => { e.preventDefault(); navigate('/canteens'); }}
               href="#" style={{ color: '#d55555', fontSize: 13, fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}>
               See All
@@ -186,6 +177,7 @@ const StudentDashboard = () => {
                 style={{
                   background: '#1a1a1a', border: '1px solid #333', borderRadius: 16,
                   padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                  color: '#fff',
                   transition: 'transform 0.2s', aspectRatio: '4/5', textAlign: 'center',
                 }}
               >
@@ -195,7 +187,7 @@ const StudentDashboard = () => {
                 }}>
                   {canteenEmojis[idx % canteenEmojis.length]}
                 </div>
-                <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>{canteen.name}</h3>
+                <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: '#fff' }}>{canteen.name}</h3>
                 <div style={{ fontSize: 11, color: '#999', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                   <span style={{ width: 6, height: 6, background: '#00ff00', borderRadius: '50%', boxShadow: '0 0 6px #00ff00' }} />
                   {canteen.location || 'Open Now'}

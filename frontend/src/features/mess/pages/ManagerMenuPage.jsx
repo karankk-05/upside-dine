@@ -2,6 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, X } from 'lucide-react';
 import { useManagerMenuList, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem } from '../hooks/useManagerMenu';
+import {
+  FIELD_LIMITS,
+  STANDARD_INPUT_PROPS,
+  sanitizeDecimalInput,
+  sanitizeEntityName,
+  sanitizeIntegerInput,
+  sanitizeMultilineText,
+} from '../../../lib/formValidation';
 import '../mess.css';
 
 const MEAL_TYPES = [
@@ -46,6 +54,21 @@ const ManagerMenuPage = () => {
     });
     setEditItem(item);
     setShowForm(true);
+  };
+
+  const updateFormField = (field, value) => {
+    const nextValueByField = {
+      item_name: sanitizeEntityName(value, FIELD_LIMITS.entityName),
+      description: sanitizeMultilineText(value, FIELD_LIMITS.description),
+      price: sanitizeDecimalInput(value),
+      available_quantity: sanitizeIntegerInput(value),
+      default_quantity: sanitizeIntegerInput(value),
+    };
+
+    setForm((current) => ({
+      ...current,
+      [field]: nextValueByField[field] ?? value,
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -137,19 +160,19 @@ const ManagerMenuPage = () => {
               <h2 className="mess-modal-title" style={{ marginBottom: 0 }}>{editItem ? 'Edit Item' : 'Add New Extra'}</h2>
               <button onClick={resetForm} style={{ background: 'none', border: 'none', color: 'var(--st-text-dim)', cursor: 'pointer' }}><X size={20} /></button>
             </div>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               <div className="mess-input-group">
                 <label className="mess-input-label">Item Name</label>
-                <input className="mess-input-field" value={form.item_name} onChange={(e) => setForm({ ...form, item_name: e.target.value })} placeholder="e.g. Paneer Butter Masala" required />
+                <input className="mess-input-field" value={form.item_name} onChange={(e) => updateFormField('item_name', e.target.value)} placeholder="e.g. Paneer Butter Masala" maxLength={FIELD_LIMITS.entityName} required />
               </div>
               <div className="mess-input-group">
                 <label className="mess-input-label">Description</label>
-                <input className="mess-input-field" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="With rice, roti & salad" />
+                <input className="mess-input-field" value={form.description} onChange={(e) => updateFormField('description', e.target.value)} placeholder="With rice, roti & salad" maxLength={FIELD_LIMITS.description} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div className="mess-input-group">
                   <label className="mess-input-label">Price (₹)</label>
-                  <input className="mess-input-field" type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required />
+                  <input className="mess-input-field" type="number" value={form.price} onChange={(e) => updateFormField('price', e.target.value)} {...STANDARD_INPUT_PROPS.price} required />
                 </div>
                 <div className="mess-input-group">
                   <label className="mess-input-label">Meal Type</label>
@@ -167,11 +190,11 @@ const ManagerMenuPage = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div className="mess-input-group">
                   <label className="mess-input-label">Available Qty</label>
-                  <input className="mess-input-field" type="number" min="0" value={form.available_quantity} onChange={(e) => setForm({ ...form, available_quantity: e.target.value })} required />
+                  <input className="mess-input-field" type="number" value={form.available_quantity} onChange={(e) => updateFormField('available_quantity', e.target.value)} {...STANDARD_INPUT_PROPS.quantity} required />
                 </div>
                 <div className="mess-input-group">
                   <label className="mess-input-label">Default Qty</label>
-                  <input className="mess-input-field" type="number" min="0" value={form.default_quantity} onChange={(e) => setForm({ ...form, default_quantity: e.target.value })} required />
+                  <input className="mess-input-field" type="number" value={form.default_quantity} onChange={(e) => updateFormField('default_quantity', e.target.value)} {...STANDARD_INPUT_PROPS.quantity} required />
                 </div>
               </div>
               {mutationError && (

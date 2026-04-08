@@ -3,6 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Edit2, Trash2, Save, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useManagerMenu } from '../hooks/useManagerMenu';
+import {
+  FIELD_LIMITS,
+  STANDARD_INPUT_PROPS,
+  sanitizeDecimalInput,
+  sanitizeEntityName,
+  sanitizeMultilineText,
+} from '../../../lib/formValidation';
 import '../canteen.css';
 
 export default function ManagerMenuPage() {
@@ -38,6 +45,19 @@ export default function ManagerMenuPage() {
     try { await deleteItem(id); } catch { alert('Failed to delete'); }
   };
 
+  const updateFormField = (field, value) => {
+    const nextValueByField = {
+      item_name: sanitizeEntityName(value, FIELD_LIMITS.entityName),
+      description: sanitizeMultilineText(value, FIELD_LIMITS.description),
+      price: sanitizeDecimalInput(value),
+    };
+
+    setFormData((current) => ({
+      ...current,
+      [field]: nextValueByField[field] ?? value,
+    }));
+  };
+
   return (
     <div className="canteen-page">
       <div className="canteen-page-header">
@@ -56,10 +76,10 @@ export default function ManagerMenuPage() {
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="canteen-checkout__section" style={{ marginBottom: 20 }}>
             <p className="canteen-checkout__section-title">{editing ? 'Edit Item' : 'New Item'}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <input className="canteen-checkout__input" placeholder="Item name" value={formData.item_name} onChange={(e) => setFormData({ ...formData, item_name: e.target.value })} />
-              <textarea className="canteen-checkout__input" placeholder="Description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={2} style={{ resize: 'none' }} />
+              <input className="canteen-checkout__input" placeholder="Item name" value={formData.item_name} onChange={(e) => updateFormField('item_name', e.target.value)} maxLength={FIELD_LIMITS.entityName} />
+              <textarea className="canteen-checkout__input" placeholder="Description" value={formData.description} onChange={(e) => updateFormField('description', e.target.value)} rows={2} maxLength={FIELD_LIMITS.description} style={{ resize: 'none' }} />
               <div style={{ display: 'flex', gap: 12 }}>
-                <input className="canteen-checkout__input" type="number" placeholder="Price" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} style={{ flex: 1 }} />
+                <input className="canteen-checkout__input" type="number" placeholder="Price" value={formData.price} onChange={(e) => updateFormField('price', e.target.value)} {...STANDARD_INPUT_PROPS.price} style={{ flex: 1 }} />
                 <select className="canteen-checkout__input" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} style={{ flex: 1 }}>
                   <option value="snacks">Snacks</option>
                   <option value="beverages">Beverages</option>

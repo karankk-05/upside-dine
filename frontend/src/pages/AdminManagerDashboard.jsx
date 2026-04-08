@@ -1,25 +1,272 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import {
+  LogOut,
+  Plus,
+  ShieldCheck,
+  Store,
+  Trash2,
+  UserCog,
+  UtensilsCrossed,
+  X,
+} from 'lucide-react';
 import { logoutUser } from '../lib/auth';
+import {
+  STANDARD_INPUT_PROPS,
+  sanitizeEmail,
+  sanitizeEntityName,
+  sanitizeLocationText,
+  sanitizePersonName,
+  sanitizePhone,
+} from '../lib/formValidation';
+import './AdminManagerDashboard.css';
+
+const TAB_ITEMS = [
+  { id: 'managers', label: 'Managers', icon: UserCog },
+  { id: 'messes', label: 'Messes', icon: UtensilsCrossed },
+  { id: 'canteens', label: 'Canteens', icon: Store },
+];
+
+const TAB_META = {
+  managers: {
+    title: 'Managers',
+    description: 'Create accounts and control who can access operations.',
+    addLabel: 'Add Manager',
+    closeLabel: 'Close Form',
+    emptyTitle: 'No managers found',
+    emptyDescription: 'Create a manager account to get started.',
+    loadingText: 'Loading managers...',
+  },
+  messes: {
+    title: 'Messes',
+    description: 'Add halls and manage which messes stay active.',
+    addLabel: 'Add Mess',
+    closeLabel: 'Close Form',
+    emptyTitle: 'No messes found',
+    emptyDescription: 'Create a mess to start assigning operations.',
+    loadingText: 'Loading messes...',
+  },
+  canteens: {
+    title: 'Canteens',
+    description: 'Add outlets and manage their availability.',
+    addLabel: 'Add Canteen',
+    closeLabel: 'Close Form',
+    emptyTitle: 'No canteens found',
+    emptyDescription: 'Create a canteen to make it available in the app.',
+    loadingText: 'Loading canteens...',
+  },
+};
+
+const formatRoleLabel = (value) => {
+  if (value === 'mess_manager') return 'Mess Manager';
+  if (value === 'canteen_manager') return 'Canteen Manager';
+  if (value === 'admin_manager') return 'Admin Manager';
+  return value ? value.replace(/_/g, ' ') : 'Unknown';
+};
+
+const getInactiveLabel = (type) => (type === 'managers' ? 'Frozen' : 'Inactive');
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('access_token');
+  return { Authorization: `Bearer ${token}` };
+};
+
+const EmptyState = ({ title, description }) => (
+  <div className="admin-empty-state">
+    <div className="admin-empty-state__icon">⌁</div>
+    <h3>{title}</h3>
+    <p>{description}</p>
+  </div>
+);
+
+const StatusBadge = ({ isActive, type }) => (
+  <span
+    className={`admin-status-badge ${
+      isActive ? 'admin-status-badge--active' : 'admin-status-badge--inactive'
+    }`}
+  >
+    {isActive ? 'Active' : getInactiveLabel(type)}
+  </span>
+);
+
+const CompactEntityCard = ({ title, subtitle, isActive, onClick }) => (
+  <button type="button" className="admin-mini-card" onClick={onClick}>
+    <span
+      className={`admin-status-dot ${
+        isActive ? 'admin-status-dot--active' : 'admin-status-dot--inactive'
+      }`}
+      aria-hidden="true"
+    />
+    <strong>{title}</strong>
+    <span>{subtitle}</span>
+  </button>
+);
+
+const DetailSheet = ({
+  entity,
+  onClose,
+  onToggleManager,
+  onToggleMess,
+  onToggleCanteen,
+  onDeleteMess,
+  onDeleteCanteen,
+}) => {
+  if (!entity) {
+    return null;
+  }
+
+  const { type, item } = entity;
+
+  let eyebrow = '';
+  let title = '';
+  let subtitle = '';
+  let details = [];
+  let primaryAction = null;
+  let secondaryAction = null;
+
+  if (type === 'managers') {
+    eyebrow = 'Manager';
+    title = item.full_name;
+    subtitle = formatRoleLabel(item.role_name);
+    details = [
+      { label: 'Email', value: item.email },
+      { label: 'Phone', value: item.phone || 'Not set' },
+      { label: 'Role', value: formatRoleLabel(item.role_name) },
+      { label: 'Employee Code', value: item.employee_code || 'Not assigned' },
+    ];
+    primaryAction = {
+      label: item.is_active ? 'Freeze Manager' : 'Activate Manager',
+      className: item.is_active
+        ? 'admin-action-button admin-action-button--danger'
+        : 'admin-action-button admin-action-button--success',
+      onClick: () => onToggleManager(item.id, item.is_active),
+      icon: ShieldCheck,
+    };
+  }
+
+  if (type === 'messes') {
+    eyebrow = 'Mess';
+    title = item.name;
+    subtitle = item.hall_display || 'Hall not set';
+    details = [
+      { label: 'Hall', value: item.hall_display || 'Not set' },
+      { label: 'Status', value: item.is_active ? 'Active' : 'Inactive' },
+    ];
+    primaryAction = {
+      label: item.is_active ? 'Freeze Mess' : 'Activate Mess',
+      className: item.is_active
+        ? 'admin-action-button admin-action-button--danger'
+        : 'admin-action-button admin-action-button--success',
+      onClick: () => onToggleMess(item.id, item.is_active),
+      icon: ShieldCheck,
+    };
+    secondaryAction = {
+      label: 'Delete Mess',
+      className: 'admin-action-button admin-action-button--ghost',
+      onClick: () => onDeleteMess(item.id),
+      icon: Trash2,
+    };
+  }
+
+  if (type === 'canteens') {
+    eyebrow = 'Canteen';
+    title = item.name;
+    subtitle = item.location || 'Location not set';
+    details = [
+      { label: 'Location', value: item.location || 'Not set' },
+      { label: 'Status', value: item.is_active ? 'Active' : 'Inactive' },
+    ];
+    primaryAction = {
+      label: item.is_active ? 'Freeze Canteen' : 'Activate Canteen',
+      className: item.is_active
+        ? 'admin-action-button admin-action-button--danger'
+        : 'admin-action-button admin-action-button--success',
+      onClick: () => onToggleCanteen(item.id, item.is_active),
+      icon: ShieldCheck,
+    };
+    secondaryAction = {
+      label: 'Delete Canteen',
+      className: 'admin-action-button admin-action-button--ghost',
+      onClick: () => onDeleteCanteen(item.id),
+      icon: Trash2,
+    };
+  }
+
+  const PrimaryIcon = primaryAction?.icon;
+  const SecondaryIcon = secondaryAction?.icon;
+
+  return (
+    <div className="admin-detail-backdrop" onClick={onClose}>
+      <div className="admin-detail-sheet" onClick={(event) => event.stopPropagation()}>
+        <div className="admin-detail-sheet__header">
+          <div>
+            <span className="admin-detail-sheet__eyebrow">{eyebrow}</span>
+            <div className="admin-detail-sheet__title-row">
+              <h3>{title}</h3>
+              <StatusBadge isActive={item.is_active} type={type} />
+            </div>
+            <p>{subtitle}</p>
+          </div>
+
+          <button
+            type="button"
+            className="admin-icon-button admin-icon-button--ghost"
+            onClick={onClose}
+            aria-label="Close details"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="admin-detail-sheet__details">
+          {details.map((detail) => (
+            <div className="admin-detail-row" key={detail.label}>
+              <span>{detail.label}</span>
+              <strong className="admin-break">{detail.value}</strong>
+            </div>
+          ))}
+        </div>
+
+        <div className="admin-detail-sheet__actions">
+          {primaryAction ? (
+            <button
+              type="button"
+              className={primaryAction.className}
+              onClick={primaryAction.onClick}
+            >
+              {PrimaryIcon ? <PrimaryIcon size={16} /> : null}
+              {primaryAction.label}
+            </button>
+          ) : null}
+
+          {secondaryAction ? (
+            <button
+              type="button"
+              className={secondaryAction.className}
+              onClick={secondaryAction.onClick}
+            >
+              {SecondaryIcon ? <SecondaryIcon size={16} /> : null}
+              {secondaryAction.label}
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const AdminManagerDashboard = () => {
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      navigate('/auth');
-    }
-  }, [navigate]);
-
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('managers');
   const [managers, setManagers] = useState([]);
   const [messes, setMesses] = useState([]);
+  const [canteens, setCanteens] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showAddMessForm, setShowAddMessForm] = useState(false);
+  const [showAddCanteenForm, setShowAddCanteenForm] = useState(false);
+  const [selectedEntity, setSelectedEntity] = useState(null);
   const [formData, setFormData] = useState({
     email: '',
     full_name: '',
@@ -30,87 +277,202 @@ const AdminManagerDashboard = () => {
   });
   const [messFormData, setMessFormData] = useState({ hall_name: '' });
   const [canteenFormData, setCanteenFormData] = useState({ name: '', location: '' });
-  const [showAddCanteenForm, setShowAddCanteenForm] = useState(false);
-  const [canteens, setCanteens] = useState([]);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [availableCanteens, setAvailableCanteens] = useState([]);
   const [availableMesses, setAvailableMesses] = useState([]);
 
+  const counts = useMemo(
+    () => ({
+      managers: managers.length,
+      messes: messes.length,
+      canteens: canteens.length,
+    }),
+    [canteens.length, managers.length, messes.length]
+  );
+
+  const activeMeta = TAB_META[activeTab];
+  const isCurrentFormOpen =
+    (activeTab === 'managers' && showAddForm) ||
+    (activeTab === 'messes' && showAddMessForm) ||
+    (activeTab === 'canteens' && showAddCanteenForm);
+
+  const closeAllForms = () => {
+    setShowAddForm(false);
+    setShowAddMessForm(false);
+    setShowAddCanteenForm(false);
+  };
+
   useEffect(() => {
-    // Fetch available canteens and messes on mount for the manager creation dropdowns
     const token = localStorage.getItem('access_token');
-    if (token) {
-      axios.get('/api/admin/messes/', { headers: { Authorization: `Bearer ${token}` } })
-        .then(res => setAvailableMesses(res.data)).catch(() => {});
-      axios.get('/api/admin/canteens/', { headers: { Authorization: `Bearer ${token}` } })
-        .then(res => setAvailableCanteens(res.data)).catch(() => {});
+    if (!token) {
+      navigate('/auth');
+      return;
     }
-  }, []);
+
+    Promise.allSettled([
+      axios.get('/api/admin/managers/', { headers: getAuthHeaders() }),
+      axios.get('/api/admin/messes/', { headers: getAuthHeaders() }),
+      axios.get('/api/admin/canteens/', { headers: getAuthHeaders() }),
+    ]).then(([managersResult, messesResult, canteensResult]) => {
+      if (managersResult.status === 'fulfilled') {
+        setManagers(Array.isArray(managersResult.value.data) ? managersResult.value.data : []);
+      }
+
+      if (messesResult.status === 'fulfilled') {
+        const nextMesses = Array.isArray(messesResult.value.data) ? messesResult.value.data : [];
+        setMesses(nextMesses);
+        setAvailableMesses(nextMesses);
+      }
+
+      if (canteensResult.status === 'fulfilled') {
+        const nextCanteens = Array.isArray(canteensResult.value.data)
+          ? canteensResult.value.data
+          : [];
+        setCanteens(nextCanteens);
+        setAvailableCanteens(nextCanteens);
+      }
+    });
+  }, [navigate]);
 
   useEffect(() => {
     if (activeTab === 'managers') {
       fetchManagers();
-    } else if (activeTab === 'messes') {
+    }
+
+    if (activeTab === 'messes') {
       fetchMesses();
-    } else if (activeTab === 'canteens') {
+    }
+
+    if (activeTab === 'canteens') {
       fetchCanteens();
     }
   }, [activeTab]);
 
+  const updateManagerForm = (field, value) => {
+    const nextValueByField = {
+      email: sanitizeEmail(value),
+      full_name: sanitizePersonName(value),
+      phone: sanitizePhone(value),
+    };
+
+    setFormData((current) => ({
+      ...current,
+      [field]: nextValueByField[field] ?? value,
+    }));
+    setMessage({ type: '', text: '' });
+  };
+
+  const updateMessForm = (field, value) => {
+    setMessFormData((current) => ({
+      ...current,
+      [field]: sanitizeEntityName(value, 120),
+    }));
+    setMessage({ type: '', text: '' });
+  };
+
+  const updateCanteenForm = (field, value) => {
+    const nextValueByField = {
+      name: sanitizeEntityName(value, 120),
+      location: sanitizeLocationText(value, 200),
+    };
+
+    setCanteenFormData((current) => ({
+      ...current,
+      [field]: nextValueByField[field] ?? value,
+    }));
+    setMessage({ type: '', text: '' });
+  };
+
   const fetchManagers = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('access_token');
       const response = await axios.get('/api/admin/managers/', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders(),
       });
-      setManagers(response.data);
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Managers currently not available' });
+      setManagers(Array.isArray(response.data) ? response.data : []);
+    } catch {
+      setMessage({ type: 'error', text: 'Managers are not available right now.' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddManager = async (e) => {
-    e.preventDefault();
+  const fetchMesses = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('/api/admin/messes/', {
+        headers: getAuthHeaders(),
+      });
+      const nextMesses = Array.isArray(response.data) ? response.data : [];
+      setMesses(nextMesses);
+      setAvailableMesses(nextMesses);
+    } catch {
+      setMessage({ type: 'error', text: 'Messes are not available right now.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCanteens = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('/api/admin/canteens/', {
+        headers: getAuthHeaders(),
+      });
+      const nextCanteens = Array.isArray(response.data) ? response.data : [];
+      setCanteens(nextCanteens);
+      setAvailableCanteens(nextCanteens);
+    } catch {
+      setMessage({ type: 'error', text: 'Canteens are not available right now.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddManager = async (event) => {
+    event.preventDefault();
     setLoading(true);
     setMessage({ type: '', text: '' });
 
     try {
-      const token = localStorage.getItem('access_token');
       const payload = {
         email: formData.email,
         full_name: formData.full_name,
         phone: formData.phone,
         role_name: formData.role_name,
       };
-      
-      // Add assignment ID based on role
+
       if (formData.role_name === 'canteen_manager' && formData.canteen_id) {
-        payload.canteen_id = parseInt(formData.canteen_id);
+        payload.canteen_id = parseInt(formData.canteen_id, 10);
       }
+
       if (formData.role_name === 'mess_manager' && formData.mess_id) {
-        payload.mess_id = parseInt(formData.mess_id);
+        payload.mess_id = parseInt(formData.mess_id, 10);
       }
-      
+
       const response = await axios.post('/api/admin/managers/', payload, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders(),
       });
-      
-      setMessage({ 
-        type: 'success', 
-        text: `Manager created! Email: ${response.data.email}, Employee Code: ${response.data.employee_code}. Credentials have been sent via email.` 
+
+      setMessage({
+        type: 'success',
+        text: `Manager created. Email: ${response.data.email}, Employee Code: ${response.data.employee_code}.`,
       });
-      setFormData({ email: '', full_name: '', phone: '', role_name: 'mess_manager', canteen_id: '', mess_id: '' });
+      setFormData({
+        email: '',
+        full_name: '',
+        phone: '',
+        role_name: 'mess_manager',
+        canteen_id: '',
+        mess_id: '',
+      });
       setShowAddForm(false);
       fetchManagers();
     } catch (error) {
-      console.error('Error creating manager:', error.response?.data);
-      let errorMsg = 'Unable to create manager';
-      
-      if (error.response?.data) {
-        const data = error.response.data;
+      const data = error.response?.data;
+      let errorMsg = 'Unable to create manager.';
+
+      if (data) {
         if (data.email) errorMsg = `Email error: ${data.email[0] || data.email}`;
         else if (data.phone) errorMsg = `Phone error: ${data.phone[0] || data.phone}`;
         else if (data.full_name) errorMsg = `Name error: ${data.full_name[0] || data.full_name}`;
@@ -120,8 +482,52 @@ const AdminManagerDashboard = () => {
         else if (data.detail) errorMsg = data.detail;
         else if (typeof data === 'string') errorMsg = data;
       }
-      
+
       setMessage({ type: 'error', text: errorMsg });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddMess = async (event) => {
+    event.preventDefault();
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const response = await axios.post('/api/admin/messes/', messFormData, {
+        headers: getAuthHeaders(),
+      });
+      setMessage({ type: 'success', text: `Mess created: ${response.data.name}` });
+      setMessFormData({ hall_name: '' });
+      setShowAddMessForm(false);
+      fetchMesses();
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.hall_name?.[0] ||
+        error.response?.data?.detail ||
+        'Unable to create mess.';
+      setMessage({ type: 'error', text: errorMessage });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddCanteen = async (event) => {
+    event.preventDefault();
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const response = await axios.post('/api/admin/canteens/', canteenFormData, {
+        headers: getAuthHeaders(),
+      });
+      setMessage({ type: 'success', text: `Canteen created: ${response.data.name}` });
+      setCanteenFormData({ name: '', location: '' });
+      setShowAddCanteenForm(false);
+      fetchCanteens();
+    } catch {
+      setMessage({ type: 'error', text: 'Unable to create canteen.' });
     } finally {
       setLoading(false);
     }
@@ -129,142 +535,89 @@ const AdminManagerDashboard = () => {
 
   const handleToggleStatus = async (userId, currentStatus) => {
     try {
-      const token = localStorage.getItem('access_token');
-      await axios.patch(`/api/admin/managers/${userId}/`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.patch(
+        `/api/admin/managers/${userId}/`,
+        {},
+        { headers: getAuthHeaders() }
+      );
+      setSelectedEntity(null);
       fetchManagers();
-      setMessage({ 
-        type: 'success', 
-        text: `Manager ${currentStatus ? 'frozen' : 'activated'} successfully` 
+      setMessage({
+        type: 'success',
+        text: `Manager ${currentStatus ? 'frozen' : 'activated'} successfully.`,
       });
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Unable to update status' });
-    }
-  };
-
-  const fetchMesses = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.get('/api/admin/messes/', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setMesses(response.data);
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Messes currently not available' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddMess = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage({ type: '', text: '' });
-    try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.post('/api/admin/messes/', messFormData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setMessage({ type: 'success', text: `Mess created: ${response.data.name}` });
-      setMessFormData({ hall_name: '' });
-      setShowAddMessForm(false);
-      fetchMesses();
-    } catch (error) {
-      const errMsg = error.response?.data?.hall_name?.[0] || error.response?.data?.detail || 'Unable to create mess';
-      setMessage({ type: 'error', text: errMsg });
-    } finally {
-      setLoading(false);
+    } catch {
+      setMessage({ type: 'error', text: 'Unable to update manager status.' });
     }
   };
 
   const handleToggleMess = async (messId, currentStatus) => {
     try {
-      const token = localStorage.getItem('access_token');
-      await axios.patch(`/api/admin/messes/${messId}/`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.patch(
+        `/api/admin/messes/${messId}/`,
+        {},
+        { headers: getAuthHeaders() }
+      );
+      setSelectedEntity(null);
       fetchMesses();
-      setMessage({ type: 'success', text: `Mess ${currentStatus ? 'frozen' : 'activated'} successfully` });
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Unable to update mess status' });
+      setMessage({
+        type: 'success',
+        text: `Mess ${currentStatus ? 'frozen' : 'activated'} successfully.`,
+      });
+    } catch {
+      setMessage({ type: 'error', text: 'Unable to update mess status.' });
     }
   };
 
   const handleDeleteMess = async (messId) => {
-    if (!window.confirm("Are you sure you want to delete this mess?")) return;
+    if (!window.confirm('Are you sure you want to delete this mess?')) {
+      return;
+    }
+
     try {
-      const token = localStorage.getItem('access_token');
       await axios.delete(`/api/admin/messes/${messId}/`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders(),
       });
+      setSelectedEntity(null);
       fetchMesses();
-      setMessage({ type: 'success', text: 'Mess deleted successfully' });
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Unable to delete mess' });
-    }
-  };
-
-  const fetchCanteens = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.get('/api/admin/canteens/', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setCanteens(response.data);
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Canteens currently not available' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddCanteen = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage({ type: '', text: '' });
-    try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.post('/api/admin/canteens/', canteenFormData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setMessage({ type: 'success', text: `Canteen created: ${response.data.name}` });
-      setCanteenFormData({ name: '', location: '', opening_time: '08:00', closing_time: '22:00' });
-      setShowAddCanteenForm(false);
-      fetchCanteens();
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Unable to create canteen' });
-    } finally {
-      setLoading(false);
+      setMessage({ type: 'success', text: 'Mess deleted successfully.' });
+    } catch {
+      setMessage({ type: 'error', text: 'Unable to delete mess.' });
     }
   };
 
   const handleToggleCanteen = async (canteenId, currentStatus) => {
     try {
-      const token = localStorage.getItem('access_token');
-      await axios.patch(`/api/admin/canteens/${canteenId}/`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.patch(
+        `/api/admin/canteens/${canteenId}/`,
+        {},
+        { headers: getAuthHeaders() }
+      );
+      setSelectedEntity(null);
       fetchCanteens();
-      setMessage({ type: 'success', text: `Canteen ${currentStatus ? 'frozen' : 'activated'} successfully` });
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Unable to update canteen status' });
+      setMessage({
+        type: 'success',
+        text: `Canteen ${currentStatus ? 'frozen' : 'activated'} successfully.`,
+      });
+    } catch {
+      setMessage({ type: 'error', text: 'Unable to update canteen status.' });
     }
   };
 
   const handleDeleteCanteen = async (canteenId) => {
-    if (!window.confirm("Are you sure you want to delete this canteen?")) return;
+    if (!window.confirm('Are you sure you want to delete this canteen?')) {
+      return;
+    }
+
     try {
-      const token = localStorage.getItem('access_token');
       await axios.delete(`/api/admin/canteens/${canteenId}/`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeaders(),
       });
+      setSelectedEntity(null);
       fetchCanteens();
-      setMessage({ type: 'success', text: 'Canteen deleted successfully' });
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Unable to delete canteen' });
+      setMessage({ type: 'success', text: 'Canteen deleted successfully.' });
+    } catch {
+      setMessage({ type: 'error', text: 'Unable to delete canteen.' });
     }
   };
 
@@ -277,702 +630,583 @@ const AdminManagerDashboard = () => {
     navigate('/auth');
   };
 
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    closeAllForms();
+    setSelectedEntity(null);
+    setMessage({ type: '', text: '' });
+  };
+
+  const toggleCurrentForm = () => {
+    setSelectedEntity(null);
+    setMessage({ type: '', text: '' });
+
+    if (activeTab === 'managers') {
+      setShowAddForm((current) => !current);
+      setShowAddMessForm(false);
+      setShowAddCanteenForm(false);
+      return;
+    }
+
+    if (activeTab === 'messes') {
+      setShowAddMessForm((current) => !current);
+      setShowAddForm(false);
+      setShowAddCanteenForm(false);
+      return;
+    }
+
+    setShowAddCanteenForm((current) => !current);
+    setShowAddForm(false);
+    setShowAddMessForm(false);
+  };
+
+  const renderManagerSection = () => {
+    if (loading && !showAddForm) {
+      return <div className="admin-loading">{TAB_META.managers.loadingText}</div>;
+    }
+
+    if (managers.length === 0) {
+      return (
+        <EmptyState
+          title={TAB_META.managers.emptyTitle}
+          description={TAB_META.managers.emptyDescription}
+        />
+      );
+    }
+
+    return (
+      <>
+        <div className="admin-mobile-grid">
+          {managers.map((manager) => (
+            <CompactEntityCard
+              key={manager.id}
+              title={manager.full_name}
+              subtitle={formatRoleLabel(manager.role_name)}
+              isActive={manager.is_active}
+              onClick={() => setSelectedEntity({ type: 'managers', item: manager })}
+            />
+          ))}
+        </div>
+
+        <div className="admin-table-panel">
+          <div className="admin-table-scroll">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Role</th>
+                  <th>Employee Code</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {managers.map((manager) => (
+                  <tr key={manager.id}>
+                    <td>{manager.full_name}</td>
+                    <td className="admin-break">{manager.email}</td>
+                    <td>{manager.phone || 'Not set'}</td>
+                    <td>{formatRoleLabel(manager.role_name)}</td>
+                    <td>{manager.employee_code}</td>
+                    <td>
+                      <StatusBadge isActive={manager.is_active} type="managers" />
+                    </td>
+                    <td>
+                      <div className="admin-action-row admin-action-row--desktop">
+                        <button
+                          type="button"
+                          className={`admin-action-button ${
+                            manager.is_active
+                              ? 'admin-action-button--danger'
+                              : 'admin-action-button--success'
+                          }`}
+                          onClick={() =>
+                            handleToggleStatus(manager.id, manager.is_active)
+                          }
+                        >
+                          {manager.is_active ? 'Freeze' : 'Activate'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </>
+    );
+  };
+
+  const renderMessSection = () => {
+    if (loading && !showAddMessForm) {
+      return <div className="admin-loading">{TAB_META.messes.loadingText}</div>;
+    }
+
+    if (messes.length === 0) {
+      return (
+        <EmptyState
+          title={TAB_META.messes.emptyTitle}
+          description={TAB_META.messes.emptyDescription}
+        />
+      );
+    }
+
+    return (
+      <>
+        <div className="admin-mobile-grid">
+          {messes.map((mess) => (
+            <CompactEntityCard
+              key={mess.id}
+              title={mess.name}
+              subtitle={mess.hall_display || 'Hall not set'}
+              isActive={mess.is_active}
+              onClick={() => setSelectedEntity({ type: 'messes', item: mess })}
+            />
+          ))}
+        </div>
+
+        <div className="admin-table-panel">
+          <div className="admin-table-scroll">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Mess Name</th>
+                  <th>Hall</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {messes.map((mess) => (
+                  <tr key={mess.id}>
+                    <td>{mess.name}</td>
+                    <td>{mess.hall_display}</td>
+                    <td>
+                      <StatusBadge isActive={mess.is_active} type="messes" />
+                    </td>
+                    <td>
+                      <div className="admin-action-row admin-action-row--desktop">
+                        <button
+                          type="button"
+                          className={`admin-action-button ${
+                            mess.is_active
+                              ? 'admin-action-button--danger'
+                              : 'admin-action-button--success'
+                          }`}
+                          onClick={() => handleToggleMess(mess.id, mess.is_active)}
+                        >
+                          {mess.is_active ? 'Freeze' : 'Activate'}
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-action-button admin-action-button--ghost"
+                          onClick={() => handleDeleteMess(mess.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </>
+    );
+  };
+
+  const renderCanteenSection = () => {
+    if (loading && !showAddCanteenForm) {
+      return <div className="admin-loading">{TAB_META.canteens.loadingText}</div>;
+    }
+
+    if (canteens.length === 0) {
+      return (
+        <EmptyState
+          title={TAB_META.canteens.emptyTitle}
+          description={TAB_META.canteens.emptyDescription}
+        />
+      );
+    }
+
+    return (
+      <>
+        <div className="admin-mobile-grid">
+          {canteens.map((canteen) => (
+            <CompactEntityCard
+              key={canteen.id}
+              title={canteen.name}
+              subtitle={canteen.location || 'Location not set'}
+              isActive={canteen.is_active}
+              onClick={() => setSelectedEntity({ type: 'canteens', item: canteen })}
+            />
+          ))}
+        </div>
+
+        <div className="admin-table-panel">
+          <div className="admin-table-scroll">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {canteens.map((canteen) => (
+                  <tr key={canteen.id}>
+                    <td>{canteen.name}</td>
+                    <td>{canteen.location}</td>
+                    <td>
+                      <StatusBadge isActive={canteen.is_active} type="canteens" />
+                    </td>
+                    <td>
+                      <div className="admin-action-row admin-action-row--desktop">
+                        <button
+                          type="button"
+                          className={`admin-action-button ${
+                            canteen.is_active
+                              ? 'admin-action-button--danger'
+                              : 'admin-action-button--success'
+                          }`}
+                          onClick={() =>
+                            handleToggleCanteen(canteen.id, canteen.is_active)
+                          }
+                        >
+                          {canteen.is_active ? 'Freeze' : 'Activate'}
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-action-button admin-action-button--ghost"
+                          onClick={() => handleDeleteCanteen(canteen.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </>
+    );
+  };
+
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff', padding: '10px' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '12px',
-          flexWrap: 'wrap',
-          marginBottom: '20px',
-        }}>
-          <h1 style={{ color: '#d63434', fontSize: 'clamp(1.5rem, 5vw, 2rem)', margin: 0 }}>
-            Admin Manager Dashboard
-          </h1>
+    <div className="admin-dashboard">
+      <div className="admin-layout">
+        <aside className="admin-sidebar">
+          <div className="admin-sidebar__brand">
+            <span className="admin-sidebar__eyebrow">Admin Manager</span>
+            <h1>Control Panel</h1>
+            <p>Manage campus operations from one place.</p>
+          </div>
+
+          <nav className="admin-sidebar__nav">
+            {TAB_ITEMS.map((tab) => {
+              const TabIcon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`admin-sidebar__nav-button ${
+                    isActive ? 'admin-sidebar__nav-button--active' : ''
+                  }`}
+                  onClick={() => handleTabChange(tab.id)}
+                >
+                  <span className="admin-sidebar__nav-content">
+                    <TabIcon size={18} />
+                    <span>{tab.label}</span>
+                  </span>
+                  <span className="admin-nav-count">{counts[tab.id]}</span>
+                </button>
+              );
+            })}
+          </nav>
+
           <button
+            type="button"
+            className="admin-sidebar__logout"
             onClick={handleLogout}
-            style={{
-              padding: '10px 16px',
-              background: 'transparent',
-              color: '#d63434',
-              border: '1px solid #333',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              fontSize: '0.95rem',
-              fontWeight: 600,
-            }}
           >
-            <LogOut size={16} />
+            <LogOut size={18} />
             Log Out
           </button>
-        </div>
+        </aside>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '5px', marginBottom: '20px', borderBottom: '2px solid #333', overflowX: 'auto' }}>
-          <button
-            onClick={() => setActiveTab('overview')}
-            style={{
-              padding: '10px 15px',
-              background: activeTab === 'overview' ? '#d63434' : 'transparent',
-              color: '#fff',
-              border: 'none',
-              cursor: 'pointer',
-              borderBottom: activeTab === 'overview' ? '3px solid #d63434' : 'none',
-              whiteSpace: 'nowrap',
-              fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-            }}
-          >
-            Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('managers')}
-            style={{
-              padding: '10px 15px',
-              background: activeTab === 'managers' ? '#d63434' : 'transparent',
-              color: '#fff',
-              border: 'none',
-              cursor: 'pointer',
-              borderBottom: activeTab === 'managers' ? '3px solid #d63434' : 'none',
-              whiteSpace: 'nowrap',
-              fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-            }}
-          >
-            Manage Managers
-          </button>
-          <button
-            onClick={() => setActiveTab('messes')}
-            style={{
-              padding: '10px 15px',
-              background: activeTab === 'messes' ? '#d63434' : 'transparent',
-              color: '#fff',
-              border: 'none',
-              cursor: 'pointer',
-              borderBottom: activeTab === 'messes' ? '3px solid #d63434' : 'none',
-              whiteSpace: 'nowrap',
-              fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-            }}
-          >
-            Manage Messes
-          </button>
-          <button
-            onClick={() => setActiveTab('canteens')}
-            style={{
-              padding: '10px 15px',
-              background: activeTab === 'canteens' ? '#d63434' : 'transparent',
-              color: '#fff',
-              border: 'none',
-              cursor: 'pointer',
-              borderBottom: activeTab === 'canteens' ? '3px solid #d63434' : 'none',
-              whiteSpace: 'nowrap',
-              fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-            }}
-          >
-            Manage Canteens
-          </button>
-        </div>
-
-        {/* Message */}
-        {message.text && (
-          <div style={{
-            padding: '15px',
-            marginBottom: '20px',
-            background: message.type === 'success' ? '#1a4d1a' : '#4d1a1a',
-            border: `1px solid ${message.type === 'success' ? '#2d7a2d' : '#7a2d2d'}`,
-            borderRadius: '5px',
-            fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-            wordBreak: 'break-word'
-          }}>
-            {message.text}
-          </div>
-        )}
-
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
-          <div>
-            <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)' }}>Welcome to Admin Manager Dashboard</h2>
-            <p style={{ fontSize: 'clamp(0.875rem, 2vw, 1rem)' }}>Manage canteen and mess managers from here.</p>
-          </div>
-        )}
-
-        {/* Managers Tab */}
-        {activeTab === 'managers' && (
-          <div>
-            <div style={{ display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', justifyContent: 'space-between', alignItems: window.innerWidth < 768 ? 'stretch' : 'center', marginBottom: '20px', gap: '10px' }}>
-              <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', margin: 0 }}>Manager Management</h2>
-              <button
-                onClick={() => setShowAddForm(!showAddForm)}
-                style={{
-                  padding: '10px 20px',
-                  background: '#d63434',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                }}
-              >
-                {showAddForm ? 'Cancel' : '+ Add Manager'}
-              </button>
+        <main className="admin-main">
+          <header className="admin-topbar">
+            <div className="admin-topbar__copy">
+              <h2>{activeMeta.title}</h2>
+              <p>{activeMeta.description}</p>
             </div>
 
-            {/* Add Form */}
-            {showAddForm && (
-              <form onSubmit={handleAddManager} style={{
-                background: '#1a1a1a',
-                padding: '15px',
-                borderRadius: '8px',
-                marginBottom: '20px'
-              }}>
-                <h3 style={{ marginBottom: '15px', fontSize: 'clamp(1rem, 3vw, 1.25rem)' }}>Add New Manager</h3>
-                <div style={{ display: 'grid', gap: '15px' }}>
-                  <input
-                    type="text"
-                    placeholder="Full Name"
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    required
-                    style={{
-                      padding: '10px',
-                      background: '#0a0a0a',
-                      border: '1px solid #333',
-                      color: '#fff',
-                      borderRadius: '5px',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                    }}
-                  />
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                    style={{
-                      padding: '10px',
-                      background: '#0a0a0a',
-                      border: '1px solid #333',
-                      color: '#fff',
-                      borderRadius: '5px',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                    }}
-                  />
-                  <input
-                    type="tel"
-                    placeholder="Phone Number"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    required
-                    style={{
-                      padding: '10px',
-                      background: '#0a0a0a',
-                      border: '1px solid #333',
-                      color: '#fff',
-                      borderRadius: '5px',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                    }}
-                  />
-                  <select
-                    value={formData.role_name}
-                    onChange={(e) => setFormData({ ...formData, role_name: e.target.value })}
-                    style={{
-                      padding: '10px',
-                      background: '#0a0a0a',
-                      border: '1px solid #333',
-                      color: '#fff',
-                      borderRadius: '5px',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                    }}
-                  >
-                    <option value="mess_manager">Mess Manager</option>
-                    <option value="canteen_manager">Canteen Manager</option>
-                  </select>
-                  {formData.role_name === 'canteen_manager' && (
-                    <select
-                      value={formData.canteen_id}
-                      onChange={(e) => setFormData({ ...formData, canteen_id: e.target.value })}
+            <div className="admin-topbar__actions">
+              <button
+                type="button"
+                className="admin-primary-button"
+                onClick={toggleCurrentForm}
+              >
+                {isCurrentFormOpen ? <X size={16} /> : <Plus size={16} />}
+                {isCurrentFormOpen ? activeMeta.closeLabel : activeMeta.addLabel}
+              </button>
+
+              <button
+                type="button"
+                className="admin-icon-button admin-mobile-logout"
+                onClick={handleLogout}
+                aria-label="Log out"
+              >
+                <LogOut size={18} />
+              </button>
+            </div>
+          </header>
+
+          {message.text ? (
+            <div
+              className={`admin-banner ${
+                message.type === 'success'
+                  ? 'admin-banner--success'
+                  : 'admin-banner--error'
+              }`}
+            >
+              {message.text}
+            </div>
+          ) : null}
+
+          <section className="admin-panel">
+            {activeTab === 'managers' && showAddForm ? (
+              <form className="admin-form-panel" onSubmit={handleAddManager} noValidate>
+                <div className="admin-form-grid">
+                  <label className="admin-field">
+                    <span>Full Name *</span>
+                    <input
+                      className="admin-input"
+                      placeholder="Enter full name"
+                      value={formData.full_name}
+                      onChange={(event) =>
+                        updateManagerForm('full_name', event.target.value)
+                      }
+                      {...STANDARD_INPUT_PROPS.personName}
                       required
-                      style={{
-                        padding: '10px',
-                        background: '#0a0a0a',
-                        border: '1px solid #333',
-                        color: '#fff',
-                        borderRadius: '5px',
-                        fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                      }}
-                    >
-                      <option value="">Select Canteen / Outlet</option>
-                      {availableCanteens.map(c => (
-                        <option key={c.id} value={c.id}>{c.name} ({c.location})</option>
-                      ))}
-                    </select>
-                  )}
-                  {formData.role_name === 'mess_manager' && (
-                    <select
-                      value={formData.mess_id}
-                      onChange={(e) => setFormData({ ...formData, mess_id: e.target.value })}
+                    />
+                  </label>
+
+                  <label className="admin-field">
+                    <span>Email *</span>
+                    <input
+                      className="admin-input"
+                      placeholder="Enter email"
+                      value={formData.email}
+                      onChange={(event) =>
+                        updateManagerForm('email', event.target.value)
+                      }
+                      {...STANDARD_INPUT_PROPS.email}
                       required
-                      style={{
-                        padding: '10px',
-                        background: '#0a0a0a',
-                        border: '1px solid #333',
-                        color: '#fff',
-                        borderRadius: '5px',
-                        fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                      }}
+                    />
+                  </label>
+
+                  <label className="admin-field">
+                    <span>Phone *</span>
+                    <input
+                      className="admin-input"
+                      placeholder="10-digit phone number"
+                      value={formData.phone}
+                      onChange={(event) =>
+                        updateManagerForm('phone', event.target.value)
+                      }
+                      {...STANDARD_INPUT_PROPS.phone}
+                      required
+                    />
+                  </label>
+
+                  <label className="admin-field">
+                    <span>Role *</span>
+                    <select
+                      className="admin-select"
+                      value={formData.role_name}
+                      onChange={(event) =>
+                        setFormData((current) => ({
+                          ...current,
+                          role_name: event.target.value,
+                          canteen_id: '',
+                          mess_id: '',
+                        }))
+                      }
                     >
-                      <option value="">Select Mess</option>
-                      {availableMesses.map(m => (
-                        <option key={m.id} value={m.id}>{m.name}</option>
-                      ))}
+                      <option value="mess_manager">Mess Manager</option>
+                      <option value="canteen_manager">Canteen Manager</option>
                     </select>
-                  )}
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                      padding: '10px',
-                      background: '#d63434',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '5px',
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                    }}
-                  >
+                  </label>
+
+                  {formData.role_name === 'canteen_manager' ? (
+                    <label className="admin-field admin-field--full">
+                      <span>Assign Canteen *</span>
+                      <select
+                        className="admin-select"
+                        value={formData.canteen_id}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            canteen_id: event.target.value,
+                          }))
+                        }
+                        required
+                      >
+                        <option value="">Select canteen</option>
+                        {availableCanteens.map((canteen) => (
+                          <option key={canteen.id} value={canteen.id}>
+                            {canteen.name} ({canteen.location})
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+
+                  {formData.role_name === 'mess_manager' ? (
+                    <label className="admin-field admin-field--full">
+                      <span>Assign Mess *</span>
+                      <select
+                        className="admin-select"
+                        value={formData.mess_id}
+                        onChange={(event) =>
+                          setFormData((current) => ({
+                            ...current,
+                            mess_id: event.target.value,
+                          }))
+                        }
+                        required
+                      >
+                        <option value="">Select mess</option>
+                        {availableMesses.map((mess) => (
+                          <option key={mess.id} value={mess.id}>
+                            {mess.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                </div>
+
+                <div className="admin-form-actions">
+                  <button type="submit" className="admin-primary-button" disabled={loading}>
                     {loading ? 'Creating...' : 'Create Manager'}
                   </button>
                 </div>
               </form>
-            )}
+            ) : null}
 
-            {/* Managers List */}
-            {loading && !showAddForm ? (
-              <p>Loading...</p>
-            ) : (
-              <div style={{ background: '#1a1a1a', borderRadius: '8px', overflow: 'auto' }}>
-                {/* Mobile View - Cards */}
-                <div style={{ display: window.innerWidth < 768 ? 'block' : 'none' }}>
-                  {managers.length === 0 ? (
-                    <p style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-                      No managers found. Add one to get started.
-                    </p>
-                  ) : (
-                    managers.map((manager) => (
-                      <div key={manager.id} style={{
-                        padding: '15px',
-                        borderBottom: '1px solid #333',
-                        background: '#0a0a0a',
-                        margin: '10px',
-                        borderRadius: '8px'
-                      }}>
-                        <div style={{ marginBottom: '10px' }}>
-                          <strong style={{ color: '#d63434' }}>{manager.full_name}</strong>
-                        </div>
-                        <div style={{ fontSize: '0.875rem', marginBottom: '5px' }}>
-                          <span style={{ color: '#888' }}>Email:</span> {manager.email}
-                        </div>
-                        <div style={{ fontSize: '0.875rem', marginBottom: '5px' }}>
-                          <span style={{ color: '#888' }}>Phone:</span> {manager.phone}
-                        </div>
-                        <div style={{ fontSize: '0.875rem', marginBottom: '5px' }}>
-                          <span style={{ color: '#888' }}>Role:</span> {manager.role_name}
-                        </div>
-                        <div style={{ fontSize: '0.875rem', marginBottom: '5px' }}>
-                          <span style={{ color: '#888' }}>Code:</span> {manager.employee_code}
-                        </div>
-                        <div style={{ marginBottom: '10px' }}>
-                          <span style={{
-                            padding: '5px 10px',
-                            borderRadius: '5px',
-                            background: manager.is_active ? '#1a4d1a' : '#4d1a1a',
-                            color: manager.is_active ? '#4ade80' : '#f87171',
-                            fontSize: '0.875rem'
-                          }}>
-                            {manager.is_active ? 'Active' : 'Frozen'}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                          <button
-                            onClick={() => handleToggleStatus(manager.id, manager.is_active)}
-                            style={{
-                              padding: '8px 15px',
-                              background: manager.is_active ? '#7a2d2d' : '#2d7a2d',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '5px',
-                              cursor: 'pointer',
-                              fontSize: '0.875rem',
-                              flex: '1'
-                            }}
-                          >
-                            {manager.is_active ? 'Freeze' : 'Activate'}
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
+            {activeTab === 'messes' && showAddMessForm ? (
+              <form className="admin-form-panel" onSubmit={handleAddMess} noValidate>
+                <div className="admin-form-grid admin-form-grid--single">
+                  <label className="admin-field admin-field--full">
+                    <span>Hall Name *</span>
+                    <input
+                      className="admin-input"
+                      placeholder="For example: Hall 15"
+                      value={messFormData.hall_name}
+                      onChange={(event) =>
+                        updateMessForm('hall_name', event.target.value)
+                      }
+                      maxLength={120}
+                      required
+                    />
+                  </label>
                 </div>
 
-                {/* Desktop View - Table */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', display: window.innerWidth < 768 ? 'none' : 'table' }}>
-                  <thead>
-                    <tr style={{ background: '#0a0a0a' }}>
-                      <th style={{ padding: '15px', textAlign: 'left' }}>Name</th>
-                      <th style={{ padding: '15px', textAlign: 'left' }}>Email</th>
-                      <th style={{ padding: '15px', textAlign: 'left' }}>Phone</th>
-                      <th style={{ padding: '15px', textAlign: 'left' }}>Role</th>
-                      <th style={{ padding: '15px', textAlign: 'left' }}>Employee Code</th>
-                      <th style={{ padding: '15px', textAlign: 'left' }}>Status</th>
-                      <th style={{ padding: '15px', textAlign: 'left' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {managers.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-                          No managers found. Add one to get started.
-                        </td>
-                      </tr>
-                    ) : (
-                      managers.map((manager) => (
-                        <tr key={manager.id} style={{ borderTop: '1px solid #333' }}>
-                          <td style={{ padding: '15px' }}>{manager.full_name}</td>
-                          <td style={{ padding: '15px' }}>{manager.email}</td>
-                          <td style={{ padding: '15px' }}>{manager.phone}</td>
-                          <td style={{ padding: '15px' }}>{manager.role_name}</td>
-                          <td style={{ padding: '15px' }}>{manager.employee_code}</td>
-                          <td style={{ padding: '15px' }}>
-                            <span style={{
-                              padding: '5px 10px',
-                              borderRadius: '5px',
-                              background: manager.is_active ? '#1a4d1a' : '#4d1a1a',
-                              color: manager.is_active ? '#4ade80' : '#f87171'
-                            }}>
-                              {manager.is_active ? 'Active' : 'Frozen'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '15px' }}>
-                            <button
-                              onClick={() => handleToggleStatus(manager.id, manager.is_active)}
-                              style={{
-                                padding: '8px 15px',
-                                background: manager.is_active ? '#7a2d2d' : '#2d7a2d',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '5px',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              {manager.is_active ? 'Freeze' : 'Activate'}
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Messes Tab */}
-        {activeTab === 'messes' && (
-          <div>
-            <div style={{ display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', justifyContent: 'space-between', alignItems: window.innerWidth < 768 ? 'stretch' : 'center', marginBottom: '20px', gap: '10px' }}>
-              <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', margin: 0 }}>Mess Management</h2>
-              <button
-                onClick={() => setShowAddMessForm(!showAddMessForm)}
-                style={{
-                  padding: '10px 20px',
-                  background: '#d63434',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                }}
-              >
-                {showAddMessForm ? 'Cancel' : '+ Add Mess'}
-              </button>
-            </div>
-
-            {/* Add Mess Form */}
-            {showAddMessForm && (
-              <form onSubmit={handleAddMess} style={{
-                background: '#1a1a1a',
-                padding: '15px',
-                borderRadius: '8px',
-                marginBottom: '20px'
-              }}>
-                <h3 style={{ marginBottom: '15px', fontSize: 'clamp(1rem, 3vw, 1.25rem)' }}>Create Mess for Hall</h3>
-                <div style={{ display: 'grid', gap: '15px' }}>
-                  <input
-                    type="text"
-                    placeholder="E.g. Hall 15, Girls Hostel"
-                    value={messFormData.hall_name}
-                    onChange={(e) => setMessFormData({ hall_name: e.target.value })}
-                    required
-                    style={{
-                      padding: '10px',
-                      background: '#0a0a0a',
-                      border: '1px solid #333',
-                      color: '#fff',
-                      borderRadius: '5px',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                      padding: '10px',
-                      background: '#d63434',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '5px',
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                    }}
-                  >
+                <div className="admin-form-actions">
+                  <button type="submit" className="admin-primary-button" disabled={loading}>
                     {loading ? 'Creating...' : 'Create Mess'}
                   </button>
                 </div>
               </form>
-            )}
+            ) : null}
 
-            {/* Messes List */}
-            {loading && !showAddMessForm ? (
-              <p>Loading...</p>
-            ) : (
-              <div style={{ background: '#1a1a1a', borderRadius: '8px', overflow: 'auto' }}>
-                {messes.length === 0 ? (
-                  <p style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-                    No messes created yet. Add one to get started.
-                  </p>
-                ) : (
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ background: '#0a0a0a' }}>
-                        <th style={{ padding: '15px', textAlign: 'left' }}>Mess Name</th>
-                        <th style={{ padding: '15px', textAlign: 'left' }}>Hall</th>
-                        <th style={{ padding: '15px', textAlign: 'left' }}>Status</th>
-                        <th style={{ padding: '15px', textAlign: 'left' }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {messes.map((mess) => (
-                        <tr key={mess.id} style={{ borderTop: '1px solid #333' }}>
-                          <td style={{ padding: '15px' }}>{mess.name}</td>
-                          <td style={{ padding: '15px' }}>{mess.hall_display}</td>
-                          <td style={{ padding: '15px' }}>
-                            <span style={{
-                              padding: '5px 10px',
-                              borderRadius: '5px',
-                              background: mess.is_active ? '#1a4d1a' : '#4d1a1a',
-                              color: mess.is_active ? '#4ade80' : '#f87171'
-                            }}>
-                              {mess.is_active ? 'Active' : 'Inactive'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '15px', display: 'flex', gap: '10px' }}>
-                            <button
-                              onClick={() => handleToggleMess(mess.id, mess.is_active)}
-                              style={{
-                                padding: '8px 15px',
-                                background: mess.is_active ? '#7a2d2d' : '#2d7a2d',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '5px',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              {mess.is_active ? 'Freeze' : 'Activate'}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteMess(mess.id)}
-                              style={{
-                                padding: '8px 15px',
-                                background: 'transparent',
-                                color: '#f87171',
-                                border: '1px solid #7a2d2d',
-                                borderRadius: '5px',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+            {activeTab === 'canteens' && showAddCanteenForm ? (
+              <form className="admin-form-panel" onSubmit={handleAddCanteen} noValidate>
+                <div className="admin-form-grid">
+                  <label className="admin-field">
+                    <span>Name *</span>
+                    <input
+                      className="admin-input"
+                      placeholder="Enter canteen name"
+                      value={canteenFormData.name}
+                      onChange={(event) =>
+                        updateCanteenForm('name', event.target.value)
+                      }
+                      maxLength={120}
+                      required
+                    />
+                  </label>
 
-        {/* Canteens Tab */}
-        {activeTab === 'canteens' && (
-          <div>
-            <div style={{ display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', justifyContent: 'space-between', alignItems: window.innerWidth < 768 ? 'stretch' : 'center', marginBottom: '20px', gap: '10px' }}>
-              <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', margin: 0 }}>Canteen Management</h2>
-              <button
-                onClick={() => setShowAddCanteenForm(!showAddCanteenForm)}
-                style={{
-                  padding: '10px 20px',
-                  background: '#d63434',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                }}
-              >
-                {showAddCanteenForm ? 'Cancel' : '+ Add Canteen'}
-              </button>
-            </div>
+                  <label className="admin-field">
+                    <span>Location *</span>
+                    <input
+                      className="admin-input"
+                      placeholder="Enter location"
+                      value={canteenFormData.location}
+                      onChange={(event) =>
+                        updateCanteenForm('location', event.target.value)
+                      }
+                      maxLength={200}
+                      required
+                    />
+                  </label>
+                </div>
 
-            {/* Add Canteen Form */}
-            {showAddCanteenForm && (
-              <form onSubmit={handleAddCanteen} style={{
-                background: '#1a1a1a',
-                padding: '15px',
-                borderRadius: '8px',
-                marginBottom: '20px'
-              }}>
-                <h3 style={{ marginBottom: '15px', fontSize: 'clamp(1rem, 3vw, 1.25rem)' }}>Create Canteen / Outlet</h3>
-                <div style={{ display: 'grid', gap: '15px' }}>
-                  <input
-                    type="text"
-                    placeholder="Name"
-                    value={canteenFormData.name}
-                    onChange={(e) => setCanteenFormData({ ...canteenFormData, name: e.target.value })}
-                    required
-                    style={{
-                      padding: '10px',
-                      background: '#0a0a0a',
-                      border: '1px solid #333',
-                      color: '#fff',
-                      borderRadius: '5px',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                    }}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Location"
-                    value={canteenFormData.location}
-                    onChange={(e) => setCanteenFormData({ ...canteenFormData, location: e.target.value })}
-                    required
-                    style={{
-                      padding: '10px',
-                      background: '#0a0a0a',
-                      border: '1px solid #333',
-                      color: '#fff',
-                      borderRadius: '5px',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                    }}
-                  />
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                      padding: '10px',
-                      background: '#d63434',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '5px',
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-                    }}
-                  >
+                <div className="admin-form-actions">
+                  <button type="submit" className="admin-primary-button" disabled={loading}>
                     {loading ? 'Creating...' : 'Create Canteen'}
                   </button>
                 </div>
               </form>
-            )}
+            ) : null}
 
-            {/* Canteens List */}
-            {loading && !showAddCanteenForm ? (
-              <p>Loading...</p>
-            ) : (
-              <div style={{ background: '#1a1a1a', borderRadius: '8px', overflow: 'auto' }}>
-                {canteens.length === 0 ? (
-                  <p style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-                    No canteens created yet. Add one to get started.
-                  </p>
-                ) : (
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ background: '#0a0a0a' }}>
-                        <th style={{ padding: '15px', textAlign: 'left' }}>Name</th>
-                        <th style={{ padding: '15px', textAlign: 'left' }}>Location</th>
-
-                        <th style={{ padding: '15px', textAlign: 'left' }}>Status</th>
-                        <th style={{ padding: '15px', textAlign: 'left' }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {canteens.map((canteen) => (
-                        <tr key={canteen.id} style={{ borderTop: '1px solid #333' }}>
-                          <td style={{ padding: '15px' }}>{canteen.name}</td>
-                          <td style={{ padding: '15px' }}>{canteen.location}</td>
-
-                          <td style={{ padding: '15px' }}>
-                            <span style={{
-                              padding: '5px 10px',
-                              borderRadius: '5px',
-                              background: canteen.is_active ? '#1a4d1a' : '#4d1a1a',
-                              color: canteen.is_active ? '#4ade80' : '#f87171'
-                            }}>
-                              {canteen.is_active ? 'Active' : 'Inactive'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '15px', display: 'flex', gap: '10px' }}>
-                            <button
-                              onClick={() => handleToggleCanteen(canteen.id, canteen.is_active)}
-                              style={{
-                                padding: '8px 15px',
-                                background: canteen.is_active ? '#7a2d2d' : '#2d7a2d',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '5px',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              {canteen.is_active ? 'Freeze' : 'Activate'}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteCanteen(canteen.id)}
-                              style={{
-                                padding: '8px 15px',
-                                background: 'transparent',
-                                color: '#f87171',
-                                border: '1px solid #7a2d2d',
-                                borderRadius: '5px',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+            {activeTab === 'managers' ? renderManagerSection() : null}
+            {activeTab === 'messes' ? renderMessSection() : null}
+            {activeTab === 'canteens' ? renderCanteenSection() : null}
+          </section>
+        </main>
       </div>
+
+      <nav className="admin-bottom-nav">
+        {TAB_ITEMS.map((tab) => {
+          const TabIcon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              className={`admin-bottom-nav__button ${
+                isActive ? 'admin-bottom-nav__button--active' : ''
+              }`}
+              onClick={() => handleTabChange(tab.id)}
+            >
+              <TabIcon size={18} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      <DetailSheet
+        entity={selectedEntity}
+        onClose={() => setSelectedEntity(null)}
+        onToggleManager={handleToggleStatus}
+        onToggleMess={handleToggleMess}
+        onToggleCanteen={handleToggleCanteen}
+        onDeleteMess={handleDeleteMess}
+        onDeleteCanteen={handleDeleteCanteen}
+      />
     </div>
   );
 };

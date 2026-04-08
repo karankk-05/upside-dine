@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AuthPage from './features/auth/pages/AuthPage';
 import ForgotPasswordPage from './features/auth/pages/ForgotPasswordPage';
@@ -55,7 +55,8 @@ function App() {
           <Route path="/manager/mess" element={<ProtectedRoute><MessManagerDashboard /></ProtectedRoute>} />
           <Route path="/manager/canteen" element={<ProtectedRoute><CanteenManagerDashboard /></ProtectedRoute>} />
           <Route path="/delivery" element={<ProtectedRoute><DeliveryDashboard /></ProtectedRoute>} />
-          <Route path="/admin/managers" element={<ProtectedRoute><AdminManagerDashboard /></ProtectedRoute>} />
+          <Route path="/manager/admin" element={<ProtectedRoute><AdminManagerDashboard /></ProtectedRoute>} />
+          <Route path="/admin/managers" element={<Navigate to="/manager/admin" replace />} />
           {/* Mess feature routes (student, manager, worker) */}
           {protectRouteElements(messRoutes)}
           {/* Canteen feature routes (student, manager) */}

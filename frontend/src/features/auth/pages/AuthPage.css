@@ -98,6 +98,17 @@
   color: #999999;
 }
 
+.input-label-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.input-label-required {
+  color: #ff7f7f;
+  font-size: 14px;
+}
+
 .password-input-wrapper {
   position: relative;
 }
@@ -148,8 +159,25 @@
   box-shadow: 0 0 15px rgba(214, 52, 52, 0.2);
 }
 
+.input-field--error {
+  border-color: #d63434;
+  box-shadow: 0 0 0 1px rgba(214, 52, 52, 0.25);
+}
+
 .input-field::placeholder {
   color: #666666;
+}
+
+.input-helper-text {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #7f7f7f;
+}
+
+.input-helper-text--error {
+  color: #ff9a9a;
 }
 
 /* Error Message */

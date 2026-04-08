@@ -1,10 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { Search, ArrowLeft } from 'lucide-react';
 import CanteenCard from '../components/CanteenCard';
+import InfiniteScrollSentinel from '../../../components/InfiniteScrollSentinel';
+import { useIncrementalList } from '../../../hooks/useIncrementalList';
 import { STANDARD_INPUT_PROPS, sanitizeSearchText } from '../../../lib/formValidation';
 import '../canteen.css';
 
@@ -32,6 +33,15 @@ export default function CanteenListPage() {
     if (!isAHall && isBHall) return -1;
     return aName.localeCompare(bName);
   });
+  const {
+    visibleItems: visibleCanteens,
+    hasMore,
+    loadMore,
+  } = useIncrementalList(filtered, {
+    initialCount: 8,
+    step: 6,
+    resetKey: search.trim().toLowerCase(),
+  });
 
   return (
     <div className="canteen-page">
@@ -52,9 +62,15 @@ export default function CanteenListPage() {
           <div className="canteen-empty"><div className="canteen-empty__icon">🍽️</div><p className="canteen-empty__text">No canteens found</p></div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {filtered.map((c, i) => (
+            {visibleCanteens.map((c, i) => (
               <CanteenCard key={c.id} canteen={c} index={i} onClick={() => navigate(`/canteens/${c.id}`)} />
             ))}
+            <InfiniteScrollSentinel
+              hasMore={hasMore}
+              onLoadMore={loadMore}
+              skeletonCount={2}
+              minHeight={96}
+            />
           </div>
         )}
       </div>

@@ -3,17 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { STANDARD_INPUT_PROPS, sanitizeSearchText } from '../lib/formValidation';
 import PullToRefresh from '../components/PullToRefresh';
+import InfiniteScrollSentinel from '../components/InfiniteScrollSentinel';
 import api from '../lib/api';
 import { CURRENT_USER_QUERY_KEY, useCurrentUser } from '../hooks/useCurrentUser';
+import { useIncrementalList } from '../hooks/useIncrementalList';
 import '../features/mess/mess.css';
 
 const PUBLIC_CANTEENS_QUERY_KEY = ['public-canteens'];
 const MESS_LIST_QUERY_KEY = ['mess', 'list'];
+const CANTEEN_MENU_SEARCH_QUERY_KEY = ['canteen', 'search'];
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
+  const trimmedSearchQuery = searchQuery.trim();
 
   const { data: currentUser } = useCurrentUser();
   const { data: canteens = [], isLoading: isLoadingCanteens } = useQuery({
@@ -30,12 +34,23 @@ const StudentDashboard = () => {
       return Array.isArray(data) ? data : [];
     },
   });
+  const { data: searchResults = [], isLoading: isLoadingSearchResults } = useQuery({
+    queryKey: [...CANTEEN_MENU_SEARCH_QUERY_KEY, trimmedSearchQuery],
+    queryFn: async () => {
+      const { data } = await api.get('/canteens/search/', {
+        params: { q: trimmedSearchQuery },
+      });
+      return Array.isArray(data) ? data : data?.results || [];
+    },
+    enabled: trimmedSearchQuery.length >= 2,
+  });
 
   const loadDashboard = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY }),
       queryClient.invalidateQueries({ queryKey: PUBLIC_CANTEENS_QUERY_KEY }),
       queryClient.invalidateQueries({ queryKey: MESS_LIST_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: CANTEEN_MENU_SEARCH_QUERY_KEY }),
     ]);
   }, [queryClient]);
 
@@ -70,6 +85,24 @@ const StudentDashboard = () => {
   });
   const showMess =
     mess && (mess.name?.toLowerCase().includes(q) || mess.hall_name?.toLowerCase().includes(q) || !q);
+  const {
+    visibleItems: visibleCanteens,
+    hasMore: hasMoreCanteens,
+    loadMore: loadMoreCanteens,
+  } = useIncrementalList(filteredCanteens, {
+    initialCount: 4,
+    step: 4,
+    resetKey: q,
+  });
+  const {
+    visibleItems: visibleSearchItems,
+    hasMore: hasMoreSearchItems,
+    loadMore: loadMoreSearchItems,
+  } = useIncrementalList(searchResults, {
+    initialCount: 4,
+    step: 4,
+    resetKey: trimmedSearchQuery,
+  });
 
   // Logout is now handled in ProfilePage
 
@@ -118,6 +151,131 @@ const StudentDashboard = () => {
             <span style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', color: '#999' }}>🔍</span>
           </div>
         </div>
+
+        {trimmedSearchQuery.length >= 2 ? (
+          <div style={{ padding: '0 20px 0 20px' }}>
+            <div style={{ marginBottom: 16 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 6 }}>
+                Matching Food Items
+              </h2>
+              <p style={{ fontSize: 12, color: '#999' }}>
+                Results from canteen menus for "{trimmedSearchQuery}"
+              </p>
+            </div>
+
+            {isLoadingSearchResults ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div
+                    key={`search-item-skeleton-${index}`}
+                    className="ui-skeleton ui-skeleton-card"
+                    style={{ minHeight: 108 }}
+                  />
+                ))}
+              </div>
+            ) : searchResults.length > 0 ? (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {visibleSearchItems.map((item) => (
+                    <div
+                      key={`${item.canteen_id}-${item.id}`}
+                      onClick={() =>
+                        navigate(`/canteens/${item.canteen_id}`, {
+                          state: {
+                            highlightItemId: item.id,
+                          },
+                        })
+                      }
+                      style={{
+                        background: '#1a1a1a',
+                        border: '1px solid #333',
+                        borderRadius: 16,
+                        padding: 16,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 12,
+                          marginBottom: 8,
+                        }}
+                      >
+                        <div style={{ minWidth: 0 }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              marginBottom: 4,
+                              minWidth: 0,
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: 10,
+                                height: 10,
+                                borderRadius: '50%',
+                                flexShrink: 0,
+                                background: item.is_veg ? '#33aa33' : '#d45555',
+                              }}
+                            />
+                            <h3
+                              style={{
+                                fontSize: 16,
+                                fontWeight: 700,
+                                color: '#fff',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {item.item_name}
+                            </h3>
+                          </div>
+                          <p style={{ fontSize: 12, color: '#999' }}>
+                            {item.canteen_name}
+                            {item.category_name ? ` • ${item.category_name}` : ''}
+                          </p>
+                        </div>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: '#d55555', flexShrink: 0 }}>
+                          ₹{item.price}
+                        </div>
+                      </div>
+                      {item.description ? (
+                        <p style={{ fontSize: 12, color: '#999', lineHeight: 1.45 }}>
+                          {item.description}
+                        </p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+                <InfiniteScrollSentinel
+                  hasMore={hasMoreSearchItems}
+                  onLoadMore={loadMoreSearchItems}
+                  skeletonCount={2}
+                  minHeight={108}
+                />
+              </>
+            ) : (
+              <div
+                style={{
+                  background: '#111',
+                  border: '1px dashed #333',
+                  borderRadius: 16,
+                  padding: 20,
+                  textAlign: 'center',
+                  color: '#777',
+                  marginBottom: 8,
+                }}
+              >
+                No food items match this search yet.
+              </div>
+            )}
+          </div>
+        ) : null}
 
         {/* Mess Section */}
         {showMess && mess ? (
@@ -170,16 +328,14 @@ const StudentDashboard = () => {
 
         {/* Canteens Section */}
         <div style={{ padding: '24px 20px 120px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>Canteens</h2>
-            <a onClick={(e) => { e.preventDefault(); navigate('/canteens'); }}
-              href="#" style={{ color: '#d55555', fontSize: 13, fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}>
-              See All
-            </a>
+          <div style={{ marginBottom: 16 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>
+              {trimmedSearchQuery ? 'Matching Canteens' : 'Canteens'}
+            </h2>
           </div>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
-            {filteredCanteens.map((canteen, idx) => (
+            {visibleCanteens.map((canteen, idx) => (
               <div
                 key={canteen.id}
                 onClick={() => navigate(`/canteens/${canteen.id}`)}
@@ -218,34 +374,17 @@ const StudentDashboard = () => {
               <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#666', padding: 40 }}>No canteens found.</p>
             )}
           </div>
-        </div>
 
-        {/* Bottom Navigation */}
-        <nav style={{
-          position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-          maxWidth: 428, width: '100%', background: '#000', borderTop: '1px solid #333',
-          display: 'flex', justifyContent: 'space-around', padding: '12px 0', zIndex: 100,
-        }}>
-          <a href="/dashboard" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: '#d55555', textDecoration: 'none', fontSize: 11, padding: '8px 20px' }}
-            id="nav-home">
-            <span style={{ fontSize: 24 }}>🏠</span>Home
-          </a>
-          <a onClick={(e) => { e.preventDefault(); navigate('/orders'); }}
-            href="#" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: '#999', textDecoration: 'none', fontSize: 11, padding: '8px 20px', cursor: 'pointer' }}
-            id="nav-orders">
-            <span style={{ fontSize: 24 }}>📦</span>Orders
-          </a>
-          <a onClick={(e) => { e.preventDefault(); navigate('/mess/bookings'); }}
-            href="#" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: '#999', textDecoration: 'none', fontSize: 11, padding: '8px 20px', cursor: 'pointer' }}
-            id="nav-bookings">
-            <span style={{ fontSize: 24 }}>🍽️</span>Mess
-          </a>
-          <a href="#" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: '#999', textDecoration: 'none', fontSize: 11, padding: '8px 20px', cursor: 'pointer' }}
-            onClick={(e) => { e.preventDefault(); navigate('/profile'); }}
-            id="nav-profile">
-            <span style={{ fontSize: 24 }}>👤</span>Profile
-          </a>
-        </nav>
+          {filteredCanteens.length > 0 ? (
+            <InfiniteScrollSentinel
+              hasMore={hasMoreCanteens}
+              onLoadMore={loadMoreCanteens}
+              skeletonCount={2}
+              minHeight={180}
+              columns={2}
+            />
+          ) : null}
+        </div>
         </div>
       </div>
     </PullToRefresh>

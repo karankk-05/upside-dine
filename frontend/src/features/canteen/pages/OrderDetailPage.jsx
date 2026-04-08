@@ -5,6 +5,14 @@ import { useCancelOrder } from '../hooks/useCancelOrder';
 import OrderStatusTracker from '../components/OrderStatusTracker';
 import '../canteen.css';
 
+const badgeVariantForStatus = (status) => {
+  if (status === 'preparing') return 'preparing';
+  if (status === 'ready' || status === 'completed') return 'ready';
+  if (['out_for_delivery', 'delivered', 'picked_up'].includes(status)) return 'delivered';
+  if (['cancelled', 'rejected'].includes(status)) return 'cancelled';
+  return 'new';
+};
+
 export default function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -40,7 +48,7 @@ export default function OrderDetailPage() {
             <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Order #{order.order_number || order.id}</h2>
             <p style={{ fontSize: 12, color: '#999' }}>{(order.order_type || 'pickup').replace(/_/g, ' ')}</p>
           </div>
-          <span className={`canteen-order-badge canteen-order-badge--${order.status === 'preparing' ? 'preparing' : order.status === 'ready' ? 'ready' : 'new'}`}>
+          <span className={`canteen-order-badge canteen-order-badge--${badgeVariantForStatus(order.status)}`}>
             {order.status?.replace(/_/g, ' ').toUpperCase()}
           </span>
         </div>

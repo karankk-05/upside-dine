@@ -6,11 +6,14 @@ import messRoutes from './features/mess/routes';
 import canteenRoutes from './features/canteen/routes';
 import './App.css';
 import { AuthLanding, ProtectedRoute, PublicOnlyRoute } from './components/RouteGuards';
+import StudentBottomNavLayout from './components/StudentBottomNavLayout';
 import { appQueryClient } from './lib/queryClient';
 
 const AuthPage = React.lazy(() => import('./features/auth/pages/AuthPage'));
 const ForgotPasswordPage = React.lazy(() => import('./features/auth/pages/ForgotPasswordPage'));
 const StudentDashboard = React.lazy(() => import('./pages/StudentDashboard'));
+const OrderHistoryPage = React.lazy(() => import('./features/canteen/pages/OrderHistoryPage'));
+const MyBookingsPage = React.lazy(() => import('./features/mess/pages/MyBookingsPage'));
 const MessManagerDashboard = React.lazy(() => import('./pages/MessManagerDashboard'));
 const CanteenManagerDashboard = React.lazy(() => import('./pages/CanteenManagerDashboard'));
 const DeliveryDashboard = React.lazy(() => import('./pages/DeliveryDashboard'));
@@ -63,8 +66,18 @@ function App() {
             }
           />
           <Route path="/forgot-password" element={withSuspense(<ForgotPasswordPage />)} />
-          <Route path="/dashboard" element={<ProtectedRoute>{withSuspense(<StudentDashboard />)}</ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute>{withSuspense(<ProfilePage />)}</ProtectedRoute>} />
+          <Route
+            element={
+              <ProtectedRoute>
+                <StudentBottomNavLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/dashboard" element={withSuspense(<StudentDashboard />)} />
+            <Route path="/orders" element={withSuspense(<OrderHistoryPage />)} />
+            <Route path="/mess/bookings" element={withSuspense(<MyBookingsPage />)} />
+            <Route path="/profile" element={withSuspense(<ProfilePage />)} />
+          </Route>
           <Route path="/manager/mess" element={<ProtectedRoute>{withSuspense(<MessManagerDashboard />)}</ProtectedRoute>} />
           <Route path="/manager/canteen" element={<ProtectedRoute>{withSuspense(<CanteenManagerDashboard />)}</ProtectedRoute>} />
           <Route path="/delivery" element={<ProtectedRoute>{withSuspense(<DeliveryDashboard />)}</ProtectedRoute>} />

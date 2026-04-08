@@ -83,7 +83,7 @@
 /* ── Menu Section ── */
 .canteen-menu {
   padding: 20px;
-  padding-bottom: 140px;
+  padding-bottom: 176px;
 }
 
 .canteen-menu-section-title {
@@ -109,8 +109,26 @@
   border-color: #444;
 }
 
+.canteen-menu-item--highlighted {
+  border-color: #d45555;
+  box-shadow: 0 0 0 1px rgba(212, 85, 85, 0.34), 0 0 24px rgba(212, 85, 85, 0.16);
+  animation: canteen-highlight-pulse 1.2s ease-in-out 3;
+}
+
 .canteen-menu-item--unavailable {
   opacity: 0.5;
+}
+
+@keyframes canteen-highlight-pulse {
+  0%,
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 1px rgba(212, 85, 85, 0.2), 0 0 16px rgba(212, 85, 85, 0.08);
+  }
+  50% {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 1px rgba(212, 85, 85, 0.42), 0 0 32px rgba(212, 85, 85, 0.22);
+  }
 }
 
 .canteen-menu-item__info {
@@ -245,20 +263,22 @@
 /* ── Fixed Cart Button ── */
 .canteen-cart-bar {
   position: fixed;
-  bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: 600px;
-  width: calc(100% - 40px);
-  z-index: 50;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  left: 0;
+  right: 0;
+  padding: 0 12px;
+  z-index: 80;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
 }
 
 .canteen-cart-bar__btn {
-  width: 100%;
-  padding: 16px 20px;
+  width: min(420px, 100%);
+  padding: 14px 18px;
   background: #d45555;
   border: none;
-  border-radius: 12px;
+  border-radius: 16px;
   color: #fff;
   font-size: 15px;
   font-weight: 700;
@@ -268,11 +288,47 @@
   align-items: center;
   box-shadow: 0 4px 20px rgba(232, 85, 85, 0.3);
   transition: all 0.3s ease;
+  gap: 16px;
+  pointer-events: auto;
 }
 
 .canteen-cart-bar__btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 25px rgba(232, 85, 85, 0.4);
+}
+
+.canteen-cart-bar__content {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.canteen-cart-bar__primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.canteen-cart-bar__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.15;
+}
+
+.canteen-cart-bar__total {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.canteen-cart-bar__count {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.82);
 }
 
 /* ── Cart Drawer ── */
@@ -443,14 +499,14 @@
   font-weight: 700;
   padding: 4px 10px;
   border-radius: 8px;
-  color: #000;
+  color: #fff;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .canteen-order-badge--new { background: #d45555; color: #fff; }
-.canteen-order-badge--preparing { background: #ff9900; }
-.canteen-order-badge--ready { background: #00ff00; }
+.canteen-order-badge--preparing { background: #ff9900; color: #1a1a1a; }
+.canteen-order-badge--ready { background: #00ff00; color: #052b05; }
 .canteen-order-badge--delivered { background: #6600ff; color: #fff; }
 .canteen-order-badge--cancelled { background: #666; color: #fff; }
 

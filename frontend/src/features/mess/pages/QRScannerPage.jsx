@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, History, Upload, LogOut, User } from 'lucide-react';
+import { ArrowLeft, Camera, History, Upload, LogOut, User } from 'lucide-react';
 import { useVerifyQR } from '../hooks/useVerifyQR';
 import VerificationResult from '../components/VerificationResult';
 import { FIELD_LIMITS, sanitizeUnstructuredText } from '../../../lib/formValidation';
@@ -182,6 +182,14 @@ const QRScannerPage = () => {
   return (
     <div className="mess-page">
       <div className="mess-page-header">
+        <button
+          type="button"
+          className="mess-back-btn"
+          onClick={() => navigate('/profile')}
+          aria-label="Go back"
+        >
+          <ArrowLeft size={18} />
+        </button>
         <h1 className="mess-page-title">QR Scanner</h1>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
           <div

@@ -527,11 +527,144 @@ class ManagerSerializer(serializers.ModelSerializer):
     employee_code = serializers.CharField(source='staff_profile.employee_code', read_only=True)
     canteen_id = serializers.IntegerField(source='staff_profile.canteen_id', read_only=True)
     role_name = serializers.CharField(source='role.role_name', read_only=True)
+    mess_id = serializers.SerializerMethodField()
+    assignment_name = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'phone', 'full_name', 'employee_code', 'canteen_id', 'role_name', 'is_active', 'date_joined']
+        fields = [
+            'id',
+            'email',
+            'phone',
+            'full_name',
+            'employee_code',
+            'canteen_id',
+            'mess_id',
+            'assignment_name',
+            'role_name',
+            'is_active',
+            'date_joined',
+        ]
         read_only_fields = fields
+
+    def _get_manager_assignment(self, obj):
+        staff_profile = getattr(obj, "staff_profile", None)
+        if staff_profile is None:
+            return None
+
+        return (
+            staff_profile.mess_assignments.filter(assignment_role="manager", is_active=True)
+            .select_related("mess")
+            .order_by("-updated_at", "-created_at")
+            .first()
+        )
+
+    def get_mess_id(self, obj):
+        assignment = self._get_manager_assignment(obj)
+        return assignment.mess_id if assignment else None
+
+    def get_assignment_name(self, obj):
+        staff_profile = getattr(obj, "staff_profile", None)
+        role = getattr(getattr(obj, "role", None), "role_name", "")
+        if role == "canteen_manager":
+            return getattr(getattr(staff_profile, "canteen", None), "name", None)
+
+        assignment = self._get_manager_assignment(obj)
+        if assignment:
+            return assignment.mess.name
+        return None
+
+
+class UpdateManagerSerializer(serializers.Serializer):
+    """Serializer for admin managers to update canteen or mess managers."""
+
+    email = serializers.EmailField()
+    full_name = serializers.CharField(max_length=100)
+    phone = serializers.CharField(max_length=20)
+    role_name = serializers.ChoiceField(choices=['canteen_manager', 'mess_manager'])
+    canteen_id = serializers.IntegerField(required=False, allow_null=True)
+    mess_id = serializers.IntegerField(required=False, allow_null=True)
+
+    def validate_email(self, value):
+        value = value.lower()
+        conflicting_user = User.objects.filter(email=value)
+        if self.instance is not None:
+            conflicting_user = conflicting_user.exclude(pk=self.instance.pk)
+        if conflicting_user.exists():
+            raise serializers.ValidationError("User with this email already exists.")
+        return value
+
+    def validate(self, attrs):
+        role_name = attrs.get("role_name")
+        canteen_id = attrs.get("canteen_id")
+        mess_id = attrs.get("mess_id")
+
+        if role_name == "canteen_manager":
+            if not canteen_id:
+                raise serializers.ValidationError(
+                    {"canteen_id": "Canteen is required for canteen managers."}
+                )
+            from apps.canteen.models import Canteen
+
+            if not Canteen.objects.filter(id=canteen_id).exists():
+                raise serializers.ValidationError({"canteen_id": "Selected canteen does not exist."})
+        elif role_name == "mess_manager":
+            if not mess_id:
+                raise serializers.ValidationError(
+                    {"mess_id": "Mess is required for mess managers."}
+                )
+            if not Mess.objects.filter(id=mess_id).exists():
+                raise serializers.ValidationError({"mess_id": "Selected mess does not exist."})
+
+        return attrs
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        role_name = validated_data["role_name"]
+        role, _ = Role.objects.get_or_create(role_name=role_name)
+        staff_profile = instance.staff_profile
+
+        instance.email = validated_data["email"]
+        instance.phone = validated_data["phone"]
+        instance.role = role
+        instance.save(update_fields=["email", "phone", "role"])
+
+        staff_profile.full_name = validated_data["full_name"]
+
+        manager_assignments = MessStaffAssignment.objects.filter(
+            staff=staff_profile,
+            assignment_role="manager",
+        )
+
+        if role_name == "canteen_manager":
+            from apps.canteen.models import Canteen
+
+            staff_profile.canteen = Canteen.objects.get(id=validated_data["canteen_id"])
+            staff_profile.is_mess_staff = False
+            manager_assignments.filter(is_active=True).update(is_active=False)
+        else:
+            selected_mess = Mess.objects.get(id=validated_data["mess_id"])
+            staff_profile.canteen = None
+            staff_profile.is_mess_staff = True
+
+            active_assignment = manager_assignments.filter(mess=selected_mess).first()
+            manager_assignments.exclude(
+                pk=getattr(active_assignment, "pk", None)
+            ).filter(is_active=True).update(is_active=False)
+            if active_assignment:
+                if not active_assignment.is_active:
+                    active_assignment.is_active = True
+                    active_assignment.save(update_fields=["is_active", "updated_at"])
+            else:
+                MessStaffAssignment.objects.create(
+                    staff=staff_profile,
+                    mess=selected_mess,
+                    assignment_role="manager",
+                    is_active=True,
+                )
+
+        staff_profile.save(update_fields=["full_name", "canteen", "is_mess_staff"])
+        return instance
 
 
 class CreateMessSerializer(serializers.Serializer):

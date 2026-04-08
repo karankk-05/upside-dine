@@ -463,6 +463,27 @@ class ToggleManagerStatusView(GenericAPIView):
     """View for admin managers to activate/deactivate canteen/mess managers"""
     permission_classes = [IsAuthenticated]
 
+    def put(self, request, user_id):
+        """Update manager contact details or assignment."""
+        if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
+            return Response({"detail": "Only admin managers can manage managers."}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            manager = User.objects.select_related('staff_profile', 'role').get(
+                id=user_id,
+                role__role_name__in=['canteen_manager', 'mess_manager']
+            )
+        except User.DoesNotExist:
+            return Response({"detail": "Manager not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        from .serializers import ManagerSerializer, UpdateManagerSerializer
+
+        serializer = UpdateManagerSerializer(instance=manager, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        manager = serializer.save()
+
+        return Response(ManagerSerializer(manager).data)
+
     def patch(self, request, user_id):
         """Toggle manager active status (freeze/unfreeze)"""
         # Check if user is admin manager

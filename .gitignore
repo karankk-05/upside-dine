@@ -178,3 +178,6 @@ htmlcov/
 # Local development
 .local/
 .env.prod.iitk
+
+# Utility Scripts
+backend/scripts/

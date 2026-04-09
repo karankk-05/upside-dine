@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Search } from 'lucide-react';
 import { useMenuSearch } from '../hooks/useMenuSearch';
+import { STANDARD_INPUT_PROPS, sanitizeSearchText } from '../../../lib/formValidation';
 import '../canteen.css';
 
 export default function MenuSearch({ onSelectItem }) {
@@ -12,10 +13,10 @@ export default function MenuSearch({ onSelectItem }) {
       <div className="canteen-search">
         <input
           className="canteen-search__input"
-          type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => setQuery(sanitizeSearchText(e.target.value))}
           placeholder="Search for food, canteen..."
+          {...STANDARD_INPUT_PROPS.search}
         />
         <span className="canteen-search__icon"><Search size={18} /></span>
       </div>

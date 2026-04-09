@@ -11,8 +11,8 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # ports:
+    #   - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -23,8 +23,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: upside_dine_redis
-    ports:
-      - "6379:6379"
+    # ports:
+    #   - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -46,8 +46,8 @@ services:
       - ./backend:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
-    ports:
-      - "8000:8000"
+    # ports:
+    #   - "8000:8000"
     env_file:
       - ./backend/.env
     depends_on:
@@ -102,8 +102,8 @@ services:
     command: daphne -b 0.0.0.0 -p 8001 config.asgi:application
     volumes:
       - ./backend:/app
-    ports:
-      - "8001:8001"
+    # ports:
+    #   - "8001:8001"
     env_file:
       - ./backend/.env
     depends_on:
@@ -119,8 +119,8 @@ services:
     command: uvicorn main:app --host 0.0.0.0 --port 8002 --reload
     volumes:
       - ./ml_service:/app
-    ports:
-      - "8002:8002"
+    # ports:
+    #   - "8002:8002"
     environment:
       - REDIS_URL=redis://redis:6379/0
       - REDIS_HOST=redis
@@ -144,8 +144,8 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    ports:
-      - "3000:3000"
+    # ports:
+    #   - "3000:3000"
     env_file:
       - ./frontend/.env
     depends_on:

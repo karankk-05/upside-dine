@@ -20,10 +20,12 @@ class MessManagerAPITests(APITestCase):
     def setUp(self):
         cache.clear()
         self.manager_user, self.manager_staff = self._create_manager_user("1")
+        MessStaffAssignment.objects.filter(staff=self.manager_staff).update(is_active=False)
         self.student_user, self.student = self._create_student_user("1")
         self.other_student_user, self.other_student = self._create_student_user("2")
         MessAccount.objects.create(student=self.student, balance=Decimal("10000.00"))
         MessAccount.objects.create(student=self.other_student, balance=Decimal("10000.00"))
+        self.current_day = timezone.localdate().strftime("%A").lower()
 
         self.mess = Mess.objects.create(
             name="Hall Mess 1",
@@ -50,7 +52,7 @@ class MessManagerAPITests(APITestCase):
             description="Tasty roll",
             price=Decimal("40.00"),
             meal_type=MessMenuItem.MealType.LUNCH,
-            day_of_week=MessMenuItem.DayOfWeek.MONDAY,
+            day_of_week=self.current_day,
             available_quantity=300,
             default_quantity=320,
             is_active=True,
@@ -61,7 +63,7 @@ class MessManagerAPITests(APITestCase):
             description="Inactive item",
             price=Decimal("25.00"),
             meal_type=MessMenuItem.MealType.BREAKFAST,
-            day_of_week=MessMenuItem.DayOfWeek.MONDAY,
+            day_of_week=self.current_day,
             available_quantity=100,
             default_quantity=100,
             is_active=False,
@@ -72,7 +74,7 @@ class MessManagerAPITests(APITestCase):
             description="Other mess item",
             price=Decimal("50.00"),
             meal_type=MessMenuItem.MealType.SNACK,
-            day_of_week=MessMenuItem.DayOfWeek.TUESDAY,
+            day_of_week=self.current_day,
             available_quantity=200,
             default_quantity=200,
             is_active=True,
@@ -177,7 +179,17 @@ class MessManagerAPITests(APITestCase):
 
         returned_ids = {item["id"] for item in response.data}
         self.assertIn(self.menu_item.id, returned_ids)
+        self.assertNotIn(self.menu_item_inactive.id, returned_ids)
+        self.assertNotIn(self.other_mess_item.id, returned_ids)
+
+    def test_manager_menu_list_can_filter_inactive_items(self):
+        self._auth_manager()
+        response = self.client.get("/api/mess/manager/menu/", {"is_active": "false"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        returned_ids = {item["id"] for item in response.data}
         self.assertIn(self.menu_item_inactive.id, returned_ids)
+        self.assertNotIn(self.menu_item.id, returned_ids)
         self.assertNotIn(self.other_mess_item.id, returned_ids)
 
     def test_manager_menu_filter_by_meal_type(self):
@@ -257,6 +269,39 @@ class MessManagerAPITests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_manager_patch_menu_item_rejects_duplicate_day_meal_name(self):
+        conflict_day = (
+            MessMenuItem.DayOfWeek.THURSDAY
+            if self.current_day != MessMenuItem.DayOfWeek.THURSDAY
+            else MessMenuItem.DayOfWeek.MONDAY
+        )
+        conflicting_item = MessMenuItem.objects.create(
+            mess=self.mess,
+            item_name=self.menu_item.item_name,
+            description="Conflict item",
+            price=Decimal("45.00"),
+            meal_type=self.menu_item.meal_type,
+            day_of_week=conflict_day,
+            available_quantity=120,
+            default_quantity=120,
+            is_active=True,
+        )
+
+        self._auth_manager()
+        response = self.client.patch(
+            f"/api/mess/manager/menu/{self.menu_item.id}/",
+            {"day_of_week": conflicting_item.day_of_week},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["detail"][0],
+            f'An extra named "Paneer Roll" already exists for {conflict_day.title()} lunch.',
+        )
+        self.menu_item.refresh_from_db()
+        self.assertEqual(self.menu_item.day_of_week, self.current_day)
+
     def test_manager_delete_menu_item_soft_deletes(self):
         self._auth_manager()
         response = self.client.delete(f"/api/mess/manager/menu/{self.menu_item.id}/")
@@ -264,6 +309,11 @@ class MessManagerAPITests(APITestCase):
 
         self.menu_item.refresh_from_db()
         self.assertFalse(self.menu_item.is_active)
+
+        list_response = self.client.get("/api/mess/manager/menu/")
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        returned_ids = {item["id"] for item in list_response.data}
+        self.assertNotIn(self.menu_item.id, returned_ids)
 
     def test_manager_bookings_default_today_with_stats(self):
         today = timezone.localdate()
@@ -366,7 +416,7 @@ class MessManagerAPITests(APITestCase):
             description="Snack special",
             price=Decimal("70.00"),
             meal_type=MessMenuItem.MealType.SNACK,
-            day_of_week=MessMenuItem.DayOfWeek.FRIDAY,
+            day_of_week=self.current_day,
             available_quantity=100,
             default_quantity=100,
             is_active=True,

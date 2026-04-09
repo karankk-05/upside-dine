@@ -7,6 +7,9 @@ import { ArrowLeft, BarChart3, TrendingUp, TrendingDown, Minus } from 'lucide-re
 import DensityIndicator from '../components/DensityIndicator';
 import CameraFeedStatus from '../components/CameraFeedStatus';
 import { useLiveCrowdDensity } from '../hooks/useLiveCrowdDensity';
+import PullToRefresh from '../../../components/PullToRefresh';
+import { STANDARD_INPUT_PROPS, sanitizeUrl } from '../../../lib/formValidation';
+import { compareNaturalText } from '../../../lib/naturalSort';
 import '../styles/crowd.css';
 
 /**
@@ -85,6 +88,14 @@ export default function ManagerCrowdOverview() {
   const [feedUrl, setFeedUrl] = React.useState('');
   const [selectedFeedMess, setSelectedFeedMess] = React.useState('');
   const [submittingFeed, setSubmittingFeed] = React.useState(false);
+  const handleRefresh = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['mess', 'list'] }),
+      queryClient.invalidateQueries({ queryKey: ['manager', 'stats'] }),
+      queryClient.invalidateQueries({ queryKey: ['crowd', 'live'] }),
+      queryClient.invalidateQueries({ queryKey: ['crowd', 'feeds'] }),
+    ]);
+  };
 
   const { data: messes = [], isLoading } = useQuery({
     queryKey: ['mess', 'list'],
@@ -93,7 +104,10 @@ export default function ManagerCrowdOverview() {
       const { data } = await axios.get('/api/mess/', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      return Array.isArray(data) ? data : data.results || [];
+      const messes = Array.isArray(data) ? data : data.results || [];
+      return messes.sort((left, right) =>
+        compareNaturalText(left.hall_name || left.name, right.hall_name || right.name)
+      );
     },
     staleTime: 300000,
   });
@@ -118,14 +132,15 @@ export default function ManagerCrowdOverview() {
   }
 
   return (
-    <div className="manager-overview">
-      <div className="crowd-dashboard__header">
+    <PullToRefresh onRefresh={handleRefresh}>
+      <div className="manager-overview">
+        <div className="crowd-dashboard__header">
         <div className="crowd-dashboard__header-row">
           <button
             className="crowd-dashboard__back-btn"
             onClick={() => {
               if (userRole === 'mess_manager') navigate('/manager/mess');
-              else if (userRole === 'admin') navigate('/admin/managers');
+              else if (userRole === 'admin' || userRole === 'admin_manager') navigate('/manager/admin');
               else navigate(-1);
             }}
             aria-label="Go back"
@@ -139,7 +154,7 @@ export default function ManagerCrowdOverview() {
         </p>
       </div>
 
-      <div className="crowd-dashboard__content">
+        <div className="crowd-dashboard__content">
         {/* All Mess Density */}
         <div className="crowd-section">
           <div className="crowd-section__title">
@@ -193,7 +208,7 @@ export default function ManagerCrowdOverview() {
           {userRole === 'mess_manager' && managerStats?.mess_id && (
             <div style={{ marginTop: 20, padding: 16, background: 'var(--st-light-gray)', borderRadius: 12, border: '1px solid var(--st-border)' }}>
               <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Add Video Feed Link</h3>
-              <form onSubmit={async (e) => {
+              <form noValidate onSubmit={async (e) => {
                 e.preventDefault();
                 setSubmittingFeed(true);
                 try {
@@ -227,10 +242,10 @@ export default function ManagerCrowdOverview() {
                   </select>
                 )}
                 <input 
-                  type="url" 
                   value={feedUrl} 
-                  onChange={(e) => setFeedUrl(e.target.value)} 
+                  onChange={(e) => setFeedUrl(sanitizeUrl(e.target.value))} 
                   placeholder="Enter RTSP or HTTP stream URL..." 
+                  {...STANDARD_INPUT_PROPS.url}
                   style={{ padding: 10, background: '#111', border: '1px solid #333', color: '#fff', borderRadius: 8 }}
                   required 
                 />
@@ -245,7 +260,8 @@ export default function ManagerCrowdOverview() {
             </div>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </PullToRefresh>
   );
 }

@@ -11,7 +11,7 @@ eggs/
 .eggs/
 lib/
 !frontend/src/lib/
-!frontend/src/lib/**
+!frontend/src/lib/*.js
 lib64/
 parts/
 sdist/
@@ -144,7 +144,6 @@ dist
 .env.development.local
 .env.test.local
 .env.production.local
-.env.prod.iitk
 
 # Logs
 logs
@@ -180,9 +179,7 @@ htmlcov/
 
 # Local development
 .local/
-
-# Sensitive Instructions
-server_instructions.md
+.env.prod.iitk
 
 # Utility Scripts
 backend/scripts/

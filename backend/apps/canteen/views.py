@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Max, Q, Sum
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.generics import (
@@ -46,6 +46,54 @@ def _get_manager_canteens(user):
     if not canteen_id:
         return Canteen.objects.none()
     return Canteen.objects.filter(id=canteen_id)
+
+
+def _normalize_category_name(value):
+    return " ".join(str(value or "").split())
+
+
+def _coerce_menu_category_input(data, canteen):
+    if "category" not in data:
+        return data
+
+    raw_category = data.get("category")
+    if raw_category in (None, ""):
+        data["category"] = None
+        return data
+
+    if not isinstance(raw_category, str):
+        return data
+
+    normalized_category = _normalize_category_name(raw_category)
+    if not normalized_category:
+        data["category"] = None
+        return data
+
+    if normalized_category.isdigit():
+        data["category"] = int(normalized_category)
+        return data
+
+    existing_category = CanteenMenuCategory.objects.filter(
+        canteen=canteen,
+        category_name__iexact=normalized_category,
+    ).first()
+    if existing_category:
+        data["category"] = existing_category.id
+        return data
+
+    max_display_order = (
+        CanteenMenuCategory.objects.filter(canteen=canteen).aggregate(max_display_order=Max("display_order"))[
+            "max_display_order"
+        ]
+        or 0
+    )
+    category = CanteenMenuCategory.objects.create(
+        canteen=canteen,
+        category_name=normalized_category.title(),
+        display_order=max_display_order + 1,
+    )
+    data["category"] = category.id
+    return data
 
 
 class CanteenListView(ListAPIView):
@@ -122,6 +170,7 @@ class CanteenManagerMenuListCreateView(ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
+        canteen = None
         if not request.user.is_superuser:
             canteen = _get_manager_canteens(request.user).first()
             if not canteen:
@@ -130,6 +179,12 @@ class CanteenManagerMenuListCreateView(ListCreateAPIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             data["canteen"] = canteen.id
+        else:
+            canteen = Canteen.objects.filter(id=data.get("canteen")).first()
+
+        if canteen:
+            data = _coerce_menu_category_input(data, canteen)
+
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
 
@@ -155,7 +210,13 @@ class CanteenManagerMenuDetailView(RetrieveUpdateDestroyAPIView):
 
     def patch(self, request, *args, **kwargs):
         item = self.get_object()
-        serializer = self.get_serializer(item, data=request.data, partial=True)
+        data = request.data.copy()
+        target_canteen = item.canteen
+        if request.user.is_superuser and data.get("canteen"):
+            target_canteen = Canteen.objects.filter(id=data.get("canteen")).first() or item.canteen
+
+        data = _coerce_menu_category_input(data, target_canteen)
+        serializer = self.get_serializer(item, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
 
         next_canteen = serializer.validated_data.get("canteen", item.canteen)

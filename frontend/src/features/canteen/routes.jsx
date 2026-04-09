@@ -2,7 +2,6 @@ import { Route } from 'react-router-dom';
 import CanteenListPage from './pages/CanteenListPage';
 import CanteenDetailPage from './pages/CanteenDetailPage';
 import CheckoutPage from './pages/CheckoutPage';
-import OrderHistoryPage from './pages/OrderHistoryPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import ManagerOrdersPage from './pages/ManagerOrdersPage';
 import ManagerOrderDetail from './pages/ManagerOrderDetail';
@@ -14,7 +13,6 @@ const canteenRoutes = [
   <Route key="canteen-list" path="/canteens" element={<CanteenListPage />} />,
   <Route key="canteen-detail" path="/canteens/:id" element={<CanteenDetailPage />} />,
   <Route key="canteen-checkout" path="/checkout" element={<CheckoutPage />} />,
-  <Route key="canteen-orders" path="/orders" element={<OrderHistoryPage />} />,
   <Route key="canteen-order-detail" path="/orders/:id" element={<OrderDetailPage />} />,
 
   /* Manager Routes */

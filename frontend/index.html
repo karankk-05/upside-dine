@@ -5,8 +5,265 @@
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Upside Dine - Campus Dining Platform</title>
+    <style>
+      :root {
+        --boot-bg: #000000;
+        --boot-accent: #cf2d2d;
+        --boot-accent-deep: rgba(120, 9, 9, 0.82);
+        --boot-accent-soft: rgba(207, 45, 45, 0.28);
+        --boot-text: #ffffff;
+      }
+
+      html,
+      body {
+        width: 100%;
+        min-height: 100%;
+        margin: 0;
+        background: var(--boot-bg);
+        color: var(--boot-text);
+      }
+
+      body {
+        overflow-x: hidden;
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      #root {
+        min-height: 100vh;
+      }
+
+      .app-boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        overflow: hidden;
+        display: grid;
+        place-items: center;
+        background: #000000;
+        transition: opacity 0.24s ease, visibility 0.24s ease;
+      }
+
+      .app-boot-splash--hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .app-boot-splash__embers {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        pointer-events: none;
+        overflow: hidden;
+        mask-image: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.45) 18%, #000 40%);
+      }
+
+      .app-boot-splash__ember {
+        position: absolute;
+        bottom: -10vh;
+        width: 4px;
+        height: 4px;
+        border-radius: 999px;
+        background:
+          radial-gradient(circle, rgba(255, 190, 160, 0.95) 0%, rgba(255, 84, 84, 0.8) 42%, rgba(116, 5, 5, 0.25) 100%);
+        box-shadow:
+          0 0 8px rgba(255, 74, 74, 0.34),
+          0 0 16px rgba(122, 8, 8, 0.18);
+        opacity: 0;
+        animation: app-boot-ember-rise linear infinite;
+      }
+
+      .app-boot-splash__ember:nth-child(1) {
+        left: 8%;
+        width: 3px;
+        height: 3px;
+        animation-duration: 6.8s;
+        animation-delay: -1.1s;
+      }
+
+      .app-boot-splash__ember:nth-child(2) {
+        left: 16%;
+        width: 5px;
+        height: 5px;
+        animation-duration: 8.3s;
+        animation-delay: -4.3s;
+      }
+
+      .app-boot-splash__ember:nth-child(3) {
+        left: 23%;
+        width: 4px;
+        height: 4px;
+        animation-duration: 7.2s;
+        animation-delay: -2.7s;
+      }
+
+      .app-boot-splash__ember:nth-child(4) {
+        left: 31%;
+        width: 2px;
+        height: 2px;
+        animation-duration: 6.1s;
+        animation-delay: -5.2s;
+      }
+
+      .app-boot-splash__ember:nth-child(5) {
+        left: 39%;
+        width: 4px;
+        height: 4px;
+        animation-duration: 7.7s;
+        animation-delay: -0.6s;
+      }
+
+      .app-boot-splash__ember:nth-child(6) {
+        left: 47%;
+        width: 5px;
+        height: 5px;
+        animation-duration: 8.8s;
+        animation-delay: -3.9s;
+      }
+
+      .app-boot-splash__ember:nth-child(7) {
+        left: 55%;
+        width: 3px;
+        height: 3px;
+        animation-duration: 6.4s;
+        animation-delay: -2.2s;
+      }
+
+      .app-boot-splash__ember:nth-child(8) {
+        left: 63%;
+        width: 2px;
+        height: 2px;
+        animation-duration: 5.7s;
+        animation-delay: -4.9s;
+      }
+
+      .app-boot-splash__ember:nth-child(9) {
+        left: 71%;
+        width: 4px;
+        height: 4px;
+        animation-duration: 7.1s;
+        animation-delay: -1.8s;
+      }
+
+      .app-boot-splash__ember:nth-child(10) {
+        left: 79%;
+        width: 5px;
+        height: 5px;
+        animation-duration: 8.5s;
+        animation-delay: -5.6s;
+      }
+
+      .app-boot-splash__ember:nth-child(11) {
+        left: 87%;
+        width: 3px;
+        height: 3px;
+        animation-duration: 6.6s;
+        animation-delay: -2.9s;
+      }
+
+      .app-boot-splash__ember:nth-child(12) {
+        left: 94%;
+        width: 4px;
+        height: 4px;
+        animation-duration: 7.9s;
+        animation-delay: -4.1s;
+      }
+
+      .app-boot-splash__core {
+        position: relative;
+        z-index: 1;
+        width: min(100%, 420px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+        padding: 24px;
+        transform: translateY(-5vh);
+      }
+
+      .app-boot-splash__logo {
+        width: clamp(132px, 38vw, 190px);
+        height: clamp(132px, 38vw, 190px);
+        display: block;
+        object-fit: contain;
+      }
+
+      .app-boot-splash__spinner {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.08);
+        border-top-color: var(--boot-accent);
+        border-right-color: var(--boot-accent-deep);
+        box-shadow: 0 0 22px var(--boot-accent-soft);
+        animation: app-boot-spin 0.8s linear infinite;
+      }
+
+      @keyframes app-boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes app-boot-ember-rise {
+        0% {
+          transform: translate3d(0, 0, 0) scale(0.8);
+          opacity: 0;
+        }
+
+        12% {
+          opacity: 0.82;
+        }
+
+        68% {
+          opacity: 0.5;
+        }
+
+        100% {
+          transform: translate3d(10px, -112vh, 0) scale(1.45);
+          opacity: 0;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .app-boot-splash,
+        .app-boot-splash__spinner,
+        .app-boot-splash__ember {
+          transition: none;
+          animation: none;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .app-boot-splash__core {
+          gap: 20px;
+          transform: translateY(-2vh);
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="app-boot-splash" class="app-boot-splash" aria-hidden="true">
+      <div class="app-boot-splash__embers" aria-hidden="true">
+        <span class="app-boot-splash__ember"></span>
+        <span class="app-boot-splash__ember"></span>
+        <span class="app-boot-splash__ember"></span>
+        <span class="app-boot-splash__ember"></span>
+        <span class="app-boot-splash__ember"></span>
+        <span class="app-boot-splash__ember"></span>
+        <span class="app-boot-splash__ember"></span>
+        <span class="app-boot-splash__ember"></span>
+        <span class="app-boot-splash__ember"></span>
+        <span class="app-boot-splash__ember"></span>
+        <span class="app-boot-splash__ember"></span>
+        <span class="app-boot-splash__ember"></span>
+      </div>
+      <div class="app-boot-splash__core">
+        <img class="app-boot-splash__logo" src="/logo.png" alt="" />
+        <div class="app-boot-splash__spinner"></div>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

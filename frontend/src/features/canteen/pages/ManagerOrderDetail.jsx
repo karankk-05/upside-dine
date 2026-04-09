@@ -208,7 +208,7 @@ export default function ManagerOrderDetail() {
             <p style={{ fontSize: 12, color: '#999', marginBottom: 16 }}>Enter the 6-digit OTP from the student's app</p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 12 }}>
               {[0, 1, 2, 3, 4, 5].map((i) => (
-                <input key={i} maxLength={1} value={otpInput[i] || ''}
+                <input key={i} type="text" inputMode="numeric" pattern="[0-9]" autoComplete={i === 0 ? 'one-time-code' : 'off'} maxLength={1} value={otpInput[i] || ''}
                   onChange={(e) => {
                     const val = e.target.value.replace(/\D/, '');
                     const arr = otpInput.split(''); arr[i] = val;

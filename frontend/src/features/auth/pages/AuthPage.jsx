@@ -1,23 +1,22 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import LoginForm from '../components/LoginForm';
 import SignupForm from '../components/SignupForm';
 import './AuthPage.css';
 
 const AuthPage = () => {
-  const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedRole, setSelectedRole] = useState('student');
-  const navigate = useNavigate();
+  const authMode = searchParams.get('mode') === 'signup' ? 'signup' : 'login';
 
-  // Only show Student role for signup, all roles for login
-  const roles = authMode === 'signup' 
-    ? [{ id: 'student', label: 'Student' }]
-    : [
-        { id: 'student', label: 'Student' },
-        { id: 'mess_manager', label: 'Mess Manager' },
-        { id: 'canteen_manager', label: 'Canteen Manager' },
-        { id: 'delivery_person', label: 'Delivery Person' },
-      ];
+  const toggleAuthMode = () => {
+    if (authMode === 'login') {
+      setSearchParams({ mode: 'signup' });
+      return;
+    }
+
+    setSearchParams({});
+  };
 
   return (
     <div className="auth-container">
@@ -52,7 +51,7 @@ const AuthPage = () => {
               : 'Already have an account? '}
             <button
               className="auth-toggle-link"
-              onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+              onClick={toggleAuthMode}
             >
               {authMode === 'login' ? 'Register' : 'Sign In'}
             </button>

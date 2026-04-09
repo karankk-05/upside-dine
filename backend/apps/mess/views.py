@@ -1,4 +1,6 @@
+import re
 from decimal import Decimal
+from uuid import uuid4
 
 from django.core.cache import cache
 from django.http import HttpResponse
@@ -30,6 +32,13 @@ from .services import QRGenerationError, build_booking_qr_payload, generate_book
 
 WORKER_SCAN_HISTORY_TTL_SECONDS = 2 * 60 * 60
 WORKER_SCAN_HISTORY_LIMIT = 20
+WORKER_SCAN_STATUS_SUCCESS = "success"
+WORKER_SCAN_STATUS_FAILED = "failed"
+
+
+def _natural_sort_key(value):
+    parts = re.split(r"(\d+)", value or "")
+    return [int(part) if part.isdigit() else part.lower() for part in parts]
 
 
 def _get_student_from_request(request):
@@ -116,32 +125,162 @@ def _worker_scan_history_cache_key(staff_id):
     return f"mess:worker:scan-history:{staff_id}"
 
 
-def _record_worker_scan_history(staff_id, booking_id):
-    key = _worker_scan_history_cache_key(staff_id)
-    existing_ids = cache.get(key, [])
-    if not isinstance(existing_ids, (list, tuple)):
-        existing_ids = []
-
-    normalized_existing_ids = []
-    for item_id in existing_ids:
-        try:
-            parsed_id = int(item_id)
-        except (TypeError, ValueError):
-            continue
-        if parsed_id != int(booking_id):
-            normalized_existing_ids.append(parsed_id)
-
-    normalized_ids = [int(booking_id)] + normalized_existing_ids
-    cache.set(key, normalized_ids[:WORKER_SCAN_HISTORY_LIMIT], timeout=WORKER_SCAN_HISTORY_TTL_SECONDS)
+def _safe_int(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
-def _get_worker_scan_history_ids(staff_id):
+def _extract_worker_scan_error_message(detail):
+    if isinstance(detail, dict):
+        first_key = next(iter(detail), None)
+        if first_key is None:
+            return "Verification failed."
+        return _extract_worker_scan_error_message(detail[first_key])
+
+    if isinstance(detail, (list, tuple)):
+        if not detail:
+            return "Verification failed."
+        return _extract_worker_scan_error_message(detail[0])
+
+    text = str(detail).strip()
+    return text or "Verification failed."
+
+
+def _normalize_worker_scan_history_entry(raw_entry):
+    if isinstance(raw_entry, dict):
+        scan_status = raw_entry.get("scan_status")
+        if scan_status not in {WORKER_SCAN_STATUS_SUCCESS, WORKER_SCAN_STATUS_FAILED}:
+            return None
+
+        booking_id = _safe_int(raw_entry.get("booking_id"))
+        if scan_status == WORKER_SCAN_STATUS_SUCCESS and booking_id is None:
+            return None
+
+        normalized_entry = {
+            "entry_id": str(raw_entry.get("entry_id") or uuid4().hex),
+            "scan_status": scan_status,
+            "attempted_at": raw_entry.get("attempted_at"),
+        }
+        if booking_id is not None:
+            normalized_entry["booking_id"] = booking_id
+
+        attempted_booking_id = _safe_int(raw_entry.get("attempted_booking_id"))
+        if attempted_booking_id is not None:
+            normalized_entry["attempted_booking_id"] = attempted_booking_id
+
+        if scan_status == WORKER_SCAN_STATUS_FAILED:
+            failure_reason = raw_entry.get("failure_reason")
+            if failure_reason:
+                normalized_entry["failure_reason"] = str(failure_reason)
+
+            identifier_type = raw_entry.get("identifier_type")
+            if identifier_type in {"booking_id", "qr_code"}:
+                normalized_entry["identifier_type"] = identifier_type
+
+        return normalized_entry
+
+    legacy_booking_id = _safe_int(raw_entry)
+    if legacy_booking_id is None:
+        return None
+
+    return {
+        "entry_id": f"legacy-success-{legacy_booking_id}",
+        "scan_status": WORKER_SCAN_STATUS_SUCCESS,
+        "booking_id": legacy_booking_id,
+    }
+
+
+def _get_worker_scan_history_entries(staff_id):
     key = _worker_scan_history_cache_key(staff_id)
     values = cache.get(key, [])
-    try:
-        return [int(item) for item in values]
-    except (TypeError, ValueError):
+    if not isinstance(values, (list, tuple)):
         return []
+
+    normalized_entries = []
+    for raw_entry in values:
+        normalized_entry = _normalize_worker_scan_history_entry(raw_entry)
+        if normalized_entry is not None:
+            normalized_entries.append(normalized_entry)
+
+    return normalized_entries[:WORKER_SCAN_HISTORY_LIMIT]
+
+
+def _set_worker_scan_history_entries(staff_id, entries):
+    cache.set(
+        _worker_scan_history_cache_key(staff_id),
+        entries[:WORKER_SCAN_HISTORY_LIMIT],
+        timeout=WORKER_SCAN_HISTORY_TTL_SECONDS,
+    )
+
+
+def _record_worker_scan_history(staff_id, *, scan_status, booking=None, failure_reason=None, payload=None):
+    payload = payload or {}
+    attempted_booking_id = _safe_int(payload.get("booking_id"))
+    identifier_type = "booking_id" if attempted_booking_id is not None else ("qr_code" if payload.get("qr_code") else None)
+
+    history_entry = {
+        "entry_id": uuid4().hex,
+        "scan_status": scan_status,
+        "attempted_at": timezone.now().isoformat(),
+    }
+    if booking is not None:
+        history_entry["booking_id"] = booking.id
+    if attempted_booking_id is not None:
+        history_entry["attempted_booking_id"] = attempted_booking_id
+    if scan_status == WORKER_SCAN_STATUS_FAILED:
+        history_entry["failure_reason"] = str(failure_reason or "Verification failed.")
+        if identifier_type:
+            history_entry["identifier_type"] = identifier_type
+
+    existing_entries = _get_worker_scan_history_entries(staff_id)
+    if scan_status == WORKER_SCAN_STATUS_SUCCESS and booking is not None:
+        existing_entries = [
+            entry
+            for entry in existing_entries
+            if not (
+                entry.get("scan_status") == WORKER_SCAN_STATUS_SUCCESS
+                and entry.get("booking_id") == booking.id
+            )
+        ]
+
+    _set_worker_scan_history_entries(staff_id, [history_entry, *existing_entries])
+
+
+def _build_worker_scan_history_response_entry(entry, *, booking=None, booking_data=None):
+    response_entry = dict(booking_data or {})
+    if not response_entry:
+        fallback_id = entry.get("attempted_booking_id") or entry.get("booking_id") or entry["entry_id"]
+        response_entry = {
+            "id": fallback_id,
+            "menu_item": None,
+            "quantity": None,
+            "total_price": None,
+            "meal_type": None,
+            "booking_date": None,
+            "status": None,
+            "qr_expires_at": None,
+            "created_at": entry.get("attempted_at"),
+            "booking_reference": None,
+        }
+
+    attempted_at = entry.get("attempted_at")
+    if attempted_at is None and booking is not None:
+        attempted_at = (booking.redeemed_at or booking.updated_at or booking.created_at).isoformat()
+
+    response_entry["entry_id"] = entry.get("entry_id") or f"success-{response_entry['id']}"
+    response_entry["scan_status"] = entry.get("scan_status", WORKER_SCAN_STATUS_SUCCESS)
+    response_entry["attempted_at"] = attempted_at or response_entry.get("created_at")
+
+    if response_entry["scan_status"] == WORKER_SCAN_STATUS_FAILED:
+        response_entry["failure_reason"] = entry.get("failure_reason") or "Verification failed."
+        response_entry["identifier_type"] = entry.get("identifier_type")
+        response_entry["attempted_booking_id"] = entry.get("attempted_booking_id")
+        if not response_entry.get("booking_reference") and entry.get("attempted_booking_id"):
+            response_entry["booking_reference"] = f"Booking #{entry['attempted_booking_id']}"
+
+    return response_entry
 
 
 def _parse_bool(value, field_name):
@@ -187,7 +326,10 @@ class StudentMessListView(generics.ListAPIView):
     serializer_class = MessSerializer
 
     def get_queryset(self):
-        return Mess.objects.filter(is_active=True).order_by("name")
+        return sorted(
+            Mess.objects.filter(is_active=True),
+            key=lambda mess: _natural_sort_key(mess.hall_name or mess.name),
+        )
 
 
 class StudentMessMenuListView(generics.ListAPIView):
@@ -323,7 +465,14 @@ class ManagerMenuListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         mess = _get_manager_mess(self.request)
-        return MessMenuItem.objects.select_related("mess").filter(mess=mess).order_by(
+        queryset = MessMenuItem.objects.select_related("mess").filter(mess=mess)
+        is_active_value = self.request.query_params.get("is_active")
+        if is_active_value is not None:
+            _parse_bool(is_active_value, "is_active")
+        if is_active_value is None:
+            queryset = queryset.filter(is_active=True)
+
+        return queryset.order_by(
             "day_of_week",
             "meal_type",
             "item_name",
@@ -516,9 +665,32 @@ class WorkerVerifyBookingView(generics.GenericAPIView):
                 "allowed_mess_id": worker_assignment.mess_id,
             },
         )
-        serializer.is_valid(raise_exception=True)
-        booking = serializer.save(staff=staff)
-        _record_worker_scan_history(staff.id, booking.id)
+        try:
+            serializer.is_valid(raise_exception=True)
+            booking = serializer.save(staff=staff)
+        except ValidationError as exc:
+            booking = None
+            if getattr(serializer, "validated_data", None):
+                try:
+                    booking = serializer.get_booking()
+                except ValidationError:
+                    booking = None
+
+            _record_worker_scan_history(
+                staff.id,
+                scan_status=WORKER_SCAN_STATUS_FAILED,
+                booking=booking,
+                failure_reason=_extract_worker_scan_error_message(exc.detail),
+                payload=payload,
+            )
+            raise
+
+        _record_worker_scan_history(
+            staff.id,
+            scan_status=WORKER_SCAN_STATUS_SUCCESS,
+            booking=booking,
+            payload=payload,
+        )
         return Response(
             MessBookingDetailSerializer(booking, context={"request": request}).data,
             status=status.HTTP_200_OK,
@@ -532,19 +704,57 @@ class WorkerScanHistoryView(APIView):
         staff = _get_staff_from_request(request)
         worker_assignment = _get_worker_assignment(request)
 
-        cached_ids = _get_worker_scan_history_ids(staff.id)
-        queryset = MessBooking.objects.select_related("menu_item", "menu_item__mess", "redeemed_by_staff").filter(
+        cached_entries = _get_worker_scan_history_entries(staff.id)
+        bookings_queryset = MessBooking.objects.select_related("menu_item", "menu_item__mess", "redeemed_by_staff").filter(
             menu_item__mess_id=worker_assignment.mess_id,
-            redeemed_by_staff=staff,
-            status=MessBooking.Status.REDEEMED,
         )
 
-        if cached_ids:
-            queryset = queryset.filter(id__in=cached_ids)
-            bookings_by_id = {booking.id: booking for booking in queryset}
-            ordered_bookings = [bookings_by_id[booking_id] for booking_id in cached_ids if booking_id in bookings_by_id]
+        if cached_entries:
+            booking_ids = [
+                entry["booking_id"]
+                for entry in cached_entries
+                if entry.get("booking_id") is not None
+            ]
+            bookings = list(bookings_queryset.filter(id__in=booking_ids))
+            bookings_by_id = {booking.id: booking for booking in bookings}
+            serialized_bookings = MessBookingListSerializer(
+                bookings,
+                many=True,
+                context={"request": request},
+            ).data
+            booking_data_by_id = {item["id"]: item for item in serialized_bookings}
+            data = [
+                _build_worker_scan_history_response_entry(
+                    entry,
+                    booking=bookings_by_id.get(entry.get("booking_id")),
+                    booking_data=booking_data_by_id.get(entry.get("booking_id")),
+                )
+                for entry in cached_entries
+            ]
         else:
-            ordered_bookings = list(queryset.order_by("-redeemed_at", "-updated_at")[:WORKER_SCAN_HISTORY_LIMIT])
+            ordered_bookings = list(
+                bookings_queryset.filter(
+                    redeemed_by_staff=staff,
+                    status=MessBooking.Status.REDEEMED,
+                ).order_by("-redeemed_at", "-updated_at")[:WORKER_SCAN_HISTORY_LIMIT]
+            )
+            serialized_bookings = MessBookingListSerializer(
+                ordered_bookings,
+                many=True,
+                context={"request": request},
+            ).data
+            booking_data_by_id = {item["id"]: item for item in serialized_bookings}
+            data = [
+                _build_worker_scan_history_response_entry(
+                    {
+                        "entry_id": f"success-{booking.id}",
+                        "scan_status": WORKER_SCAN_STATUS_SUCCESS,
+                        "booking_id": booking.id,
+                    },
+                    booking=booking,
+                    booking_data=booking_data_by_id.get(booking.id),
+                )
+                for booking in ordered_bookings
+            ]
 
-        data = MessBookingListSerializer(ordered_bookings, many=True, context={"request": request}).data
         return Response(data, status=status.HTTP_200_OK)

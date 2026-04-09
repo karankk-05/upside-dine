@@ -3,7 +3,7 @@
   "appName": "Upside Dine",
   "webDir": "dist",
   "server": {
-    "url": "https://cushy-chanda-unmaltable.ngrok-free.dev",
+    "url": "https://upside-dine.netlify.app",
     "cleartext": true
   }
 }

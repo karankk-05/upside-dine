@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, History, Upload, LogOut, User } from 'lucide-react';
+import { ArrowLeft, Camera, History, Upload, LogOut, User } from 'lucide-react';
 import { useVerifyQR } from '../hooks/useVerifyQR';
 import VerificationResult from '../components/VerificationResult';
+import { FIELD_LIMITS, sanitizeUnstructuredText } from '../../../lib/formValidation';
 import '../mess.css';
 
 const QRScannerPage = () => {
@@ -181,6 +182,14 @@ const QRScannerPage = () => {
   return (
     <div className="mess-page">
       <div className="mess-page-header">
+        <button
+          type="button"
+          className="mess-back-btn"
+          onClick={() => navigate('/profile')}
+          aria-label="Go back"
+        >
+          <ArrowLeft size={18} />
+        </button>
         <h1 className="mess-page-title">QR Scanner</h1>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
           <div
@@ -200,7 +209,7 @@ const QRScannerPage = () => {
               background: 'var(--st-light-gray)', border: '2px solid var(--st-text-dim)',
               borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
-            onClick={() => navigate('/worker/profile')}
+            onClick={() => navigate('/profile')}
             title="Profile"
           >
             <User size={16} color="var(--st-text-dim)" />
@@ -295,8 +304,11 @@ const QRScannerPage = () => {
             className="mess-input-field"
             type="text"
             value={bookingIdInput}
-            onChange={(e) => setBookingIdInput(e.target.value)}
+            onChange={(e) => setBookingIdInput(sanitizeUnstructuredText(e.target.value, FIELD_LIMITS.qrInput))}
             placeholder="Enter booking ID (e.g. 1) or QR code string"
+            maxLength={FIELD_LIMITS.qrInput}
+            autoComplete="off"
+            spellCheck={false}
             onKeyDown={(e) => e.key === 'Enter' && handleManualVerify()}
           />
         </div>

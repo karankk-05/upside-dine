@@ -1,6 +1,18 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
+import {
+  getInlineValidationMessage,
+  STANDARD_INPUT_PROPS,
+  sanitizeEmail,
+  sanitizeOtp,
+  sanitizePassword,
+  sanitizePersonName,
+  sanitizePhone,
+  sanitizeRollNumber,
+  sanitizeRoomNumber,
+} from '../../../lib/formValidation';
+import { compareNaturalText } from '../../../lib/naturalSort';
 
 const EyeIcon = ({ isVisible }) => (
   <svg
@@ -27,9 +39,41 @@ const EyeIcon = ({ isVisible }) => (
   </svg>
 );
 
+const REGISTRATION_FIELD_NAMES = [
+  'full_name',
+  'email',
+  'phone',
+  'roll_number',
+  'hostel_name',
+  'room_number',
+  'employee_code',
+  'password',
+];
+
+const getApiErrorMessage = (value) => {
+  if (Array.isArray(value)) {
+    return getApiErrorMessage(value[0]);
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (value && typeof value === 'object') {
+    for (const nestedValue of Object.values(value)) {
+      const nestedMessage = getApiErrorMessage(nestedValue);
+      if (nestedMessage) {
+        return nestedMessage;
+      }
+    }
+  }
+
+  return '';
+};
+
 const SignupForm = ({ selectedRole }) => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1); // 1: Basic Info, 2: OTP Verification
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -48,7 +92,10 @@ const SignupForm = ({ selectedRole }) => {
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [serverFieldErrors, setServerFieldErrors] = useState({});
   const [availableHalls, setAvailableHalls] = useState([]);
+  const [blurredFields, setBlurredFields] = useState({});
+  const step = searchParams.get('step') === 'verify' ? 2 : 1;
 
   // Fetch available halls for student registration
   useEffect(() => {
@@ -57,7 +104,8 @@ const SignupForm = ({ selectedRole }) => {
         try {
           const response = await axios.get('/api/public/halls/');
           // response.data is an array of strings e.g. ["Hall 1", "Hall 2"]
-          setAvailableHalls(response.data);
+          const halls = Array.isArray(response.data) ? response.data : [];
+          setAvailableHalls(halls.sort(compareNaturalText));
         } catch (err) {
           console.error("Halls currently not available", err);
         }
@@ -66,17 +114,104 @@ const SignupForm = ({ selectedRole }) => {
     }
   }, [selectedRole]);
 
+  useEffect(() => {
+    if (step === 2 && !formData.email) {
+      setSearchParams({ mode: 'signup' }, { replace: true });
+    }
+  }, [formData.email, setSearchParams, step]);
+
   const handleChange = (e) => {
+    const { name, value } = e.target;
+    const nextValueByField = {
+      email: sanitizeEmail(value),
+      password: sanitizePassword(value),
+      confirmPassword: sanitizePassword(value),
+      phone: sanitizePhone(value),
+      full_name: sanitizePersonName(value),
+      roll_number: sanitizeRollNumber(value),
+      room_number: sanitizeRoomNumber(value),
+    };
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: nextValueByField[name] ?? value,
+    });
+    setError('');
+    setServerFieldErrors((current) => {
+      if (!current[name]) {
+        return current;
+      }
+      const nextErrors = { ...current };
+      delete nextErrors[name];
+      return nextErrors;
     });
   };
+
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setBlurredFields((current) => ({ ...current, [name]: true }));
+  };
+
+  const fullNameClientError = getInlineValidationMessage('personName', formData.full_name, {
+    required: true,
+  });
+  const emailClientError = getInlineValidationMessage('email', formData.email, { required: true });
+  const phoneClientError = getInlineValidationMessage('phone', formData.phone, { required: true });
+  const rollNumberClientError =
+    selectedRole === 'student'
+      ? getInlineValidationMessage('rollNumber', formData.roll_number, { required: true })
+      : '';
+  const passwordClientError = getInlineValidationMessage('password', formData.password, {
+    required: true,
+  });
+  const confirmPasswordClientError = !formData.confirmPassword
+    ? 'This field is required.'
+    : formData.password === formData.confirmPassword
+    ? ''
+    : 'Passwords do not match.';
+  const otpError = getInlineValidationMessage('otp', otp, { required: true });
+
+  const fullNameError = serverFieldErrors.full_name || fullNameClientError;
+  const emailError = serverFieldErrors.email || emailClientError;
+  const phoneError = serverFieldErrors.phone || phoneClientError;
+  const rollNumberError = serverFieldErrors.roll_number || rollNumberClientError;
+  const hostelNameError = serverFieldErrors.hostel_name || '';
+  const roomNumberError = serverFieldErrors.room_number || '';
+  const passwordError = serverFieldErrors.password || passwordClientError;
+  const confirmPasswordError = confirmPasswordClientError;
+
+  const shouldShowFieldMessage = (fieldName, message) =>
+    Boolean(message) && (blurredFields[fieldName] || Boolean(serverFieldErrors[fieldName]));
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setServerFieldErrors({});
+
+    const fieldErrors = [
+      fullNameClientError,
+      emailClientError,
+      phoneClientError,
+      rollNumberClientError,
+      passwordClientError,
+      confirmPasswordClientError,
+    ].filter(Boolean);
+
+    if (fieldErrors.length > 0) {
+      setBlurredFields((current) => ({
+        ...current,
+        ...(fullNameClientError ? { full_name: true } : {}),
+        ...(emailClientError ? { email: true } : {}),
+        ...(phoneClientError ? { phone: true } : {}),
+        ...(rollNumberClientError ? { roll_number: true } : {}),
+        ...(passwordClientError ? { password: true } : {}),
+        ...(confirmPasswordClientError ? { confirmPassword: true } : {}),
+      }));
+      setError('Please correct the highlighted fields before continuing.');
+      setLoading(false);
+      return;
+    }
 
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
@@ -108,18 +243,37 @@ const SignupForm = ({ selectedRole }) => {
       
       const response = await axios.post('/api/auth/register/', payload);
       console.log('Registration response:', response.data);
-      setStep(2); // Move to OTP verification
+      setBlurredFields({});
+      setSearchParams({ mode: 'signup', step: 'verify' });
     } catch (err) {
       console.error('Registration error:', err.response?.data);
-      const errorMessage = 
-        err.response?.data?.email?.[0] ||
-        err.response?.data?.phone?.[0] ||
-        err.response?.data?.roll_number?.[0] ||
-        err.response?.data?.employee_code?.[0] ||
-        err.response?.data?.message ||
-        err.response?.data?.detail ||
-        err.response?.data?.error ||
-        (typeof err.response?.data === 'string' ? err.response.data : null) ||
+      const responseData = err.response?.data;
+      const nextServerFieldErrors = {};
+
+      if (responseData && typeof responseData === 'object' && !Array.isArray(responseData)) {
+        REGISTRATION_FIELD_NAMES.forEach((fieldName) => {
+          const fieldMessage = getApiErrorMessage(responseData[fieldName]);
+          if (fieldMessage) {
+            nextServerFieldErrors[fieldName] = fieldMessage;
+          }
+        });
+      }
+
+      if (Object.keys(nextServerFieldErrors).length > 0) {
+        setServerFieldErrors(nextServerFieldErrors);
+        setBlurredFields((current) => ({
+          ...current,
+          ...Object.fromEntries(Object.keys(nextServerFieldErrors).map((fieldName) => [fieldName, true])),
+        }));
+      }
+
+      const errorMessage =
+        getApiErrorMessage(responseData?.non_field_errors) ||
+        Object.values(nextServerFieldErrors)[0] ||
+        getApiErrorMessage(responseData?.message) ||
+        getApiErrorMessage(responseData?.detail) ||
+        getApiErrorMessage(responseData?.error) ||
+        (typeof responseData === 'string' ? responseData : null) ||
         'Registration failed. Please check your information and try again.';
       setError(errorMessage);
     } finally {
@@ -131,6 +285,13 @@ const SignupForm = ({ selectedRole }) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    if (otpError) {
+      setBlurredFields((current) => ({ ...current, otp: true }));
+      setError('Please enter the OTP correctly.');
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await axios.post('/api/auth/verify-otp/', {
@@ -167,7 +328,7 @@ const SignupForm = ({ selectedRole }) => {
 
   if (step === 2) {
     return (
-      <form className="auth-form" onSubmit={handleVerifyOTP}>
+      <form className="auth-form" onSubmit={handleVerifyOTP} noValidate>
         {error && <div className="error-message">{error}</div>}
 
         <div className="otp-info">
@@ -177,16 +338,26 @@ const SignupForm = ({ selectedRole }) => {
         </div>
 
         <div className="input-group">
-          <label className="input-label">Enter OTP</label>
+          <label className="input-label">
+            <span className="input-label-row">
+              Enter OTP <strong className="input-label-required">*</strong>
+            </span>
+          </label>
           <input
-            type="text"
-            className="input-field"
+            className={`input-field ${shouldShowFieldMessage('otp', otpError) ? 'input-field--error' : ''}`}
             placeholder="Enter 6-digit OTP"
             value={otp}
-            onChange={(e) => setOtp(e.target.value)}
-            maxLength={6}
+            onChange={(e) => {
+              setOtp(sanitizeOtp(e.target.value));
+              setError('');
+            }}
+            onBlur={() => setBlurredFields((current) => ({ ...current, otp: true }))}
+            {...STANDARD_INPUT_PROPS.otp}
             required
           />
+          {shouldShowFieldMessage('otp', otpError) ? (
+            <small className="input-helper-text input-helper-text--error">{otpError}</small>
+          ) : null}
         </div>
 
         <button type="submit" className="btn-primary" disabled={loading}>
@@ -196,7 +367,11 @@ const SignupForm = ({ selectedRole }) => {
         <button
           type="button"
           className="btn-secondary"
-          onClick={() => setStep(1)}
+          onClick={() => {
+            setBlurredFields({});
+            setServerFieldErrors({});
+            setSearchParams({ mode: 'signup' });
+          }}
         >
           Back to Registration
         </button>
@@ -205,28 +380,39 @@ const SignupForm = ({ selectedRole }) => {
   }
 
   return (
-    <form className="auth-form" onSubmit={handleRegister}>
+    <form className="auth-form" onSubmit={handleRegister} noValidate>
       {error && <div className="error-message">{error}</div>}
 
       <div className="input-group">
-        <label className="input-label">Full Name</label>
+        <label className="input-label">
+          <span className="input-label-row">
+            Full Name <strong className="input-label-required">*</strong>
+          </span>
+        </label>
         <input
-          type="text"
           name="full_name"
-          className="input-field"
+          className={`input-field ${shouldShowFieldMessage('full_name', fullNameError) ? 'input-field--error' : ''}`}
           placeholder="Enter your full name"
           value={formData.full_name}
           onChange={handleChange}
+          onBlur={handleBlur}
+          {...STANDARD_INPUT_PROPS.personName}
           required
         />
+        {shouldShowFieldMessage('full_name', fullNameError) ? (
+          <small className="input-helper-text input-helper-text--error">{fullNameError}</small>
+        ) : null}
       </div>
 
       <div className="input-group">
-        <label className="input-label">Email</label>
+        <label className="input-label">
+          <span className="input-label-row">
+            Email <strong className="input-label-required">*</strong>
+          </span>
+        </label>
         <input
-          type="email"
           name="email"
-          className="input-field"
+          className={`input-field ${shouldShowFieldMessage('email', emailError) ? 'input-field--error' : ''}`}
           placeholder={
             selectedRole === 'student'
               ? 'your.email@iitk.ac.in'
@@ -234,77 +420,113 @@ const SignupForm = ({ selectedRole }) => {
           }
           value={formData.email}
           onChange={handleChange}
+          onBlur={handleBlur}
+          {...STANDARD_INPUT_PROPS.email}
           required
         />
+        {shouldShowFieldMessage('email', emailError) ? (
+          <small className="input-helper-text input-helper-text--error">{emailError}</small>
+        ) : null}
       </div>
 
       <div className="input-group">
-        <label className="input-label">Phone</label>
+        <label className="input-label">
+          <span className="input-label-row">
+            Phone <strong className="input-label-required">*</strong>
+          </span>
+        </label>
         <input
-          type="tel"
           name="phone"
-          className="input-field"
+          className={`input-field ${shouldShowFieldMessage('phone', phoneError) ? 'input-field--error' : ''}`}
           placeholder="Enter your phone number"
           value={formData.phone}
           onChange={handleChange}
+          onBlur={handleBlur}
+          {...STANDARD_INPUT_PROPS.phone}
           required
         />
+        {shouldShowFieldMessage('phone', phoneError) ? (
+          <small className="input-helper-text input-helper-text--error">{phoneError}</small>
+        ) : null}
       </div>
 
       {selectedRole === 'student' && (
         <>
           <div className="input-group">
-            <label className="input-label">Roll Number</label>
+            <label className="input-label">
+              <span className="input-label-row">
+                Roll Number <strong className="input-label-required">*</strong>
+              </span>
+            </label>
             <input
-              type="text"
               name="roll_number"
-              className="input-field"
+              className={`input-field ${shouldShowFieldMessage('roll_number', rollNumberError) ? 'input-field--error' : ''}`}
               placeholder="Enter your roll number"
               value={formData.roll_number}
               onChange={handleChange}
+              onBlur={handleBlur}
+              {...STANDARD_INPUT_PROPS.rollNumber}
               required
             />
+            {shouldShowFieldMessage('roll_number', rollNumberError) ? (
+              <small className="input-helper-text input-helper-text--error">{rollNumberError}</small>
+            ) : null}
           </div>
 
           <div className="input-group">
             <label className="input-label">Hostel / Hall</label>
             <select
               name="hostel_name"
-              className="input-field"
+              className={`input-field ${shouldShowFieldMessage('hostel_name', hostelNameError) ? 'input-field--error' : ''}`}
               value={formData.hostel_name}
               onChange={handleChange}
+              onBlur={handleBlur}
             >
               <option value="">Select your hostel</option>
               {availableHalls.map((hall) => (
                 <option key={hall} value={hall}>{hall}</option>
               ))}
             </select>
+            {shouldShowFieldMessage('hostel_name', hostelNameError) ? (
+              <small className="input-helper-text input-helper-text--error">{hostelNameError}</small>
+            ) : null}
           </div>
 
           <div className="input-group">
             <label className="input-label">Room Number</label>
             <input
-              type="text"
               name="room_number"
-              className="input-field"
+              className={`input-field ${shouldShowFieldMessage('room_number', roomNumberError) ? 'input-field--error' : ''}`}
               placeholder="Enter your room number"
               value={formData.room_number}
               onChange={handleChange}
+              onBlur={handleBlur}
+              {...STANDARD_INPUT_PROPS.roomNumber}
             />
+            {shouldShowFieldMessage('room_number', roomNumberError) ? (
+              <small className="input-helper-text input-helper-text--error">{roomNumberError}</small>
+            ) : null}
           </div>
         </>
       )}
 
       <div className="input-group">
-        <label className="input-label">Password</label>
+        <label className="input-label">
+          <span className="input-label-row">
+            Password <strong className="input-label-required">*</strong>
+          </span>
+        </label>
         <div className="password-input-wrapper">
           <input
             type={showPassword ? 'text' : 'password'}
             name="password"
-            className="input-field"
+            className={`input-field ${shouldShowFieldMessage('password', passwordError) ? 'input-field--error' : ''}`}
             placeholder="Create a password"
             value={formData.password}
             onChange={handleChange}
+            onBlur={handleBlur}
+            {...STANDARD_INPUT_PROPS.password}
+            autoComplete="new-password"
             required
           />
           <button
@@ -316,18 +538,28 @@ const SignupForm = ({ selectedRole }) => {
             <EyeIcon isVisible={showPassword} />
           </button>
         </div>
+        {shouldShowFieldMessage('password', passwordError) ? (
+          <small className="input-helper-text input-helper-text--error">{passwordError}</small>
+        ) : null}
       </div>
 
       <div className="input-group">
-        <label className="input-label">Confirm Password</label>
+        <label className="input-label">
+          <span className="input-label-row">
+            Confirm Password <strong className="input-label-required">*</strong>
+          </span>
+        </label>
         <div className="password-input-wrapper">
           <input
             type={showConfirmPassword ? 'text' : 'password'}
             name="confirmPassword"
-            className="input-field"
+            className={`input-field ${shouldShowFieldMessage('confirmPassword', confirmPasswordError) ? 'input-field--error' : ''}`}
             placeholder="Confirm your password"
             value={formData.confirmPassword}
             onChange={handleChange}
+            onBlur={handleBlur}
+            {...STANDARD_INPUT_PROPS.password}
+            autoComplete="new-password"
             required
           />
           <button
@@ -339,6 +571,9 @@ const SignupForm = ({ selectedRole }) => {
             <EyeIcon isVisible={showConfirmPassword} />
           </button>
         </div>
+        {shouldShowFieldMessage('confirmPassword', confirmPasswordError) ? (
+          <small className="input-helper-text input-helper-text--error">{confirmPasswordError}</small>
+        ) : null}
       </div>
 
       <button type="submit" className="btn-primary" disabled={loading}>

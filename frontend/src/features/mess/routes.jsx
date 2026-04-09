@@ -1,7 +1,6 @@
 import { Route } from 'react-router-dom';
 import MessListPage from './pages/MessListPage';
 import MessMenuPage from './pages/MessMenuPage';
-import MyBookingsPage from './pages/MyBookingsPage';
 import BookingDetailPage from './pages/BookingDetailPage';
 import ManagerMenuPage from './pages/ManagerMenuPage';
 import ManagerBookingsPage from './pages/ManagerBookingsPage';
@@ -15,7 +14,6 @@ const messRoutes = [
   /* Student Routes */
   <Route key="mess-list" path="/mess" element={<MessListPage />} />,
   <Route key="mess-menu" path="/mess/:messId/menu" element={<MessMenuPage />} />,
-  <Route key="mess-bookings" path="/mess/bookings" element={<MyBookingsPage />} />,
   <Route key="mess-booking-detail" path="/mess/bookings/:id" element={<BookingDetailPage />} />,
 
   /* Manager Routes */

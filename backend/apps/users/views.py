@@ -1,3 +1,6 @@
+import re
+
+from django.db import transaction
 from django.utils import timezone
 from django.core.cache import cache
 from rest_framework import status
@@ -13,6 +16,7 @@ from .serializers import (
     VerifyOTPSerializer,
     LoginSerializer,
     UserSerializer,
+    UserProfileUpdateSerializer,
     MessAccountSerializer,
     RefreshTokenSerializer,
     ForgotPasswordSerializer,
@@ -25,6 +29,37 @@ from .services import generate_otp, verify_otp, send_otp_email, record_otp_attem
 
 def _get_client_ip(request):
     return request.META.get("REMOTE_ADDR")
+
+
+def _natural_sort_key(value):
+    parts = re.split(r"(\d+)", value or "")
+    return [int(part) if part.isdigit() else part.lower() for part in parts]
+
+
+def _get_managed_mess_worker(request, user_id):
+    if not hasattr(request.user, 'role') or request.user.role.role_name != 'mess_manager':
+        return None, Response({"detail": "Only mess managers can manage workers."}, status=status.HTTP_403_FORBIDDEN)
+
+    manager_staff = getattr(request.user, 'staff_profile', None)
+    if manager_staff is None:
+        return None, Response({"detail": "Mess manager profile not found."}, status=status.HTTP_403_FORBIDDEN)
+
+    from apps.mess.models import MessStaffAssignment
+
+    manager_assignment = MessStaffAssignment.objects.filter(
+        staff=manager_staff, assignment_role='manager', is_active=True
+    ).first()
+    if not manager_assignment:
+        return None, Response({"detail": "You are not assigned to any mess."}, status=status.HTTP_403_FORBIDDEN)
+
+    worker_assignment = MessStaffAssignment.objects.filter(
+        mess=manager_assignment.mess, assignment_role='worker', staff__user_id=user_id
+    ).select_related('staff__user').first()
+
+    if not worker_assignment:
+        return None, Response({"detail": "Worker not found in your mess."}, status=status.HTTP_404_NOT_FOUND)
+
+    return worker_assignment.staff.user, None
 
 
 class RegisterView(GenericAPIView):
@@ -192,7 +227,11 @@ class ResetPasswordView(GenericAPIView):
 
 class MeView(GenericAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = UserSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return UserProfileUpdateSerializer
+        return UserSerializer
 
     def get(self, request):
         return Response(self.get_serializer(request.user).data)
@@ -201,7 +240,7 @@ class MeView(GenericAPIView):
         serializer = self.get_serializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data)
+        return Response(UserSerializer(request.user).data)
 
 
 class DeleteAccountView(GenericAPIView):
@@ -289,15 +328,12 @@ class ToggleDeliveryPersonStatusView(GenericAPIView):
     """View for canteen managers to activate/deactivate delivery personnel"""
     permission_classes = [IsAuthenticated]
 
-    def patch(self, request, user_id):
-        """Toggle delivery person active status"""
-        # Check if user is canteen manager
+    def _get_delivery_person(self, request, user_id):
         if not hasattr(request.user, 'staff_profile') or request.user.role.role_name != 'canteen_manager':
-            return Response({"detail": "Only canteen managers can manage delivery personnel."}, status=status.HTTP_403_FORBIDDEN)
+            return None, Response({"detail": "Only canteen managers can manage delivery personnel."}, status=status.HTTP_403_FORBIDDEN)
 
         canteen = request.user.staff_profile.canteen
 
-        # Get delivery person
         try:
             delivery_person = User.objects.select_related('staff_profile', 'role').get(
                 id=user_id,
@@ -305,7 +341,15 @@ class ToggleDeliveryPersonStatusView(GenericAPIView):
                 staff_profile__canteen=canteen
             )
         except User.DoesNotExist:
-            return Response({"detail": "Delivery person not found."}, status=status.HTTP_404_NOT_FOUND)
+            return None, Response({"detail": "Delivery person not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        return delivery_person, None
+
+    def patch(self, request, user_id):
+        """Toggle delivery person active status"""
+        delivery_person, error = self._get_delivery_person(request, user_id)
+        if error:
+            return error
 
         # Toggle active status
         delivery_person.is_active = not delivery_person.is_active
@@ -316,6 +360,52 @@ class ToggleDeliveryPersonStatusView(GenericAPIView):
             "detail": f"Delivery person {status_text} successfully.",
             "is_active": delivery_person.is_active
         })
+
+    @transaction.atomic
+    def delete(self, request, user_id):
+        """Delete a delivery person account and release assigned active orders."""
+        delivery_person, error = self._get_delivery_person(request, user_id)
+        if error:
+            return error
+
+        from apps.orders.models import CanteenOrder
+
+        active_delivery_statuses = [
+            CanteenOrder.STATUS_CONFIRMED,
+            CanteenOrder.STATUS_PREPARING,
+            CanteenOrder.STATUS_READY,
+            CanteenOrder.STATUS_OUT_FOR_DELIVERY,
+        ]
+        reopened_statuses = [CanteenOrder.STATUS_OUT_FOR_DELIVERY]
+        now = timezone.now()
+
+        assigned_orders = CanteenOrder.objects.filter(
+            delivery_person=delivery_person,
+            status__in=active_delivery_statuses,
+        )
+        reopened_count = assigned_orders.filter(status__in=reopened_statuses).update(
+            status=CanteenOrder.STATUS_READY,
+            delivery_person=None,
+            delivery_accepted_at=None,
+            updated_at=now,
+        )
+        released_count = assigned_orders.exclude(status__in=reopened_statuses).update(
+            delivery_person=None,
+            delivery_accepted_at=None,
+            updated_at=now,
+        )
+
+        delivery_person_email = delivery_person.email
+        delivery_person.delete()
+
+        detail = f"Delivery person {delivery_person_email} deleted successfully."
+        if reopened_count or released_count:
+            detail += (
+                f" {reopened_count} active delivery order(s) were moved back to ready,"
+                f" and {released_count} assigned order(s) were released for reassignment."
+            )
+
+        return Response({"detail": detail})
 
 
 
@@ -372,6 +462,27 @@ class AdminManagerManagementView(GenericAPIView):
 class ToggleManagerStatusView(GenericAPIView):
     """View for admin managers to activate/deactivate canteen/mess managers"""
     permission_classes = [IsAuthenticated]
+
+    def put(self, request, user_id):
+        """Update manager contact details or assignment."""
+        if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
+            return Response({"detail": "Only admin managers can manage managers."}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            manager = User.objects.select_related('staff_profile', 'role').get(
+                id=user_id,
+                role__role_name__in=['canteen_manager', 'mess_manager']
+            )
+        except User.DoesNotExist:
+            return Response({"detail": "Manager not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        from .serializers import ManagerSerializer, UpdateManagerSerializer
+
+        serializer = UpdateManagerSerializer(instance=manager, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        manager = serializer.save()
+
+        return Response(ManagerSerializer(manager).data)
 
     def patch(self, request, user_id):
         """Toggle manager active status (freeze/unfreeze)"""
@@ -432,7 +543,7 @@ class AdminMessManagementView(GenericAPIView):
 
         from apps.mess.models import Mess
         from .serializers import MessListSerializer
-        messes = Mess.objects.all()
+        messes = sorted(Mess.objects.all(), key=lambda mess: _natural_sort_key(mess.hall_name))
         serializer = MessListSerializer(messes, many=True)
         return Response(serializer.data)
 
@@ -452,33 +563,52 @@ class AdminMessManagementView(GenericAPIView):
             "id": mess.id,
             "name": mess.name,
             "hall_name": mess.hall_name,
+            "location": mess.location,
         }, status=status.HTTP_201_CREATED)
 
 
 class AdminMessDetailView(GenericAPIView):
-    """View to toggle status or delete a mess"""
+    """View to update, toggle status, or delete a mess"""
     permission_classes = [IsAuthenticated]
 
-    def patch(self, request, mess_id):
+    def put(self, request, pk):
         if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
             return Response({"detail": "Only admin managers can access this."}, status=status.HTTP_403_FORBIDDEN)
-        
-        from apps.mess.models import Mess
+
+        from .serializers import UpdateMessSerializer, MessListSerializer
         try:
-            mess = Mess.objects.get(id=mess_id)
+            mess = Mess.objects.get(id=pk)
+        except Mess.DoesNotExist:
+            return Response({"detail": "Mess not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = UpdateMessSerializer(mess, data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        updated_mess = serializer.save()
+        return Response({
+            "detail": f"Mess updated successfully: {updated_mess.name}",
+            **MessListSerializer(updated_mess).data,
+        })
+
+    def patch(self, request, pk):
+        if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
+            return Response({"detail": "Only admin managers can access this."}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            mess = Mess.objects.get(id=pk)
             mess.is_active = not mess.is_active
             mess.save()
             return Response({"detail": f"Mess {'activated' if mess.is_active else 'frozen'} successfully.", "is_active": mess.is_active})
         except Mess.DoesNotExist:
             return Response({"detail": "Mess not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    def delete(self, request, mess_id):
+    def delete(self, request, pk):
         if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
             return Response({"detail": "Only admin managers can access this."}, status=status.HTTP_403_FORBIDDEN)
-        
-        from apps.mess.models import Mess
+
         try:
-            mess = Mess.objects.get(id=mess_id)
+            mess = Mess.objects.get(id=pk)
             mess_name = mess.name
             mess.delete()
             return Response({"detail": f"Mess {mess_name} deleted successfully."})
@@ -496,7 +626,13 @@ class AdminCanteenManagementView(GenericAPIView):
 
         from apps.canteen.models import Canteen
         from .serializers import CanteenListSerializer
-        canteens = Canteen.objects.all().order_by('-is_active', 'name')
+        canteens = sorted(
+            Canteen.objects.all(),
+            key=lambda canteen: (
+                not canteen.is_active,
+                _natural_sort_key(canteen.name),
+            ),
+        )
         return Response(CanteenListSerializer(canteens, many=True).data)
 
     def post(self, request):
@@ -520,26 +656,29 @@ class AdminCanteenDetailView(GenericAPIView):
     """View to toggle status or delete a canteen"""
     permission_classes = [IsAuthenticated]
 
-    def patch(self, request, canteen_id):
+    def _get_canteen(self, pk):
+        from apps.canteen.models import Canteen
+
+        return Canteen.objects.get(id=pk)
+
+    def patch(self, request, pk):
         if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
             return Response({"detail": "Only admin managers can access this."}, status=status.HTTP_403_FORBIDDEN)
-        
-        from apps.canteen.models import Canteen
+
         try:
-            canteen = Canteen.objects.get(id=canteen_id)
+            canteen = self._get_canteen(pk)
             canteen.is_active = not canteen.is_active
             canteen.save()
             return Response({"detail": f"Canteen {'activated' if canteen.is_active else 'frozen'} successfully.", "is_active": canteen.is_active})
         except Canteen.DoesNotExist:
             return Response({"detail": "Canteen not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    def delete(self, request, canteen_id):
+    def delete(self, request, pk):
         if not hasattr(request.user, 'role') or request.user.role.role_name != 'admin_manager':
             return Response({"detail": "Only admin managers can access this."}, status=status.HTTP_403_FORBIDDEN)
-        
-        from apps.canteen.models import Canteen
+
         try:
-            canteen = Canteen.objects.get(id=canteen_id)
+            canteen = self._get_canteen(pk)
             canteen_name = canteen.name
             canteen.delete()
             return Response({"detail": f"Canteen {canteen_name} deleted successfully."})
@@ -550,7 +689,10 @@ class AvailableHallsView(GenericAPIView):
     permission_classes = [AllowAny]
     
     def get(self, request):
-        halls = Mess.objects.filter(is_active=True).values_list('hall_name', flat=True).distinct()
+        halls = sorted(
+            Mess.objects.filter(is_active=True).values_list('hall_name', flat=True).distinct(),
+            key=_natural_sort_key,
+        )
         return Response(list(halls))
 
 
@@ -560,7 +702,10 @@ class PublicCanteensView(GenericAPIView):
 
     def get(self, request):
         from apps.canteen.models import Canteen
-        canteens = Canteen.objects.filter(is_active=True).order_by('name').values('id', 'name', 'location')
+        canteens = sorted(
+            Canteen.objects.filter(is_active=True).values('id', 'name', 'location'),
+            key=lambda canteen: _natural_sort_key(canteen["name"]),
+        )
         return Response(list(canteens))
 
 
@@ -610,31 +755,31 @@ class MessWorkerManagementView(GenericAPIView):
         }, status=status.HTTP_201_CREATED)
 
 
+class MessWorkerDetailView(GenericAPIView):
+    """View for mess managers to update worker details."""
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, user_id):
+        worker, error = _get_managed_mess_worker(request, user_id)
+        if error:
+            return error
+
+        from .serializers import MessWorkerSerializer, UpdateMessWorkerSerializer
+
+        serializer = UpdateMessWorkerSerializer(worker, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        updated_worker = serializer.save()
+
+        return Response(MessWorkerSerializer(updated_worker).data, status=status.HTTP_200_OK)
+
+
 class ToggleMessWorkerStatusView(GenericAPIView):
     """View for mess managers to toggle or delete mess workers"""
     permission_classes = [IsAuthenticated]
 
     def _get_worker(self, request, user_id):
         """Helper to validate manager and find the worker"""
-        if not hasattr(request.user, 'role') or request.user.role.role_name != 'mess_manager':
-            return None, Response({"detail": "Only mess managers can manage workers."}, status=status.HTTP_403_FORBIDDEN)
-
-        from apps.mess.models import MessStaffAssignment
-        manager_assignment = MessStaffAssignment.objects.filter(
-            staff=request.user.staff_profile, assignment_role='manager', is_active=True
-        ).first()
-        if not manager_assignment:
-            return None, Response({"detail": "You are not assigned to any mess."}, status=status.HTTP_403_FORBIDDEN)
-
-        # Ensure the worker belongs to the same mess
-        worker_assignment = MessStaffAssignment.objects.filter(
-            mess=manager_assignment.mess, assignment_role='worker', staff__user_id=user_id
-        ).select_related('staff__user').first()
-
-        if not worker_assignment:
-            return None, Response({"detail": "Worker not found in your mess."}, status=status.HTTP_404_NOT_FOUND)
-
-        return worker_assignment.staff.user, None
+        return _get_managed_mess_worker(request, user_id)
 
     def patch(self, request, user_id):
         """Toggle worker active status (freeze/unfreeze)"""
@@ -660,4 +805,3 @@ class ToggleMessWorkerStatusView(GenericAPIView):
         worker_email = worker.email
         worker.delete()
         return Response({"detail": f"Worker {worker_email} deleted successfully."})
-

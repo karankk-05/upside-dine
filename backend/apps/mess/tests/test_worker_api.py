@@ -23,6 +23,7 @@ class MessWorkerAPITests(APITestCase):
         self.other_worker_user, self.other_worker_staff = self._create_worker_user("2")
         self.student_user, self.student = self._create_student_user("1")
         MessAccount.objects.create(student=self.student, balance=Decimal("10000.00"))
+        current_day = timezone.localdate().strftime("%A").lower()
 
         self.mess = Mess.objects.create(
             name="Hall Mess 1",
@@ -56,7 +57,7 @@ class MessWorkerAPITests(APITestCase):
             description="Main item",
             price=Decimal("40.00"),
             meal_type=MessMenuItem.MealType.LUNCH,
-            day_of_week=MessMenuItem.DayOfWeek.MONDAY,
+            day_of_week=current_day,
             available_quantity=300,
             default_quantity=300,
             is_active=True,
@@ -67,7 +68,7 @@ class MessWorkerAPITests(APITestCase):
             description="Other mess item",
             price=Decimal("50.00"),
             meal_type=MessMenuItem.MealType.SNACK,
-            day_of_week=MessMenuItem.DayOfWeek.TUESDAY,
+            day_of_week=current_day,
             available_quantity=300,
             default_quantity=300,
             is_active=True,
@@ -268,6 +269,8 @@ class MessWorkerAPITests(APITestCase):
         self.assertEqual(len(response.data), 2)
         self.assertEqual(response.data[0]["id"], booking_2.id)
         self.assertEqual(response.data[1]["id"], booking_1.id)
+        self.assertEqual(response.data[0]["scan_status"], "success")
+        self.assertEqual(response.data[1]["scan_status"], "success")
 
     def test_scan_history_fallback_query_when_cache_is_empty(self):
         booking_1 = create_booking(self.student, self.menu_item.id, quantity=1)
@@ -299,3 +302,47 @@ class MessWorkerAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["id"], booking_for_worker_1.id)
+
+    def test_scan_history_includes_failed_invalid_qr_attempts(self):
+        self._auth_worker()
+        verify_response = self.client.post(
+            "/api/mess/worker/verify/",
+            {"qr_code": "invalid-qr"},
+            format="json",
+        )
+        self.assertEqual(verify_response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        history_response = self.client.get("/api/mess/worker/scan-history/")
+        self.assertEqual(history_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(history_response.data), 1)
+        self.assertEqual(history_response.data[0]["scan_status"], "failed")
+        self.assertEqual(history_response.data[0]["failure_reason"], "Invalid QR code.")
+        self.assertEqual(history_response.data[0]["identifier_type"], "qr_code")
+        self.assertIsNone(history_response.data[0]["menu_item"])
+
+    def test_scan_history_keeps_failed_attempts_alongside_successful_scans(self):
+        booking = create_booking(self.student, self.menu_item.id, quantity=1)
+
+        self._auth_worker()
+        first_response = self.client.post(
+            "/api/mess/worker/verify/",
+            {"booking_id": booking.id},
+            format="json",
+        )
+        self.assertEqual(first_response.status_code, status.HTTP_200_OK)
+
+        duplicate_response = self.client.post(
+            "/api/mess/worker/verify/",
+            {"booking_id": booking.id},
+            format="json",
+        )
+        self.assertEqual(duplicate_response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        history_response = self.client.get("/api/mess/worker/scan-history/")
+        self.assertEqual(history_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(history_response.data), 2)
+        self.assertEqual(history_response.data[0]["scan_status"], "failed")
+        self.assertEqual(history_response.data[0]["id"], booking.id)
+        self.assertEqual(history_response.data[0]["booking_reference"], history_response.data[1]["booking_reference"])
+        self.assertEqual(history_response.data[1]["scan_status"], "success")
+        self.assertNotEqual(history_response.data[0]["entry_id"], history_response.data[1]["entry_id"])

@@ -40,6 +40,28 @@ const withSuspense = (element) => (
   <React.Suspense fallback={<RouteFallback />}>{element}</React.Suspense>
 );
 
+const MESS_MANAGER_ROLES = ['mess_manager'];
+const MESS_WORKER_ROLES = ['mess_worker'];
+const CANTEEN_MANAGER_ROLES = ['canteen_manager'];
+const DELIVERY_ROLES = ['delivery_person'];
+const ADMIN_ROLES = ['admin_manager', 'superadmin'];
+
+const getAllowedRolesForPath = (path = '') => {
+  if (path.startsWith('/manager/mess') || path.startsWith('/manager/crowd')) {
+    return MESS_MANAGER_ROLES;
+  }
+
+  if (path.startsWith('/worker/')) {
+    return MESS_WORKER_ROLES;
+  }
+
+  if (path.startsWith('/manager/canteen')) {
+    return CANTEEN_MANAGER_ROLES;
+  }
+
+  return undefined;
+};
+
 const protectRouteElements = (routeElements) =>
   React.Children.map(routeElements, (route) => {
     if (!React.isValidElement(route)) {
@@ -47,7 +69,11 @@ const protectRouteElements = (routeElements) =>
     }
 
     return React.cloneElement(route, {
-      element: <ProtectedRoute>{withSuspense(route.props.element)}</ProtectedRoute>,
+      element: (
+        <ProtectedRoute allowedRoles={getAllowedRolesForPath(route.props.path)}>
+          {withSuspense(route.props.element)}
+        </ProtectedRoute>
+      ),
     });
   });
 
@@ -78,11 +104,46 @@ function App() {
             <Route path="/mess/bookings" element={withSuspense(<MyBookingsPage />)} />
             <Route path="/profile" element={withSuspense(<ProfilePage />)} />
           </Route>
-          <Route path="/manager/mess" element={<ProtectedRoute>{withSuspense(<MessManagerDashboard />)}</ProtectedRoute>} />
-          <Route path="/manager/canteen" element={<ProtectedRoute>{withSuspense(<CanteenManagerDashboard />)}</ProtectedRoute>} />
-          <Route path="/delivery" element={<ProtectedRoute>{withSuspense(<DeliveryDashboard />)}</ProtectedRoute>} />
-          <Route path="/manager/admin" element={<ProtectedRoute>{withSuspense(<AdminManagerDashboard />)}</ProtectedRoute>} />
-          <Route path="/admin/managers" element={<Navigate to="/manager/admin" replace />} />
+          <Route
+            path="/manager/mess"
+            element={
+              <ProtectedRoute allowedRoles={MESS_MANAGER_ROLES}>
+                {withSuspense(<MessManagerDashboard />)}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manager/canteen"
+            element={
+              <ProtectedRoute allowedRoles={CANTEEN_MANAGER_ROLES}>
+                {withSuspense(<CanteenManagerDashboard />)}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/delivery"
+            element={
+              <ProtectedRoute allowedRoles={DELIVERY_ROLES}>
+                {withSuspense(<DeliveryDashboard />)}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manager/admin"
+            element={
+              <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                {withSuspense(<AdminManagerDashboard />)}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/managers"
+            element={
+              <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                <Navigate to="/manager/admin" replace />
+              </ProtectedRoute>
+            }
+          />
           {/* Mess feature routes (student, manager, worker) */}
           {protectRouteElements(messRoutes)}
           {/* Canteen feature routes (student, manager) */}

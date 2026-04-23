@@ -59,7 +59,7 @@ export default function PaymentModal({
       const rzpOrderId = res.payment?.razorpay_order_id || res.razorpay_order?.id;
       const rzpAmount = res.razorpay_order?.amount || amount * 100;
       const selectedLanguage = normalizeCheckoutLanguage(language);
-      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || res.razorpay_key_id;
+      const razorpayKey = res.razorpay_key_id || import.meta.env.VITE_RAZORPAY_KEY_ID;
 
       if (!rzpOrderId || !razorpayKey) {
         throw new Error('Payment gateway is not configured correctly. Please try again.');

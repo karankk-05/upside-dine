@@ -25,8 +25,6 @@ class OrderServiceSmokeTests(TestCase):
         self.canteen = Canteen.objects.create(
             name="Hall 2 Canteen",
             location="Hall 2",
-            opening_time="08:00",
-            closing_time="22:00",
         )
         self.item = CanteenMenuItem.objects.create(
             canteen=self.canteen,
@@ -47,6 +45,21 @@ class OrderServiceSmokeTests(TestCase):
         )
         self.assertEqual(order.total_amount, order.subtotal)
         self.assertEqual(order.items.count(), 1)
+
+    def test_create_pay_later_order_without_payment_config(self):
+        order = create_order_for_student(
+            self.student,
+            {
+                "canteen_id": self.canteen.id,
+                "order_type": "pickup",
+                "payment_method": "cash",
+                "items": [{"menu_item_id": self.item.id, "quantity": 1}],
+            },
+        )
+
+        self.assertEqual(order.status, CanteenOrder.STATUS_PENDING)
+        self.assertEqual(order.total_amount, Decimal("60.00"))
+        self.assertFalse(hasattr(order, "payment"))
 
     def test_cancelling_order_restores_inventory(self):
         order = create_order_for_student(

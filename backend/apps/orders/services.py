@@ -162,7 +162,6 @@ def validate_payment_method(canteen, payment_method):
 def create_order_for_student(student, validated_data):
     canteen = (
         Canteen.objects.select_for_update()
-        .select_related("payment_config")
         .filter(id=validated_data["canteen_id"], is_active=True)
         .first()
     )

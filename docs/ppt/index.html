@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UpsideDine — HiveMinds Presentation</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <div class="reveal">
+    <div class="slides">
+      <section data-background-color="#0a0000">
+        <div class="center-slide">
+          <div class="group-number">GROUP 18</div>
+          <div class="group-name">HiveMinds</div>
+          <div class="group-course">CS253 — Software Development and Operations</div>
+          <div class="group-college">IIT Kanpur</div>
+          <div class="group-prof">Prof. Indranil Saha</div>
+          <div class="group-members">
+             Shivam Kumar Shaw &middot; Divyansh Yadav &middot; Hanny &middot; Harshit Agarwal &middot; Ayush Kumar<br />
+            Karan Keer &middot; Kaushal Mehra &middot; Rohan Kumar &middot;Dheeraj Dagar  &middot; Vivek Meena
+          </div>
+        </div>
+      </section>
+
+
+      <section data-background-color="#0a0000">
+        <div class="center-slide">
+          <div class="phase-label">PHASE 1</div>
+          <div class="phase-heading">The Need & The Vision</div>
+        </div>
+      </section>
+
+
+      <section data-background-color="#0a0000">
+        <div class="center-slide">
+          <h2 class="slide-heading" style="font-size: 2.5em !important; margin-bottom: 20px !important;">The Mess within
+            the Mess</h2>
+          <p class="slide-sub" style="font-size: 1.2em; max-width: 800px; margin: 0 auto; line-height: 1.5;">
+            Because right now, trying to grab a meal looks exactly like this...
+          </p>
+        </div>
+      </section>
+
+
+      <section data-background-color="#000000">
+        <div class="video-container"
+          style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;">
+          <div class="vhs-frame" style="width: 100%; height: 100%; border: none;">
+            <div class="vhs-topbar" style="font-size: 1.5em; padding: 20px;">HALL 12 MESS — PEAK HOUR</div>
+            <div class="vhs-screen" style="height: calc(100% - 70px);">
+              <p class="placeholder-text" style="font-size: 2em;">[ Play Hall 12 Video Here ]</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <section data-background-color="#0a0000" class="survey-slide">
+        <h2 class="slide-heading">The Voice of the Junta</h2>
+        <div class="survey-container">
+          <div class="survey-img-wrap fragment fade-out" data-fragment-index="1">
+            <img src="form.png" class="survey-img" alt="160 Responses Google Form Screenshot" />
+          </div>
+          <div class="survey-stats-overlay">
+            <div class="premium-stat-block fragment fade-up" data-fragment-index="2">
+              <div class="stat-val">85%</div>
+              <div class="stat-desc">Would delay meals<br />to avoid peak crowds</div>
+            </div>
+            <div class="premium-stat-block fragment fade-up" data-fragment-index="3">
+              <div class="stat-val">81%</div>
+              <div class="stat-desc">Demand a digital QR<br />pre-booking system</div>
+            </div>
+            <div class="premium-stat-block fragment fade-up" data-fragment-index="4">
+              <div class="stat-val">89%</div>
+              <div class="stat-desc">Want pre-ordering<br />from canteen</div>
+            </div>
+          </div>
+        </div>
+        <div class="survey-link">
+          <a href="https://docs.google.com/forms/d/1yaRYZiPXouL3eqelMptjQCOfYy2Pwivgc8McH0zwb1g/edit#responses"
+            target="_blank">View Live Responses</a>
+        </div>
+      </section>
+
+
+      <section data-background-color="#000000" data-transition="fade">
+        <div class="center-slide logo-reveal-slide">
+          <p class="reveal-intro-text">"...and so, we built"</p>
+          <div class="st-logo">
+            <div class="st-dbl st-dbl-top"></div>
+            <div class="st-word-upper"><span class="st-cap">U</span>PSID<span class="st-cap">E</span></div>
+            <div class="st-lower-row">
+              <div class="st-dbl st-dbl-side"></div>
+              <div class="st-word-lower">DINE</div>
+              <div class="st-dbl st-dbl-side"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <section data-background-color="#0a0000">
+        <h2 class="slide-heading">Major Requirements</h2>
+        <div class="req-list">
+          <div class="req-row fragment fade-up" data-fragment-index="1">
+            <div class="req-num">01</div>
+            <div class="req-body">
+              <div class="req-title">Digital 'Extras' Booking</div>
+              <div class="req-sub">Replacing physical paper coupons with a secure, automated QR based token system.
+              </div>
+            </div>
+          </div>
+          <div class="req-row fragment fade-up" data-fragment-index="2">
+            <div class="req-num">02</div>
+            <div class="req-body">
+              <div class="req-title">Smart Crowd Monitoring</div>
+              <div class="req-sub">Implementing a Computer Vision model to provide real-time 'Time-Risk Assessments' of
+                the mess lines.</div>
+            </div>
+          </div>
+          <div class="req-row fragment fade-up" data-fragment-index="3">
+            <div class="req-num">03</div>
+            <div class="req-body">
+              <div class="req-title">Remote Canteen Ordering</div>
+              <div class="req-sub">Eliminating queue times by allowing students to pre-order food directly from their
+                rooms.</div>
+            </div>
+          </div>
+          <div class="req-row fragment fade-up" data-fragment-index="4">
+            <div class="req-num">04</div>
+            <div class="req-body">
+              <div class="req-title">Delivery Logistics</div>
+              <div class="req-sub">Engineering a real-time, delivery system to assign, track, and manage deliveries.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <section data-background-color="#0a0000">
+        <h2 class="slide-heading">The UpsideDine Ecosystem</h2>
+        <div class="eco-layout">
+          <!-- LEFT: Management Chain -->
+          <div class="eco-chain">
+            <div class="eco-chain-title">Management Chain</div>
+
+            <!-- Tier 1: Admin -->
+            <div class="fragment fade-down" data-fragment-index="1">
+              <div class="eco-node eco-admin" id="eco-admin-node">
+                <span class="eco-tag">TIER 1</span>
+                <span class="eco-label">Admin</span>
+                <span class="eco-desc">Creates managers, canteens &amp; messes</span>
+              </div>
+            </div>
+
+            <!-- Connector -->
+            <div class="eco-connector fragment fade-in" data-fragment-index="3">
+              <div class="eco-line"></div>
+              <div class="eco-branch-split"></div>
+            </div>
+
+            <!-- Tier 2: Managers -->
+            <div class="eco-pair fragment fade-up" data-fragment-index="3">
+              <div class="eco-node eco-mgr">
+                <span class="eco-tag">TIER 2</span>
+                <span class="eco-label">Mess Manager</span>
+                <span class="eco-desc">Menu, Bookings, Crowd, Create workers</span>
+              </div>
+              <div class="eco-node eco-mgr">
+                <span class="eco-tag">TIER 2</span>
+                <span class="eco-label">Canteen Manager</span>
+                <span class="eco-desc">Menu, Orders, Revenue, Create delivery coordies</span>
+              </div>
+            </div>
+
+            <!-- Connector -->
+            <div class="eco-straight-connectors fragment fade-in" data-fragment-index="4">
+              <div>
+                <div class="eco-line"></div>
+              </div>
+              <div>
+                <div class="eco-line"></div>
+              </div>
+            </div>
+
+            <!-- Tier 3: Workers -->
+            <div class="eco-pair fragment fade-up" data-fragment-index="4">
+              <div class="eco-node eco-leaf" id="eco-mw">
+                <span class="eco-tag">TIER 3</span>
+                <span class="eco-label">Mess Worker</span>
+                <span class="eco-desc">QR scan &amp; verify</span>
+              </div>
+              <div class="eco-node eco-leaf" id="eco-dc">
+                <span class="eco-tag">TIER 3</span>
+                <span class="eco-label">Delivery Coord.</span>
+                <span class="eco-desc">Pickup &amp; deliver</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- MIDDLE: Entities -->
+          <div class="eco-entities fragment fade-up" data-fragment-index="2" id="eco-entities-col">
+            <div class="eco-chain-title">Entities</div>
+            <div class="eco-node eco-entity" id="eco-mess">
+              <span class="eco-label">Messes</span>
+              <span class="eco-desc">Hall dining facilities</span>
+            </div>
+            <div class="eco-entities-gap"></div>
+            <div class="eco-node eco-entity" id="eco-canteen">
+              <span class="eco-label">Canteens</span>
+              <span class="eco-desc">Food outlets &amp; shops</span>
+            </div>
+          </div>
+
+          <!-- RIGHT: Student Interactions -->
+          <div class="eco-interact">
+            <div class="eco-chain-title">Student Interactions</div>
+
+            <div class="fragment fade-up" data-fragment-index="5">
+              <div class="eco-node eco-student-node">
+                <span class="eco-label">Student</span>
+                <span class="eco-desc">Self-registers via OTP</span>
+              </div>
+            </div>
+
+            <div class="eco-flow-row fragment fade-up" data-fragment-index="6" id="flow-extras">
+              <div class="eco-flow-line"></div>
+              <div class="eco-flow-card">
+                <span class="eco-flow-action">Books Extras</span>
+                <span class="eco-flow-arrow">&rarr;</span>
+                <span class="eco-flow-target">shows QR to</span>
+                <span class="eco-flow-role">Mess Worker</span>
+              </div>
+            </div>
+
+            <div class="eco-flow-row fragment fade-up" data-fragment-index="7" id="flow-order">
+              <div class="eco-flow-line"></div>
+              <div class="eco-flow-card">
+                <span class="eco-flow-action">Places Order</span>
+                <span class="eco-flow-arrow">&rarr;</span>
+                <span class="eco-flow-target">gives OTP to</span>
+                <span class="eco-flow-role">Delivery Coordies</span>
+              </div>
+            </div>
+
+            <div class="eco-flow-row fragment fade-up" data-fragment-index="8" id="flow-prebook">
+              <div class="eco-flow-line"></div>
+              <div class="eco-flow-card">
+                <span class="eco-flow-action">Pre-books Order</span>
+                <span class="eco-flow-arrow">&rarr;</span>
+                <span class="eco-flow-target">pickup at</span>
+                <span class="eco-flow-role">Canteen</span>
+              </div>
+            </div>
+
+            <div class="eco-flow-row fragment fade-up" data-fragment-index="9" id="flow-crowd">
+              <div class="eco-flow-line"></div>
+              <div class="eco-flow-card">
+                <span class="eco-flow-action">Views Crowd</span>
+                <span class="eco-flow-arrow">&rarr;</span>
+                <span class="eco-flow-target">live feed from</span>
+                <span class="eco-flow-role">Mess</span>
+              </div>
+            </div>
+          </div>
+          <!-- SVG overlay for arrows -->
+          <svg class="eco-arrows-svg" id="ecoArrowsSvg"></svg>
+        </div>
+      </section>
+      <section data-background-color="#0a0000">
+        <div class="center-slide">
+          <div class="phase-label">PHASE 2</div>
+          <div class="phase-heading">Live Demo</div>
+        </div>
+      </section>
+
+
+      <section data-background-color="#0a0000">
+        <h2 class="slide-heading">Workflow 01</h2>
+        <p class="slide-sub">Student books extras, gets a live QR, and hands it to the mess worker for verification at
+          the counter.</p>
+        <div class="workflow-board workflow-board-three" id="demo-workflow-mess">
+          <div class="workflow-column">
+            <div class="workflow-role-tag workflow-role-blue">Student</div>
+            <div class="workflow-card arch-box arch-b-blue" id="wf-student-dashboard">
+              <div class="workflow-card-title">Student Dashboard</div>
+              <div class="workflow-card-copy">Assigned mess, canteen cards, and quick entry points to extras and crowd
+                view.</div>
+            </div>
+            <div class="workflow-card arch-box arch-b-blue" id="wf-book-extras">
+              <div class="workflow-card-title">Book Extras</div>
+              <div class="workflow-card-copy">Pick an item, quantity, and confirm the booking from the mess menu.</div>
+            </div>
+            <div class="workflow-card arch-box arch-b-blue" id="wf-booking-qr">
+              <div class="workflow-card-title">Booking Detail + QR</div>
+              <div class="workflow-card-copy">Student opens the generated QR and shows it directly at the counter.</div>
+            </div>
+          </div>
+
+          <div class="workflow-column workflow-column-side">
+            <div class="workflow-mini workflow-mini-blue" id="wf-my-bookings">
+              <strong>My Bookings</strong>
+              <span>Student can reopen the same booking from the bookings tab before redemption.</span>
+            </div>
+            <div class="workflow-mini workflow-mini-amber" id="wf-qr-timer">
+              <strong>QR Validity</strong>
+              <span>Countdown timer, billing note, and clear valid or redeemed states on the same screen.</span>
+            </div>
+          </div>
+
+          <div class="workflow-column">
+            <div class="workflow-role-tag workflow-role-amber">Mess Worker</div>
+            <div class="workflow-card arch-box arch-b-amber" id="wf-worker-scan">
+              <div class="workflow-card-title">Scanner / Manual Entry</div>
+              <div class="workflow-card-copy">Worker scans the QR or enters the booking reference on the worker screen.
+              </div>
+            </div>
+            <div class="workflow-card arch-box arch-b-amber" id="wf-worker-verify">
+              <div class="workflow-card-title">Verification Success</div>
+              <div class="workflow-card-copy">Booking is redeemed once, the meal is issued, and the student flow is
+                complete.</div>
+            </div>
+            <div class="workflow-mini workflow-mini-amber" id="wf-scan-history">
+              <strong>Worker History</strong>
+              <span>Recent scans remain visible for operational traceability and quick cross-checking.</span>
+            </div>
+          </div>
+
+          <svg class="workflow-svg-overlay" id="workflowMessSvg"></svg>
+        </div>
+      </section>
+
+      <section data-background-color="#0a0000">
+        <h2 class="slide-heading">Workflow 02</h2>
+        <p class="slide-sub">After the mess flow, the same student checks live crowd levels and then places a paid
+          canteen order.</p>
+        <div class="workflow-board workflow-board-three" id="demo-workflow-student">
+          <div class="workflow-column">
+            <div class="workflow-role-tag workflow-role-blue">Student</div>
+            <div class="workflow-card arch-box arch-b-blue" id="wf-student-home">
+              <div class="workflow-card-title">Student Home</div>
+              <div class="workflow-card-copy">Single starting point for mess actions, crowd visibility, and canteen
+                discovery.</div>
+            </div>
+            <div class="workflow-mini workflow-mini-blue" id="wf-student-search">
+              <strong>Search + Cards</strong>
+              <span>Quick canteen filtering, hall-based ordering, and shortcuts from the dashboard itself.</span>
+            </div>
+          </div>
+
+          <div class="workflow-column">
+            <div class="workflow-card arch-box arch-b-purple" id="wf-crowd-monitor">
+              <div class="workflow-card-title">Live Crowd Monitor</div>
+              <div class="workflow-card-copy">Student checks current density, live updates, and mess-level crowd
+                visibility.</div>
+            </div>
+            <div class="workflow-mini workflow-mini-purple" id="wf-best-time">
+              <strong>Best Time Recommendation</strong>
+              <span>Recommendation and history views help explain why the crowd feature matters in the demo.</span>
+            </div>
+            <div class="workflow-card arch-box arch-b-green" id="wf-canteen-menu">
+              <div class="workflow-card-title">Canteen Menu + Cart</div>
+              <div class="workflow-card-copy">Browse items, add to cart, and move into the checkout flow from the same
+                student account.</div>
+            </div>
+          </div>
+
+          <div class="workflow-column">
+            <div class="workflow-card arch-box arch-b-green" id="wf-payment">
+              <div class="workflow-card-title">Checkout + Payment</div>
+              <div class="workflow-card-copy">Delivery order is created and paid, which immediately starts the order
+                lifecycle.</div>
+            </div>
+            <div class="workflow-card arch-box arch-b-green" id="wf-order-detail">
+              <div class="workflow-card-title">Order Detail + Live Status</div>
+              <div class="workflow-card-copy">Student can track the order, assigned coordinator, and delivery OTP on
+                the order screen.</div>
+            </div>
+            <div class="workflow-mini workflow-mini-green" id="wf-order-history">
+              <strong>Order Trail</strong>
+              <span>Orders tab, status tracker, and payment confirmation act as proof after the workflow finishes.</span>
+            </div>
+          </div>
+
+          <svg class="workflow-svg-overlay" id="workflowStudentSvg"></svg>
+        </div>
+      </section>
+
+      <section data-background-color="#0a0000">
+        <h2 class="slide-heading">Workflow 03</h2>
+        <p class="slide-sub">Canteen manager takes over, assigns the delivery coordinator, and the order closes only
+          after the student OTP is confirmed.</p>
+        <div class="workflow-board workflow-board-four" id="demo-workflow-fulfilment">
+          <div class="workflow-column">
+            <div class="workflow-role-tag workflow-role-blue">Student</div>
+            <div class="workflow-card arch-box arch-b-blue" id="wf-student-order">
+              <div class="workflow-card-title">Paid Order Created</div>
+              <div class="workflow-card-copy">Student payment lands the order in the canteen manager dashboard.</div>
+            </div>
+            <div class="workflow-card arch-box arch-b-blue" id="wf-student-otp">
+              <div class="workflow-card-title">Delivery OTP on Student Screen</div>
+              <div class="workflow-card-copy">Student keeps the 6-digit OTP ready for the final handoff.</div>
+            </div>
+          </div>
+
+          <div class="workflow-column">
+            <div class="workflow-role-tag workflow-role-red">Canteen Manager</div>
+            <div class="workflow-card arch-box arch-b-red" id="wf-manager-queue">
+              <div class="workflow-card-title">Active Orders Dashboard</div>
+              <div class="workflow-card-copy">Manager sees the incoming order in the CCD or canteen order queue.</div>
+            </div>
+            <div class="workflow-card arch-box arch-b-red" id="wf-manager-status">
+              <div class="workflow-card-title">Accept -> Preparing -> Ready</div>
+              <div class="workflow-card-copy">Manager moves the order through the major production states during the
+                demo.</div>
+            </div>
+          </div>
+
+          <div class="workflow-column">
+            <div class="workflow-role-tag workflow-role-red">Manager Handoff</div>
+            <div class="workflow-card arch-box arch-b-red" id="wf-manager-assign">
+              <div class="workflow-card-title">Assign Delivery Coordinator</div>
+              <div class="workflow-card-copy">Ready order is assigned to a specific coordinator directly from the order
+                detail page.</div>
+            </div>
+            <div class="workflow-mini workflow-mini-red" id="wf-manager-staff">
+              <strong>Delivery Staff List</strong>
+              <span>Available coordinators and manager-side visibility make the handoff obvious in one screen.</span>
+            </div>
+          </div>
+
+          <div class="workflow-column">
+            <div class="workflow-role-tag workflow-role-green">Delivery Coordinator</div>
+            <div class="workflow-card arch-box arch-b-green" id="wf-delivery-active">
+              <div class="workflow-card-title">Pending -> Active Delivery</div>
+              <div class="workflow-card-copy">Coordinator accepts the assigned order and opens the active delivery
+                screen.</div>
+            </div>
+            <div class="workflow-card arch-box arch-b-green" id="wf-delivery-otp">
+              <div class="workflow-card-title">Enter Student OTP</div>
+              <div class="workflow-card-copy">Coordinator types the OTP received from the student to confirm the
+                delivery.</div>
+            </div>
+            <div class="workflow-mini workflow-mini-green" id="wf-delivery-complete">
+              <strong>Completed + Stats</strong>
+              <span>The order moves to completed history and the dashboard counts update immediately.</span>
+            </div>
+          </div>
+
+          <svg class="workflow-svg-overlay" id="workflowFulfilmentSvg"></svg>
+        </div>
+      </section>
+
+
+
+
+      <section data-background-color="#0a0000">
+        <div class="center-slide">
+          <div class="phase-label">PHASE 3</div>
+          <div class="phase-heading">Architecture &amp; Reflection</div>
+        </div>
+      </section>
+
+
+      <section data-background-color="#0a0000">
+        <h2 class="slide-heading">System Architecture</h2>
+        <div class="arch-canvas">
+          <div class="arch-docker-boundary fragment fade-in" data-fragment-index="1">
+            <span class="arch-docker-label">Docker Compose &mdash; 9 Containers</span>
+            <div class="arch-slot">
+              <div class="arch-banner fragment fade-in-then-out" data-fragment-index="2"><span
+                  class="arch-banner-num">Layer 1</span><span class="arch-banner-name">Client</span></div>
+              <div class="fragment fade-in" data-fragment-index="3">
+                <div class="arch-box arch-b-blue" id="ab-frontend"><span class="arch-box-tag">:3000</span><span
+                    class="arch-box-title">React 18 PWA</span><span class="arch-box-desc">Vite &middot; TailwindCSS
+                    &middot; Zustand &middot; React Query &middot; Capacitor</span></div>
+              </div>
+            </div>
+            <div class="arch-slot">
+              <div class="arch-banner fragment fade-in-then-out" data-fragment-index="3"><span
+                  class="arch-banner-num">Layer 2</span><span class="arch-banner-name">Gateway</span></div>
+              <div class="fragment fade-in" data-fragment-index="4">
+                <div class="arch-box arch-b-amber arch-box-wide" id="ab-nginx"><span
+                    class="arch-box-tag">:80</span><span class="arch-box-title">Nginx Reverse Proxy</span><span
+                    class="arch-box-desc">/ &rarr; Frontend &nbsp; /api/ &rarr; Django &nbsp; /ws/ &rarr; Daphne &nbsp;
+                    /static/ &rarr; Volume</span></div>
+              </div>
+            </div>
+            <div class="arch-slot">
+              <div class="arch-banner fragment fade-in-then-out" data-fragment-index="4"><span
+                  class="arch-banner-num">Layer 3</span><span class="arch-banner-name">Application</span></div>
+              <div class="arch-row fragment fade-in" data-fragment-index="5">
+                <div class="arch-box arch-b-red" id="ab-django"><span class="arch-box-tag">:8000</span><span
+                    class="arch-box-title">Django REST API</span><span class="arch-box-desc">Users &middot; Mess
+                    &middot; Canteen<br>Orders &middot; Payments &middot; Crowd<br>JWT Auth &middot; RBAC &middot;
+                    OTP</span></div>
+                <div class="arch-box arch-b-red" id="ab-daphne"><span class="arch-box-tag">:8001</span><span
+                    class="arch-box-title">Daphne ASGI</span><span class="arch-box-desc">Django Channels<br>WebSocket
+                    Server</span></div>
+                <div class="arch-box arch-b-red" id="ab-ml"><span class="arch-box-tag">:8002</span><span
+                    class="arch-box-title">FastAPI + YOLOv8</span><span class="arch-box-desc">Crowd Detection<br>Camera
+                    Feed Polling</span></div>
+              </div>
+            </div>
+            <div class="arch-slot">
+              <div class="arch-banner fragment fade-in-then-out" data-fragment-index="5"><span
+                  class="arch-banner-num">Layer 4</span><span class="arch-banner-name">Background Services</span></div>
+              <div class="arch-row fragment fade-in" data-fragment-index="6">
+                <div class="arch-box arch-b-green" id="ab-celery"><span class="arch-box-title">Celery Worker</span><span
+                    class="arch-box-desc">Async Task Queue</span></div>
+                <div class="arch-box arch-b-green" id="ab-beat"><span class="arch-box-title">Celery Beat</span><span
+                    class="arch-box-desc">Booking Expiry &middot; Inventory Reset</span></div>
+              </div>
+            </div>
+            <div class="arch-slot">
+              <div class="arch-banner fragment fade-in-then-out" data-fragment-index="6"><span
+                  class="arch-banner-num">Layer 5</span><span class="arch-banner-name">Data</span></div>
+              <div class="arch-row fragment fade-in" data-fragment-index="7">
+                <div class="arch-box arch-b-purple" id="ab-postgres"><span class="arch-box-title">PostgreSQL
+                    14</span><span class="arch-box-desc">Primary Database</span></div>
+                <div class="arch-box arch-b-purple" id="ab-redis"><span class="arch-box-title">Redis 7</span><span
+                    class="arch-box-desc">Cache &middot; Broker &middot; Pub/Sub</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- External -->
+          <div class="arch-external fragment fade-in" data-fragment-index="8">
+            <span class="arch-ext-label">External APIs</span>
+            <div class="arch-slot arch-ext-slot">
+              <div class="arch-banner arch-banner-ext fragment fade-in-then-out" data-fragment-index="8"><span
+                  class="arch-banner-name">External<br>APIs</span></div>
+              <div class="arch-ext-boxes fragment fade-in" data-fragment-index="9">
+                <div class="arch-box arch-b-orange" id="ab-razorpay"><span class="arch-box-title">Razorpay</span><span
+                    class="arch-box-desc">Payments &middot; Webhooks<br>UPI &middot; Cards &middot; Refunds</span></div>
+                <div class="arch-box arch-b-orange" id="ab-brevo"><span class="arch-box-title">Brevo SMTP</span><span
+                    class="arch-box-desc">OTP Emails</span></div>
+                <div class="arch-box arch-b-orange" id="ab-camera"><span class="arch-box-title">IP Cameras</span><span
+                    class="arch-box-desc">RTSP Feeds</span></div>
+              </div>
+            </div>
+          </div>
+          <span class="arch-arrow-trigger fragment" data-fragment-index="10" id="arch-trig-route"></span>
+          <span class="arch-arrow-trigger fragment" data-fragment-index="11" id="arch-trig-data"></span>
+          <span class="arch-arrow-trigger fragment" data-fragment-index="12" id="arch-trig-ext"></span>
+          <svg class="arch-svg-overlay" id="archArrowsSvg"></svg>
+        </div>
+      </section>
+
+
+
+
+      <section data-background-color="#0a0000">
+        <h2 class="slide-heading" style="margin-bottom: 10px !important;">Deployment Details</h2>
+        <p class="slide-sub" style="margin-bottom: 30px;">Publicly accessible at: <a
+            href="https://cushy-chanda-unmaltable.ngrok-free.dev/" target="_blank"
+            style="color: var(--blue);">cushy-chanda-unmaltable.ngrok-free.dev</a></p>
+
+        <div class="eco-layout"
+          style="grid-template-columns: 1fr 1.2fr 2fr; align-items: center; gap: 20px; max-width: 1050px; margin: 0 auto;">
+
+          <!-- Column 1: Public -->
+          <div style="display: flex; justify-content: center;">
+            <div class="arch-box arch-b-blue fragment fade-right" data-fragment-index="1" id="dep-public"
+              style="width: 160px;">
+              <span class="arch-box-title">Public Internet</span>
+              <span class="arch-box-desc">Global Access</span>
+            </div>
+          </div>
+
+          <!-- Column 2: Ngrok -->
+          <div style="display: flex; justify-content: center;">
+            <div class="arch-box arch-b-green fragment fade-right" data-fragment-index="2" id="dep-ngrok"
+              style="width: 180px;">
+              <span class="arch-box-title">Ngrok Tunnel</span>
+              <span class="arch-box-desc">Bypasses Firewall</span>
+            </div>
+          </div>
+
+          <!-- Column 3: IITK Server -->
+          <div class="arch-docker-boundary fragment fade-in" data-fragment-index="3" id="dep-server"
+            style="display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 25px 15px 15px; min-height: auto;">
+            <span class="arch-docker-label">IITK Server (Single Node)</span>
+
+            <div class="arch-box arch-b-amber" id="dep-nginx" style="width: 100%; max-width: 280px;">
+              <span class="arch-box-tag">:80</span>
+              <span class="arch-box-title">Nginx Reverse Proxy</span>
+            </div>
+
+            <div style="display: flex; gap: 15px; width: 100%; justify-content: center;">
+              <div class="arch-box arch-b-red" id="dep-django" style="flex: 1;">
+                <span class="arch-box-title">Django API</span>
+              </div>
+              <div class="arch-box arch-b-purple" id="dep-data" style="flex: 1;">
+                <span class="arch-box-title">DB / Redis</span>
+              </div>
+              <div class="arch-box arch-b-blue" id="dep-front" style="flex: 1;">
+                <span class="arch-box-title">React PWA</span>
+              </div>
+            </div>
+          </div>
+
+          <svg class="arch-svg-overlay" id="depArrowsSvg" style="pointer-events: none;"></svg>
+        </div>
+
+        <div class="fragment fade-up" data-fragment-index="4"
+          style="font-size: 0.6em; color: #a0a0a0; max-width: 900px; margin: 30px auto 0; padding: 12px; border: 1px dashed rgba(255,255,255,0.2); border-radius: 8px;">
+          <span style="color: #ffd43b; font-weight: bold;">Note:</span> We originally configured Nginx for Render/Koyeb
+          load balancing. We bypassed this multiservice approach and consolidated entirely on the IITK server for
+          stability against campus firewall rules.
+        </div>
+
+
+      </section>
+
+      <section data-background-color="#0a0000">
+        <h2 class="slide-heading">Future Plans</h2>
+        <div class="req-list">
+          <div class="req-row fragment fade-up" data-fragment-index="1">
+            <div class="req-num">01</div>
+            <div class="req-body">
+              <div class="req-title">Scheduled Pre-Orders</div>
+              <div class="req-sub">Let students reserve pickup slots in advance so they can avoid rush-hour waiting.
+              </div>
+            </div>
+          </div>
+          <div class="req-row fragment fade-up" data-fragment-index="2">
+            <div class="req-num">02</div>
+            <div class="req-body">
+              <div class="req-title">Ratings &amp; Feedback</div>
+              <div class="req-sub">Collect simple post-order feedback to improve menu quality, service, and canteen
+                decisions.</div>
+            </div>
+          </div>
+          <div class="req-row fragment fade-up" data-fragment-index="3">
+            <div class="req-num">03</div>
+            <div class="req-body">
+              <div class="req-title">Kubernetes Auto-Scaling</div>
+              <div class="req-sub">K8s deployment with HPA for peak-hour traffic spikes during lunch and dinner.</div>
+            </div>
+          </div>
+          <div class="req-row fragment fade-up" data-fragment-index="4">
+            <div class="req-num">04</div>
+            <div class="req-body">
+              <div class="req-title">PWA + Push Notifications</div>
+              <div class="req-sub">Service worker for offline support, FCM push notifications, add-to-homescreen.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <section data-background-color="#0a0000">
+        <h2 class="slide-heading">Lessons Learnt</h2>
+        <div class="req-list">
+          <div class="req-row fragment fade-up" data-fragment-index="1">
+            <div class="req-num">01</div>
+            <div class="req-body">
+              <div class="req-title">Managing a 10-Person Dev Team</div>
+              <div class="req-sub">Feature-based modular architecture enabled parallel development with near-zero
+                merge conflicts. Weekly sync meetings kept everyone aligned.</div>
+            </div>
+          </div>
+          <div class="req-row fragment fade-up" data-fragment-index="2">
+            <div class="req-num">02</div>
+            <div class="req-body">
+              <div class="req-title">IITK Firewall Blocks Outgoing Database Requests</div>
+              <div class="req-sub">We planned a multiservice architecture across Render/Koyeb and IITK, but the campus
+                firewall strictly blocks outgoing database connections from internal servers. We had to pivot to deploying
+                everything entirely on the IITK server.</div>
+            </div>
+          </div>
+          <div class="req-row fragment fade-up" data-fragment-index="3">
+            <div class="req-num">03</div>
+            <div class="req-body">
+              <div class="req-title">Git Conflicts Are Inevitable</div>
+              <div class="req-sub">Strict branch naming (<code>name-feature</code>), feature-scoped directories, and
+                mandatory PR reviews minimized integration pain.</div>
+            </div>
+          </div>
+          <div class="req-row fragment fade-up" data-fragment-index="4">
+            <div class="req-num">04</div>
+            <div class="req-body">
+              <div class="req-title">One Feature Means Multiple User Journeys</div>
+              <div class="req-sub">Even a simple canteen order spans students, canteen managers, delivery coordinators,
+                and admins. Planning the handoffs between roles mattered as much as building each screen.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <section data-background-color="#000000">
+        <div class="center-slide">
+          <div class="st-logo st-logo-sm">
+            <div class="st-dbl st-dbl-top"></div>
+            <div class="st-word-upper"><span class="st-cap">U</span>PSID<span class="st-cap">E</span></div>
+            <div class="st-lower-row">
+              <div class="st-dbl st-dbl-side"></div>
+              <div class="st-word-lower">DINE</div>
+              <div class="st-dbl st-dbl-side"></div>
+            </div>
+          </div>
+          <div class="thankyou" style="font-size: 3.8em; font-weight: 700; letter-spacing: 0.2em;">Thank You</div>
+          <div class="thankyou-sub">Questions?</div>
+          <div class="thankyou-footer">
+            Group 18 &middot; HiveMinds &middot; CS253 &middot; IIT Kanpur<br />
+            <span class="thankyou-link">github.com/karankk-05/upside-dine</span>
+          </div>
+        </div>
+      </section>
+
+
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+  <script>
+    Reveal.initialize({
+      hash: true,
+      slideNumber: 'c/t',
+      transition: 'fade',
+      transitionSpeed: 'slow',
+      backgroundTransition: 'fade',
+      controls: true,
+      controlsLayout: 'edges',
+      controlsBackArrows: 'faded',
+      controlsTutorial: false,
+      progress: true,
+      center: true,
+      width: 1280,
+      height: 720,
+      margin: 0.08,
+      minScale: 0.2,
+      maxScale: 1.0,
+      plugins: [RevealHighlight]
+    });
+
+    // Audio-synced logo reveal
+    const stAudio = new Audio('strangerthings_theme.mp3');
+    stAudio.volume = 0.8;
+    let logoPlayed = false;
+
+    Reveal.on('slidechanged', function (event) {
+      const logoSlide = event.currentSlide.querySelector('.logo-reveal-slide');
+      if (logoSlide && !logoPlayed) {
+        logoPlayed = true;
+        logoSlide.classList.remove('playing');
+
+        // Start everything together: music + text + logo zoom (7s animation)
+        logoSlide.classList.add('playing');
+        stAudio.currentTime = 0;
+        stAudio.play().catch(() => {
+          console.log('Click the page first to enable audio.');
+        });
+      }
+
+      // Allow replay if navigating away
+      if (!logoSlide) {
+        logoPlayed = false;
+      }
+    });
+  </script>
+
+  <!-- Floating particles -->
+  <canvas id="particleCanvas"></canvas>
+  <script>
+    (function () {
+      const c = document.getElementById('particleCanvas');
+      const ctx = c.getContext('2d');
+      let particles = [];
+      function resize() { c.width = window.innerWidth; c.height = window.innerHeight; }
+      resize();
+      window.addEventListener('resize', resize);
+      for (let i = 0; i < 40; i++) {
+        particles.push({
+          x: Math.random() * c.width, y: Math.random() * c.height,
+          vx: (Math.random() - 0.5) * 0.2, vy: -Math.random() * 0.4 - 0.05,
+          r: Math.random() * 1.5 + 0.3, a: Math.random() * 0.35 + 0.05
+        });
+      }
+      function draw() {
+        ctx.clearRect(0, 0, c.width, c.height);
+        particles.forEach(p => {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(180, 40, 40, ${p.a})`;
+          ctx.fill();
+          p.x += p.vx; p.y += p.vy;
+          if (p.y < -10) { p.y = c.height + 10; p.x = Math.random() * c.width; }
+          if (p.x < -10 || p.x > c.width + 10) p.x = Math.random() * c.width;
+        });
+        requestAnimationFrame(draw);
+      }
+      draw();
+    })();
+  </script>
+
+  <!-- Ecosystem connecting arrows -->
+  <script>
+    (function () {
+      // Student flow → target role arrows
+      const flowArrows = [
+        { flowId: 'flow-extras', targetId: 'eco-mw', color: '#4a9eff' },
+        { flowId: 'flow-order', targetId: 'eco-dc', color: '#34d399' },
+        { flowId: 'flow-prebook', targetId: 'eco-canteen', color: '#fb923c' },
+        { flowId: 'flow-crowd', targetId: 'eco-mess', color: '#a78bfa' },
+      ];
+
+      // Admin → entity arrows
+      const adminArrows = [
+        { fromId: 'eco-admin-node', toId: 'eco-mess', color: '#c41e1e' },
+        { fromId: 'eco-admin-node', toId: 'eco-canteen', color: '#c41e1e' },
+      ];
+
+      function drawCurve(svg, x1, y1, x2, y2, color) {
+        var curX = Math.max(Math.abs(x2 - x1) / 2, Math.abs(y2 - y1) / 2);
+        if (Math.abs(y2 - y1) < 30) curX += 40;
+        var cx1 = x1 + (x2 > x1 ? curX : -curX);
+        var cx2 = x2 - (x2 > x1 ? curX : -curX);
+
+        var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', 'M' + x1 + ',' + y1 + ' C' + cx1 + ',' + y1 + ' ' + cx2 + ',' + y2 + ' ' + x2 + ',' + y2);
+        path.setAttribute('stroke', color);
+        path.setAttribute('stroke-width', '1.5');
+        path.setAttribute('stroke-dasharray', '6,4');
+        path.setAttribute('fill', 'none');
+        path.setAttribute('opacity', '0.7');
+
+        var aSize = 5;
+        var arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        // Point arrowhead in the direction of travel
+        if (x2 > x1) {
+          // Left → Right: arrowhead points right
+          arrow.setAttribute('points',
+            x2 + ',' + y2 + ' ' + (x2 - aSize - 2) + ',' + (y2 - aSize) + ' ' + (x2 - aSize - 2) + ',' + (y2 + aSize)
+          );
+        } else {
+          // Right → Left: arrowhead points left
+          arrow.setAttribute('points',
+            x2 + ',' + y2 + ' ' + (x2 + aSize + 2) + ',' + (y2 - aSize) + ' ' + (x2 + aSize + 2) + ',' + (y2 + aSize)
+          );
+        }
+        arrow.setAttribute('fill', color);
+        arrow.setAttribute('opacity', '0.7');
+
+        svg.appendChild(path);
+        svg.appendChild(arrow);
+      }
+
+      function refreshArrows() {
+        var svg = document.getElementById('ecoArrowsSvg');
+        if (!svg) return;
+        var container = svg.closest('.eco-layout');
+        if (!container) return;
+        var cr = container.getBoundingClientRect();
+
+        svg.innerHTML = '';
+
+        // Admin → Entity arrows (show when entities column is visible)
+        var entitiesCol = document.getElementById('eco-entities-col');
+        if (entitiesCol && entitiesCol.classList.contains('visible')) {
+          adminArrows.forEach(function (a) {
+            var fromEl = document.getElementById(a.fromId);
+            var toEl = document.getElementById(a.toId);
+            if (!fromEl || !toEl) return;
+            var fr = fromEl.getBoundingClientRect();
+            var tr = toEl.getBoundingClientRect();
+            var x1 = (fr.right - cr.left);
+            var y1 = (fr.top + fr.height / 2) - cr.top;
+            var x2 = (tr.left - cr.left);
+            var y2 = (tr.top + tr.height / 2) - cr.top;
+            drawCurve(svg, x1, y1, x2, y2, a.color);
+          });
+        }
+
+        // Student flow → role arrows
+        flowArrows.forEach(function (m) {
+          var flowEl = document.getElementById(m.flowId);
+          var targetEl = document.getElementById(m.targetId);
+          if (!flowEl || !targetEl) return;
+          if (!flowEl.classList.contains('visible')) return;
+          var fr = flowEl.getBoundingClientRect();
+          var tr = targetEl.getBoundingClientRect();
+          var x1 = (fr.left - cr.left);
+          var y1 = (fr.top + fr.height / 2) - cr.top;
+          var x2 = (tr.right - cr.left);
+          var y2 = (tr.top + tr.height / 2) - cr.top;
+          drawCurve(svg, x1, y1, x2, y2, m.color);
+        });
+      }
+
+      Reveal.on('fragmentshown', function () { setTimeout(refreshArrows, 500); });
+      Reveal.on('fragmenthidden', function () { setTimeout(refreshArrows, 500); });
+      Reveal.on('slidechanged', function () { setTimeout(refreshArrows, 600); });
+      window.addEventListener('resize', function () { setTimeout(refreshArrows, 200); });
+    })();
+  </script>
+
+  <!-- Demo workflow arrows -->
+  <script>
+    (function () {
+      var boards = [
+        {
+          boardId: 'demo-workflow-mess',
+          svgId: 'workflowMessSvg',
+          arrows: [
+            { from: 'wf-student-dashboard', to: 'wf-book-extras', color: '#4a9eff', mode: 'vertical', fromSide: 'bottom', toSide: 'top' },
+            { from: 'wf-book-extras', to: 'wf-booking-qr', color: '#4a9eff', mode: 'vertical', fromSide: 'bottom', toSide: 'top' },
+            { from: 'wf-booking-qr', to: 'wf-my-bookings', color: '#4a9eff', mode: 'horizontal', fromSide: 'right', toSide: 'left', dash: '7,5', width: 1.9, opacity: 0.62 },
+            { from: 'wf-booking-qr', to: 'wf-qr-timer', color: '#f59e0b', mode: 'horizontal', fromSide: 'right', toSide: 'left', fromRatio: 0.72, toRatio: 0.35, dash: '7,5', width: 1.9, opacity: 0.62 },
+            { from: 'wf-booking-qr', to: 'wf-worker-scan', color: '#f59e0b', mode: 'horizontal', fromSide: 'right', toSide: 'left', fromRatio: 0.52, toRatio: 0.5 },
+            { from: 'wf-worker-scan', to: 'wf-worker-verify', color: '#f59e0b', mode: 'vertical', fromSide: 'bottom', toSide: 'top' },
+            { from: 'wf-worker-verify', to: 'wf-scan-history', color: '#f59e0b', mode: 'vertical', fromSide: 'bottom', toSide: 'top', dash: '7,5', width: 1.9, opacity: 0.62 }
+          ]
+        },
+        {
+          boardId: 'demo-workflow-student',
+          svgId: 'workflowStudentSvg',
+          arrows: [
+            { from: 'wf-student-home', to: 'wf-student-search', color: '#4a9eff', mode: 'vertical', fromSide: 'bottom', toSide: 'top', dash: '7,5', width: 1.9, opacity: 0.62 },
+            { from: 'wf-student-home', to: 'wf-crowd-monitor', color: '#a78bfa', mode: 'horizontal', fromSide: 'right', toSide: 'left' },
+            { from: 'wf-crowd-monitor', to: 'wf-best-time', color: '#a78bfa', mode: 'vertical', fromSide: 'bottom', toSide: 'top', dash: '7,5', width: 1.9, opacity: 0.62 },
+            { from: 'wf-crowd-monitor', to: 'wf-canteen-menu', color: '#34d399', mode: 'vertical', fromSide: 'bottom', toSide: 'top' },
+            { from: 'wf-canteen-menu', to: 'wf-payment', color: '#34d399', mode: 'horizontal', fromSide: 'right', toSide: 'left' },
+            { from: 'wf-payment', to: 'wf-order-detail', color: '#34d399', mode: 'vertical', fromSide: 'bottom', toSide: 'top' },
+            { from: 'wf-order-detail', to: 'wf-order-history', color: '#34d399', mode: 'vertical', fromSide: 'bottom', toSide: 'top', dash: '7,5', width: 1.9, opacity: 0.62 }
+          ]
+        },
+        {
+          boardId: 'demo-workflow-fulfilment',
+          svgId: 'workflowFulfilmentSvg',
+          arrows: [
+            { from: 'wf-student-order', to: 'wf-student-otp', color: '#4a9eff', mode: 'vertical', fromSide: 'bottom', toSide: 'top' },
+            { from: 'wf-student-order', to: 'wf-manager-queue', color: '#ff7d7d', mode: 'horizontal', fromSide: 'right', toSide: 'left' },
+            { from: 'wf-manager-queue', to: 'wf-manager-status', color: '#ff7d7d', mode: 'vertical', fromSide: 'bottom', toSide: 'top' },
+            { from: 'wf-manager-status', to: 'wf-manager-assign', color: '#ff7d7d', mode: 'horizontal', fromSide: 'right', toSide: 'left' },
+            { from: 'wf-manager-assign', to: 'wf-manager-staff', color: '#ff7d7d', mode: 'vertical', fromSide: 'bottom', toSide: 'top', dash: '7,5', width: 1.9, opacity: 0.62 },
+            { from: 'wf-manager-assign', to: 'wf-delivery-active', color: '#34d399', mode: 'horizontal', fromSide: 'right', toSide: 'left' },
+            { from: 'wf-student-otp', to: 'wf-delivery-otp', color: '#34d399', mode: 'horizontal', fromSide: 'right', toSide: 'left', fromRatio: 0.56, toRatio: 0.56 },
+            { from: 'wf-delivery-active', to: 'wf-delivery-otp', color: '#34d399', mode: 'vertical', fromSide: 'bottom', toSide: 'top' },
+            { from: 'wf-delivery-otp', to: 'wf-delivery-complete', color: '#34d399', mode: 'vertical', fromSide: 'bottom', toSide: 'top', dash: '7,5', width: 1.9, opacity: 0.62 }
+          ]
+        }
+      ];
+
+      function getRect(id) {
+        var el = document.getElementById(id);
+        return el ? el.getBoundingClientRect() : null;
+      }
+
+      function getPoint(rect, cr, side, ratio) {
+        var r = ratio == null ? 0.5 : ratio;
+        if (side === 'top') return { x: (rect.left - cr.left) + (rect.width * r), y: rect.top - cr.top };
+        if (side === 'bottom') return { x: (rect.left - cr.left) + (rect.width * r), y: rect.bottom - cr.top };
+        if (side === 'left') return { x: rect.left - cr.left, y: (rect.top - cr.top) + (rect.height * r) };
+        return { x: rect.right - cr.left, y: (rect.top - cr.top) + (rect.height * r) };
+      }
+
+      function drawWorkflowCurve(svg, fromPoint, toPoint, color, opts) {
+        opts = opts || {};
+
+        var c1, c2;
+        if (opts.mode === 'vertical') {
+          var signY = toPoint.y >= fromPoint.y ? 1 : -1;
+          var curveY = Math.max(Math.abs(toPoint.y - fromPoint.y) * 0.48, Math.abs(toPoint.x - fromPoint.x) * 0.25, 28);
+          c1 = { x: fromPoint.x, y: fromPoint.y + (signY * curveY) };
+          c2 = { x: toPoint.x, y: toPoint.y - (signY * curveY) };
+        } else {
+          var signX = toPoint.x >= fromPoint.x ? 1 : -1;
+          var curveX = Math.max(Math.abs(toPoint.x - fromPoint.x) * 0.48, Math.abs(toPoint.y - fromPoint.y) * 0.35, 34);
+          c1 = { x: fromPoint.x + (signX * curveX), y: fromPoint.y };
+          c2 = { x: toPoint.x - (signX * curveX), y: toPoint.y };
+        }
+
+        var d = 'M' + fromPoint.x + ',' + fromPoint.y +
+          ' C' + c1.x + ',' + c1.y + ' ' + c2.x + ',' + c2.y + ' ' + toPoint.x + ',' + toPoint.y;
+
+        var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('stroke', color);
+        path.setAttribute('stroke-width', String(opts.width || 2.3));
+        path.setAttribute('fill', 'none');
+        path.setAttribute('opacity', String(opts.opacity || 0.8));
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        path.setAttribute('stroke-dasharray', opts.dash || '9,6');
+        svg.appendChild(path);
+
+        var dx = toPoint.x - c2.x;
+        var dy = toPoint.y - c2.y;
+        var len = Math.sqrt((dx * dx) + (dy * dy));
+        if (!len) return;
+
+        var ux = dx / len;
+        var uy = dy / len;
+        var px = -uy;
+        var py = ux;
+        var arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        var arrowSize = opts.arrowSize || 5.5;
+        var arrowBack = opts.arrowBack || 9;
+        arrow.setAttribute(
+          'points',
+          toPoint.x + ',' + toPoint.y + ' ' +
+          (toPoint.x - (ux * arrowBack) + (px * arrowSize)) + ',' + (toPoint.y - (uy * arrowBack) + (py * arrowSize)) + ' ' +
+          (toPoint.x - (ux * arrowBack) - (px * arrowSize)) + ',' + (toPoint.y - (uy * arrowBack) - (py * arrowSize))
+        );
+        arrow.setAttribute('fill', color);
+        arrow.setAttribute('opacity', String(opts.opacity || 0.88));
+        svg.appendChild(arrow);
+      }
+
+      function drawWorkflowArrow(svg, cr, spec) {
+        var fromRect = getRect(spec.from);
+        var toRect = getRect(spec.to);
+        if (!fromRect || !toRect) return;
+
+        var fromPoint = getPoint(fromRect, cr, spec.fromSide || 'right', spec.fromRatio);
+        var toPoint = getPoint(toRect, cr, spec.toSide || 'left', spec.toRatio);
+        drawWorkflowCurve(svg, fromPoint, toPoint, spec.color, spec);
+      }
+
+      function refreshWorkflowBoard(config) {
+        var board = document.getElementById(config.boardId);
+        var svg = document.getElementById(config.svgId);
+        if (!board || !svg) return;
+
+        svg.innerHTML = '';
+        var slide = board.closest('section');
+        if (!slide || !slide.classList.contains('present')) return;
+
+        var cr = board.getBoundingClientRect();
+        if (!cr.width || !cr.height) return;
+
+        config.arrows.forEach(function (spec) {
+          drawWorkflowArrow(svg, cr, spec);
+        });
+      }
+
+      function refreshWorkflowArrows() {
+        boards.forEach(refreshWorkflowBoard);
+      }
+
+      Reveal.on('ready', function () { setTimeout(refreshWorkflowArrows, 250); });
+      Reveal.on('slidechanged', function () { setTimeout(refreshWorkflowArrows, 350); });
+      window.addEventListener('resize', function () { setTimeout(refreshWorkflowArrows, 200); });
+    })();
+  </script>
+
+  <!-- Architecture container arrows -->
+  <script>
+    (function () {
+      function getRect(id) {
+        var el = document.getElementById(id);
+        return el ? el.getBoundingClientRect() : null;
+      }
+
+      function relX(rect, cr, ratio) {
+        return (rect.left - cr.left) + (rect.width * ratio);
+      }
+
+      function relTop(rect, cr) {
+        return rect.top - cr.top;
+      }
+
+      function relBottom(rect, cr) {
+        return rect.bottom - cr.top;
+      }
+
+      function relLeft(rect, cr) {
+        return rect.left - cr.left;
+      }
+
+      function relRight(rect, cr) {
+        return rect.right - cr.left;
+      }
+
+      function relMidY(rect, cr, ratio) {
+        return (rect.top - cr.top) + (rect.height * ratio);
+      }
+
+      function drawPolyline(svg, points, color, opts) {
+        if (!points || points.length < 2) return;
+        opts = opts || {};
+
+        var d = 'M' + points[0].x + ',' + points[0].y;
+        for (var i = 1; i < points.length; i++) {
+          d += ' L' + points[i].x + ',' + points[i].y;
+        }
+
+        var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('stroke', color);
+        path.setAttribute('stroke-width', String(opts.width || 2.4));
+        path.setAttribute('fill', 'none');
+        path.setAttribute('opacity', String(opts.opacity || 0.78));
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        if (opts.dash !== false) {
+          path.setAttribute('stroke-dasharray', opts.dash || '8,5');
+        }
+        svg.appendChild(path);
+
+        if (opts.arrow === false) return;
+
+        var p1 = points[points.length - 2];
+        var p2 = points[points.length - 1];
+        var dx = p2.x - p1.x;
+        var dy = p2.y - p1.y;
+        var len = Math.sqrt((dx * dx) + (dy * dy));
+        if (!len) return;
+
+        var ux = dx / len;
+        var uy = dy / len;
+        var px = -uy;
+        var py = ux;
+        var arrowSize = opts.arrowSize || 6;
+        var arrowBack = opts.arrowBack || 10;
+
+        var arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        arrow.setAttribute(
+          'points',
+          p2.x + ',' + p2.y + ' ' +
+          (p2.x - (ux * arrowBack) + (px * arrowSize)) + ',' + (p2.y - (uy * arrowBack) + (py * arrowSize)) + ' ' +
+          (p2.x - (ux * arrowBack) - (px * arrowSize)) + ',' + (p2.y - (uy * arrowBack) - (py * arrowSize))
+        );
+        arrow.setAttribute('fill', color);
+        arrow.setAttribute('opacity', String(opts.opacity || 0.88));
+        svg.appendChild(arrow);
+      }
+
+      function drawRouteGroup(svg, cr) {
+        var frontend = getRect('ab-frontend');
+        var nginx = getRect('ab-nginx');
+        var django = getRect('ab-django');
+        var daphne = getRect('ab-daphne');
+        var ml = getRect('ab-ml');
+        if (!frontend || !nginx || !django || !daphne || !ml) return;
+
+        var routeBusY = Math.min(relTop(django, cr), relTop(daphne, cr), relTop(ml, cr)) - 22;
+        var frontendX = relX(frontend, cr, 0.5);
+        var nginxX = relX(nginx, cr, 0.5);
+        var targetXs = [relX(django, cr, 0.5), relX(daphne, cr, 0.5), relX(ml, cr, 0.5)];
+
+        drawPolyline(svg, [
+          { x: frontendX, y: relBottom(frontend, cr) },
+          { x: frontendX, y: relTop(nginx, cr) }
+        ], '#4a9eff', { width: 2.6, opacity: 0.78 });
+
+        drawPolyline(svg, [
+          { x: nginxX, y: relBottom(nginx, cr) },
+          { x: nginxX, y: routeBusY }
+        ], '#f59e0b', { width: 1.8, opacity: 0.34, dash: false, arrow: false });
+
+        drawPolyline(svg, [
+          { x: targetXs[0], y: routeBusY },
+          { x: targetXs[2], y: routeBusY }
+        ], '#f59e0b', { width: 1.8, opacity: 0.34, dash: false, arrow: false });
+
+        [django, daphne, ml].forEach(function (rect) {
+          var targetX = relX(rect, cr, 0.5);
+          drawPolyline(svg, [
+            { x: targetX, y: routeBusY },
+            { x: targetX, y: relTop(rect, cr) }
+          ], '#f59e0b', { width: 2.15, opacity: 0.7 });
+        });
+      }
+
+      function drawDataGroup(svg, cr, boundaryRect) {
+        var django = getRect('ab-django');
+        var celery = getRect('ab-celery');
+        var beat = getRect('ab-beat');
+        var postgres = getRect('ab-postgres');
+        var redis = getRect('ab-redis');
+        if (!django || !celery || !beat || !postgres || !redis || !boundaryRect) return;
+
+        var postgresEntryX = relX(postgres, cr, 0.28);
+        var redisEntryX = relX(redis, cr, 0.34);
+        var redisTaskX = relX(redis, cr, 0.68);
+        var dbLaneY = relTop(postgres, cr) - 18;
+        var redisLaneY = relTop(redis, cr) - 18;
+
+        drawPolyline(svg, [
+          { x: relX(django, cr, 0.28), y: relBottom(django, cr) },
+          { x: relX(django, cr, 0.28), y: dbLaneY },
+          { x: postgresEntryX, y: dbLaneY },
+          { x: postgresEntryX, y: relTop(postgres, cr) }
+        ], '#a78bfa', { width: 2.2, opacity: 0.72 });
+
+        drawPolyline(svg, [
+          { x: relX(django, cr, 0.72), y: relBottom(django, cr) },
+          { x: relX(django, cr, 0.72), y: redisLaneY },
+          { x: redisEntryX, y: redisLaneY },
+          { x: redisEntryX, y: relTop(redis, cr) }
+        ], '#a78bfa', { width: 2.2, opacity: 0.72 });
+
+        drawPolyline(svg, [
+          { x: relX(celery, cr, 0.5), y: relBottom(celery, cr) },
+          { x: relX(celery, cr, 0.5), y: redisLaneY + 8 },
+          { x: redisTaskX, y: redisLaneY + 8 },
+          { x: redisTaskX, y: relTop(redis, cr) }
+        ], '#34d399', { width: 2.15, opacity: 0.72 });
+
+        drawPolyline(svg, [
+          { x: relX(beat, cr, 0.5), y: relBottom(beat, cr) },
+          { x: relX(beat, cr, 0.5), y: relTop(redis, cr) }
+        ], '#34d399', { width: 2.05, opacity: 0.72 });
+      }
+
+      function drawExternalGroup(svg, cr, boundaryRect) {
+        var django = getRect('ab-django');
+        var ml = getRect('ab-ml');
+        var razorpay = getRect('ab-razorpay');
+        var brevo = getRect('ab-brevo');
+        var camera = getRect('ab-camera');
+        if (!django || !ml || !razorpay || !brevo || !camera || !boundaryRect) return;
+
+        var railNear = Math.min(relLeft(razorpay, cr), relLeft(brevo, cr), relLeft(camera, cr)) - 18;
+        var railMid = railNear - 14;
+        var railFar = railNear - 28;
+
+        drawPolyline(svg, [
+          { x: relRight(django, cr), y: relMidY(django, cr, 0.34) },
+          { x: railFar, y: relMidY(django, cr, 0.34) },
+          { x: railFar, y: relMidY(razorpay, cr, 0.5) },
+          { x: relLeft(razorpay, cr), y: relMidY(razorpay, cr, 0.5) }
+        ], '#fb923c', { width: 2.15, opacity: 0.72 });
+
+        drawPolyline(svg, [
+          { x: relRight(django, cr), y: relMidY(django, cr, 0.66) },
+          { x: railMid, y: relMidY(django, cr, 0.66) },
+          { x: railMid, y: relMidY(brevo, cr, 0.5) },
+          { x: relLeft(brevo, cr), y: relMidY(brevo, cr, 0.5) }
+        ], '#fb923c', { width: 2.15, opacity: 0.72 });
+
+        drawPolyline(svg, [
+          { x: relRight(ml, cr), y: relMidY(ml, cr, 0.5) },
+          { x: railNear, y: relMidY(ml, cr, 0.5) },
+          { x: railNear, y: relMidY(camera, cr, 0.5) },
+          { x: relLeft(camera, cr), y: relMidY(camera, cr, 0.5) }
+        ], '#fb923c', { width: 2.15, opacity: 0.72 });
+      }
+
+      function refreshArchArrows() {
+        var svg = document.getElementById('archArrowsSvg');
+        if (!svg) return;
+        var canvas = svg.closest('.arch-canvas');
+        if (!canvas) return;
+        var cr = canvas.getBoundingClientRect();
+        svg.innerHTML = '';
+
+        var boundary = canvas.querySelector('.arch-docker-boundary');
+        if (!boundary || !boundary.classList.contains('visible')) return;
+        var boundaryRect = boundary.getBoundingClientRect();
+
+        var tRoute = document.getElementById('arch-trig-route');
+        var tData = document.getElementById('arch-trig-data');
+        var tExt = document.getElementById('arch-trig-ext');
+
+        if (tRoute && tRoute.classList.contains('visible')) drawRouteGroup(svg, cr);
+        if (tData && tData.classList.contains('visible')) drawDataGroup(svg, cr, boundaryRect);
+        if (tExt && tExt.classList.contains('visible')) drawExternalGroup(svg, cr, boundaryRect);
+      }
+
+      Reveal.on('fragmentshown', function () { setTimeout(refreshArchArrows, 400); });
+      Reveal.on('fragmenthidden', function () { setTimeout(refreshArchArrows, 400); });
+      Reveal.on('slidechanged', function () { setTimeout(refreshArchArrows, 500); });
+      window.addEventListener('resize', function () { setTimeout(refreshArchArrows, 200); });
+    })();
+  </script>
+
+  <!-- Deployment arrows -->
+  <script>
+    (function () {
+      function point(rect, cr, side, ratio) {
+        var r = ratio == null ? 0.5 : ratio;
+        if (side === 'top') return { x: (rect.left - cr.left) + (rect.width * r), y: rect.top - cr.top };
+        if (side === 'bottom') return { x: (rect.left - cr.left) + (rect.width * r), y: rect.bottom - cr.top };
+        if (side === 'left') return { x: rect.left - cr.left, y: (rect.top - cr.top) + (rect.height * r) };
+        return { x: rect.right - cr.left, y: (rect.top - cr.top) + (rect.height * r) };
+      }
+
+      function drawDeploymentPolyline(svg, points, color, opts) {
+        if (!points || points.length < 2) return;
+        opts = opts || {};
+
+        var d = 'M' + points[0].x + ',' + points[0].y;
+        for (var i = 1; i < points.length; i++) d += ' L' + points[i].x + ',' + points[i].y;
+
+        var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('stroke', color);
+        path.setAttribute('stroke-width', String(opts.width || 2.8));
+        path.setAttribute('fill', 'none');
+        path.setAttribute('opacity', String(opts.opacity || 0.84));
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        if (opts.dash !== false) path.setAttribute('stroke-dasharray', opts.dash || '9,6');
+        svg.appendChild(path);
+
+        if (opts.arrow === false) return;
+
+        var p1 = points[points.length - 2];
+        var p2 = points[points.length - 1];
+        var dx = p2.x - p1.x;
+        var dy = p2.y - p1.y;
+        var len = Math.sqrt((dx * dx) + (dy * dy));
+        if (!len) return;
+
+        var ux = dx / len;
+        var uy = dy / len;
+        var px = -uy;
+        var py = ux;
+        var arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        arrow.setAttribute(
+          'points',
+          p2.x + ',' + p2.y + ' ' +
+          (p2.x - (ux * 11) + (px * 6)) + ',' + (p2.y - (uy * 11) + (py * 6)) + ' ' +
+          (p2.x - (ux * 11) - (px * 6)) + ',' + (p2.y - (uy * 11) - (py * 6))
+        );
+        arrow.setAttribute('fill', color);
+        arrow.setAttribute('opacity', String(opts.opacity || 0.9));
+        svg.appendChild(arrow);
+      }
+
+      function refreshDeploymentArrows() {
+        var svg = document.getElementById('depArrowsSvg');
+        if (!svg) return;
+        var container = svg.closest('.eco-layout');
+        if (!container) return;
+        var cr = container.getBoundingClientRect();
+        svg.innerHTML = '';
+        var slide = container.closest('section');
+        if (!slide || !slide.classList.contains('present')) return;
+
+        var publicNode = document.getElementById('dep-public');
+        var ngrokNode = document.getElementById('dep-ngrok');
+        var nginxNode = document.getElementById('dep-nginx');
+        var djangoNode = document.getElementById('dep-django');
+        var dataNode = document.getElementById('dep-data');
+        var frontNode = document.getElementById('dep-front');
+
+        if (!(publicNode && ngrokNode && nginxNode && djangoNode && dataNode && frontNode)) return;
+        if (!publicNode.classList.contains('visible') || !ngrokNode.classList.contains('visible')) return;
+
+        drawDeploymentPolyline(svg, [
+          point(publicNode.getBoundingClientRect(), cr, 'right'),
+          point(ngrokNode.getBoundingClientRect(), cr, 'left')
+        ], '#4a9eff', { width: 2.8, opacity: 0.84 });
+
+        drawDeploymentPolyline(svg, [
+          point(ngrokNode.getBoundingClientRect(), cr, 'right'),
+          point(nginxNode.getBoundingClientRect(), cr, 'left')
+        ], '#34d399', { width: 2.8, opacity: 0.84 });
+
+        var nginxRect = nginxNode.getBoundingClientRect();
+        var djangoRect = djangoNode.getBoundingClientRect();
+        var dataRect = dataNode.getBoundingClientRect();
+        var frontRect = frontNode.getBoundingClientRect();
+        var busY = Math.min(djangoRect.top, dataRect.top, frontRect.top) - cr.top - 16;
+        var nginxX = point(nginxRect, cr, 'bottom').x;
+        var djangoX = point(djangoRect, cr, 'top').x;
+        var dataX = point(dataRect, cr, 'top').x;
+        var frontX = point(frontRect, cr, 'top').x;
+
+        drawDeploymentPolyline(svg, [
+          { x: nginxX, y: point(nginxRect, cr, 'bottom').y },
+          { x: nginxX, y: busY }
+        ], '#f59e0b', { width: 1.9, opacity: 0.36, dash: false, arrow: false });
+
+        drawDeploymentPolyline(svg, [
+          { x: djangoX, y: busY },
+          { x: frontX, y: busY }
+        ], '#f59e0b', { width: 1.9, opacity: 0.36, dash: false, arrow: false });
+
+        drawDeploymentPolyline(svg, [
+          { x: djangoX, y: busY },
+          point(djangoRect, cr, 'top')
+        ], '#f59e0b', { width: 2.4, opacity: 0.78 });
+
+        drawDeploymentPolyline(svg, [
+          { x: dataX, y: busY },
+          point(dataRect, cr, 'top')
+        ], '#a78bfa', { width: 2.4, opacity: 0.78 });
+
+        drawDeploymentPolyline(svg, [
+          { x: frontX, y: busY },
+          point(frontRect, cr, 'top')
+        ], '#4a9eff', { width: 2.4, opacity: 0.78 });
+      }
+
+      Reveal.on('fragmentshown', function () { setTimeout(refreshDeploymentArrows, 350); });
+      Reveal.on('fragmenthidden', function () { setTimeout(refreshDeploymentArrows, 350); });
+      Reveal.on('slidechanged', function () { setTimeout(refreshDeploymentArrows, 450); });
+      window.addEventListener('resize', function () { setTimeout(refreshDeploymentArrows, 200); });
+    })();
+  </script>
+</body>
+
+</html>

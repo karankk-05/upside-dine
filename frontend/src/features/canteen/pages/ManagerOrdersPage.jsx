@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, ChefHat, Package, Truck, Check } from 'lucide-react';
+import { ArrowLeft, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import InfiniteScrollSentinel from '../../../components/InfiniteScrollSentinel';
 import { useIncrementalList } from '../../../hooks/useIncrementalList';
@@ -29,14 +29,24 @@ const getItemNames = (items) => {
 export default function ManagerOrdersPage() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
-  const { data: orders = [], isLoading, refetch } = useManagerOrders();
+  const [pendingUpdates, setPendingUpdates] = useState({});
+  const { data: orders = [], isLoading } = useManagerOrders();
   const { mutateAsync: updateStatus } = useUpdateOrderStatus();
+  const optimisticOrders = orders.map((order) => {
+    const nextStatus = pendingUpdates[order.id];
+    return nextStatus
+      ? {
+          ...order,
+          status: nextStatus,
+        }
+      : order;
+  });
 
   const filtered = filter === 'all'
-    ? orders
+    ? optimisticOrders
     : filter === 'prebooking'
-      ? orders.filter(o => o.order_type === 'prebooking')
-      : orders.filter(o => o.order_type === filter);
+      ? optimisticOrders.filter(o => o.order_type === 'prebooking')
+      : optimisticOrders.filter(o => o.order_type === filter);
 
   // Sort: pending first, then by created_at desc
   const sorted = [...filtered].sort((a, b) => {
@@ -58,16 +68,25 @@ export default function ManagerOrdersPage() {
 
   const handleStatusUpdate = async (e, id, newStatus) => {
     e.stopPropagation();
+    setPendingUpdates((current) => ({
+      ...current,
+      [id]: newStatus,
+    }));
     try {
       await updateStatus({ id, status: newStatus });
-      refetch();
     } catch (err) {
       const d = err.response?.data;
       alert(typeof d === 'object' ? JSON.stringify(d) : (d?.detail || 'Failed'));
+    } finally {
+      setPendingUpdates((current) => {
+        const nextUpdates = { ...current };
+        delete nextUpdates[id];
+        return nextUpdates;
+      });
     }
   };
 
-  const activeCount = orders.filter(o => !['cancelled', 'rejected', 'picked_up', 'delivered'].includes(o.status)).length;
+  const activeCount = optimisticOrders.filter(o => !['cancelled', 'rejected', 'picked_up', 'delivered'].includes(o.status)).length;
 
   return (
     <div className="canteen-page">
@@ -83,9 +102,9 @@ export default function ManagerOrdersPage() {
         }}>
           {[
             { label: 'Active', value: activeCount, color: '#d45555' },
-            { label: 'Pending', value: orders.filter(o => o.status === 'pending').length, color: '#ff6b6b' },
-            { label: 'Preparing', value: orders.filter(o => o.status === 'preparing').length, color: '#ffaa33' },
-            { label: 'Ready', value: orders.filter(o => o.status === 'ready').length, color: '#00ff66' },
+            { label: 'Pending', value: optimisticOrders.filter(o => o.status === 'pending').length, color: '#ff6b6b' },
+            { label: 'Preparing', value: optimisticOrders.filter(o => o.status === 'preparing').length, color: '#ffaa33' },
+            { label: 'Ready', value: optimisticOrders.filter(o => o.status === 'ready').length, color: '#00ff66' },
           ].map(stat => (
             <div key={stat.label} style={{
               flex: 1, background: '#1a1a1a', border: '1px solid #333', borderRadius: 12,
@@ -112,7 +131,7 @@ export default function ManagerOrdersPage() {
                 transition: 'all 0.2s',
               }}
             >
-              {f === 'all' ? `All (${orders.length})` : f}
+              {f === 'all' ? `All (${optimisticOrders.length})` : f}
             </button>
           ))}
         </div>
@@ -129,6 +148,16 @@ export default function ManagerOrdersPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {visibleOrders.map((order, idx) => {
               const cfg = statusConfig[order.status] || statusConfig.pending;
+              const pendingStatus = pendingUpdates[order.id];
+              const isUpdating = !!pendingStatus;
+              const actionLabel =
+                pendingStatus === 'preparing'
+                  ? 'Starting...'
+                  : pendingStatus === 'ready'
+                    ? 'Marking Ready...'
+                    : pendingStatus === 'out_for_delivery'
+                      ? 'Dispatching...'
+                      : 'Saving...';
 
               return (
                 <motion.div
@@ -145,6 +174,7 @@ export default function ManagerOrdersPage() {
                     cursor: 'pointer',
                     boxShadow: order.status === 'pending' ? `0 0 20px ${cfg.glow}` : 'none',
                     transition: 'all 0.2s',
+                    opacity: isUpdating ? 0.78 : 1,
                   }}
                 >
                   {/* Header Row */}
@@ -204,13 +234,13 @@ export default function ManagerOrdersPage() {
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {order.status === 'pending' && (
                       <>
-                        <button onClick={(e) => handleStatusUpdate(e, order.id, 'confirmed')} style={{
+                        <button onClick={(e) => handleStatusUpdate(e, order.id, 'confirmed')} disabled={isUpdating} style={{
                           flex: 1, padding: '10px 12px', background: '#d45555', color: '#fff',
                           border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer',
                         }}>
-                          ✅ Accept
+                          {isUpdating ? actionLabel : '✅ Accept'}
                         </button>
-                        <button onClick={(e) => handleStatusUpdate(e, order.id, 'rejected')} style={{
+                        <button onClick={(e) => handleStatusUpdate(e, order.id, 'rejected')} disabled={isUpdating} style={{
                           padding: '10px 16px', background: 'transparent', color: '#ff6b6b',
                           border: '1px solid #ff6b6b', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer',
                         }}>
@@ -219,43 +249,43 @@ export default function ManagerOrdersPage() {
                       </>
                     )}
                     {order.status === 'confirmed' && (
-                      <button onClick={(e) => handleStatusUpdate(e, order.id, 'preparing')} style={{
+                      <button onClick={(e) => handleStatusUpdate(e, order.id, 'preparing')} disabled={isUpdating} style={{
                         flex: 1, padding: '10px', background: '#332200', color: '#ffaa33',
-                        border: '1px solid #ffaa33', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                        border: '1px solid #ffaa33', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: isUpdating ? 'not-allowed' : 'pointer',
                       }}>
-                        🍳 Start Preparing
+                        {isUpdating ? actionLabel : '🍳 Start Preparing'}
                       </button>
                     )}
                     {order.status === 'preparing' && (
-                      <button onClick={(e) => handleStatusUpdate(e, order.id, 'ready')} style={{
+                      <button onClick={(e) => handleStatusUpdate(e, order.id, 'ready')} disabled={isUpdating} style={{
                         flex: 1, padding: '10px', background: '#003311', color: '#00ff66',
-                        border: '1px solid #00ff66', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                        border: '1px solid #00ff66', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: isUpdating ? 'not-allowed' : 'pointer',
                       }}>
-                        📦 Mark Ready
+                        {isUpdating ? actionLabel : '📦 Mark Ready'}
                       </button>
                     )}
                     {order.status === 'ready' && order.order_type !== 'delivery' && (
-                      <button onClick={(e) => { e.stopPropagation(); navigate(`/manager/canteen/orders/${order.id}`); }} style={{
+                      <button onClick={(e) => { e.stopPropagation(); navigate(`/manager/canteen/orders/${order.id}`); }} disabled={isUpdating} style={{
                         flex: 1, padding: '10px', background: '#112233', color: '#66aaff',
-                        border: '1px solid #66aaff', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                        border: '1px solid #66aaff', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: isUpdating ? 'not-allowed' : 'pointer',
                       }}>
-                        🔑 Enter OTP to Complete
+                        {isUpdating ? actionLabel : '🔑 Enter OTP to Complete'}
                       </button>
                     )}
                     {order.status === 'ready' && order.order_type === 'delivery' && (
                       order.delivery_person_name ? (
-                        <button onClick={(e) => handleStatusUpdate(e, order.id, 'out_for_delivery')} style={{
+                        <button onClick={(e) => handleStatusUpdate(e, order.id, 'out_for_delivery')} disabled={isUpdating} style={{
                           flex: 1, padding: '10px', background: '#220033', color: '#b566ff',
-                          border: '1px solid #b566ff', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                          border: '1px solid #b566ff', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: isUpdating ? 'not-allowed' : 'pointer',
                         }}>
-                          🚴 Dispatch to Coordinator
+                          {isUpdating ? actionLabel : '🚴 Dispatch to Coordinator'}
                         </button>
                       ) : (
-                        <button onClick={(e) => { e.stopPropagation(); navigate(`/manager/canteen/orders/${order.id}`); }} style={{
+                        <button onClick={(e) => { e.stopPropagation(); navigate(`/manager/canteen/orders/${order.id}`); }} disabled={isUpdating} style={{
                           flex: 1, padding: '10px', background: '#1a1a1a', color: '#aaa',
-                          border: '1px dashed #666', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                          border: '1px dashed #666', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: isUpdating ? 'not-allowed' : 'pointer',
                         }}>
-                          ⏳ Open to Assign Coordinator
+                          {isUpdating ? actionLabel : '⏳ Open to Assign Coordinator'}
                         </button>
                       )
                     )}

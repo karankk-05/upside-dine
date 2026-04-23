@@ -27,6 +27,7 @@ export default function ManagerOrderDetail() {
   const [deliveryPersonnel, setDeliveryPersonnel] = useState([]);
   const [loadingPersonnel, setLoadingPersonnel] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState('');
 
   const refreshManagerSummaries = async () => {
     await Promise.all([
@@ -48,27 +49,30 @@ export default function ManagerOrderDetail() {
   };
 
   const handleStatusUpdate = async (newStatus, extraData = {}) => {
+    setPendingStatus(newStatus);
     try {
       await updateStatus({ id, status: newStatus, ...extraData });
-      await Promise.all([refetch(), refreshManagerSummaries()]);
       setShowAssignModal(false);
     } catch (err) {
       const errData = err.response?.data;
       const msg = typeof errData === 'object' ? JSON.stringify(errData) : (errData?.detail || 'Failed to update');
       alert(msg);
+    } finally {
+      setPendingStatus('');
     }
   };
 
   const handleAssignDelivery = async (dpId) => {
     setAssigning(true);
+    setPendingStatus('out_for_delivery');
     try {
       await updateStatus({ id, status: 'out_for_delivery', delivery_person_id: dpId });
-      await Promise.all([refetch(), refreshManagerSummaries()]);
       setShowAssignModal(false);
     } catch (err) {
       alert(err.response?.data?.detail || 'Failed to assign');
     } finally {
       setAssigning(false);
+      setPendingStatus('');
     }
   };
 
@@ -89,7 +93,22 @@ export default function ManagerOrderDetail() {
   if (isLoading) return <div className="canteen-page"><div className="canteen-loading"><div className="canteen-loading-spinner" /></div></div>;
   if (!order) return <div className="canteen-page"><div className="canteen-empty"><p className="canteen-empty__text">Order not found</p></div></div>;
 
-  const isPickup = order.order_type !== 'delivery';
+  const displayOrder = pendingStatus
+    ? {
+        ...order,
+        status: pendingStatus,
+      }
+    : order;
+  const isPickup = displayOrder.order_type !== 'delivery';
+  const isUpdatingStatus = !!pendingStatus;
+  const pendingActionLabel =
+    pendingStatus === 'preparing'
+      ? 'Starting...'
+      : pendingStatus === 'ready'
+        ? 'Marking Ready...'
+        : pendingStatus === 'out_for_delivery'
+          ? 'Dispatching...'
+          : 'Saving...';
 
   return (
     <div className="canteen-page">
@@ -103,26 +122,26 @@ export default function ManagerOrderDetail() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <span style={{
             fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 6,
-            background: order.order_type === 'delivery' ? '#220044' : '#222',
-            color: order.order_type === 'delivery' ? '#b566ff' : '#aaa',
+            background: displayOrder.order_type === 'delivery' ? '#220044' : '#222',
+            color: displayOrder.order_type === 'delivery' ? '#b566ff' : '#aaa',
             textTransform: 'uppercase',
           }}>
-            {order.order_type || 'pickup'}
+            {displayOrder.order_type || 'pickup'}
           </span>
           <span style={{
             fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 8,
-            background: order.status === 'pending' ? '#331111' : order.status === 'preparing' ? '#332200' : order.status === 'ready' ? '#003311' : '#1a1a1a',
-            color: order.status === 'pending' ? '#ff6b6b' : order.status === 'preparing' ? '#ffaa33' : order.status === 'ready' ? '#00ff66' : '#999',
+            background: displayOrder.status === 'pending' ? '#331111' : displayOrder.status === 'preparing' ? '#332200' : displayOrder.status === 'ready' ? '#003311' : '#1a1a1a',
+            color: displayOrder.status === 'pending' ? '#ff6b6b' : displayOrder.status === 'preparing' ? '#ffaa33' : displayOrder.status === 'ready' ? '#00ff66' : '#999',
             border: '1px solid',
           }}>
-            {order.status?.replace(/_/g, ' ').toUpperCase()}
+            {displayOrder.status?.replace(/_/g, ' ').toUpperCase()}
           </span>
         </div>
 
         {/* Items */}
         <div style={{ background: '#1a1a1a', borderRadius: 14, padding: 16, marginBottom: 16, border: '1px solid #333' }}>
           <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: '#ccc' }}>Order Items</p>
-          {order.items?.map((item, i) => (
+          {displayOrder.items?.map((item, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 6, color: '#eee' }}>
               <span>{item.menu_item_name || item.item_name || item.name} × {item.quantity}</span>
               <span style={{ color: '#d45555', fontWeight: 600 }}>₹{item.total_price || (item.unit_price || item.price) * item.quantity}</span>
@@ -130,32 +149,32 @@ export default function ManagerOrderDetail() {
           ))}
           <div style={{ borderTop: '1px solid #333', marginTop: 10, paddingTop: 10, display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 16 }}>
             <span>Total</span>
-            <span style={{ color: '#d45555' }}>₹{order.total_amount}</span>
+            <span style={{ color: '#d45555' }}>₹{displayOrder.total_amount}</span>
           </div>
         </div>
 
         {/* Customer Info */}
         <div style={{ background: '#1a1a1a', borderRadius: 14, padding: 16, marginBottom: 16, border: '1px solid #333' }}>
-          {order.delivery_address && <p style={{ fontSize: 13, color: '#ddd', marginBottom: 4 }}>📍 {order.delivery_address}</p>}
-          {order.notes && <p style={{ fontSize: 13, color: '#ddd', marginBottom: 4 }}>📝 {order.notes}</p>}
-          {order.estimated_ready_time && (
-            <p style={{ fontSize: 13, color: '#ddd' }}>⏱ ETA: {new Date(order.estimated_ready_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+          {displayOrder.delivery_address && <p style={{ fontSize: 13, color: '#ddd', marginBottom: 4 }}>📍 {displayOrder.delivery_address}</p>}
+          {displayOrder.notes && <p style={{ fontSize: 13, color: '#ddd', marginBottom: 4 }}>📝 {displayOrder.notes}</p>}
+          {displayOrder.estimated_ready_time && (
+            <p style={{ fontSize: 13, color: '#ddd' }}>⏱ ETA: {new Date(displayOrder.estimated_ready_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
           )}
         </div>
 
-        {order.order_type === 'delivery' && (
+        {displayOrder.order_type === 'delivery' && (
           <div style={{ background: '#1a1a1a', borderRadius: 14, padding: 16, marginBottom: 16, border: '1px solid #b566ff' }}>
             <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: '#b566ff' }}>Delivery Coordinator</p>
-            {order.delivery_person_name ? (
+            {displayOrder.delivery_person_name ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{
                   width: 44, height: 44, background: '#220044', borderRadius: '50%',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0,
                 }}>🚴</div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: '#eee' }}>{order.delivery_person_name}</p>
-                  {order.delivery_person_phone && (
-                    <p style={{ fontSize: 12, color: '#b566ff', marginTop: 2 }}>📞 {order.delivery_person_phone}</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: '#eee' }}>{displayOrder.delivery_person_name}</p>
+                  {displayOrder.delivery_person_phone && (
+                    <p style={{ fontSize: 12, color: '#b566ff', marginTop: 2 }}>📞 {displayOrder.delivery_person_phone}</p>
                   )}
                 </div>
               </div>
@@ -176,40 +195,40 @@ export default function ManagerOrderDetail() {
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
-          {order.status === 'pending' && (
+          {displayOrder.status === 'pending' && (
             <>
-              <button onClick={() => handleStatusUpdate('confirmed')} style={{
+              <button onClick={() => handleStatusUpdate('confirmed')} disabled={isUpdatingStatus} style={{
                 flex: 1, padding: 14, background: '#d45555', color: '#fff', border: 'none', borderRadius: 12,
-                fontSize: 14, fontWeight: 700, cursor: 'pointer',
-              }}>✅ Accept Order</button>
-              <button onClick={() => handleStatusUpdate('rejected')} style={{
+                fontSize: 14, fontWeight: 700, cursor: isUpdatingStatus ? 'not-allowed' : 'pointer',
+              }}>{isUpdatingStatus ? pendingActionLabel : '✅ Accept Order'}</button>
+              <button onClick={() => handleStatusUpdate('rejected')} disabled={isUpdatingStatus} style={{
                 padding: '14px 20px', background: 'transparent', color: '#ff6b6b', border: '1px solid #ff6b6b',
-                borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: isUpdatingStatus ? 'not-allowed' : 'pointer',
               }}>✕ Reject</button>
             </>
           )}
-          {order.status === 'confirmed' && (
-            <button onClick={() => handleStatusUpdate('preparing')} style={{
+          {displayOrder.status === 'confirmed' && (
+            <button onClick={() => handleStatusUpdate('preparing')} disabled={isUpdatingStatus} style={{
               flex: 1, padding: 14, background: '#332200', color: '#ffaa33', border: '1px solid #ffaa33',
-              borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer',
-            }}>🍳 Start Preparing</button>
+              borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: isUpdatingStatus ? 'not-allowed' : 'pointer',
+            }}>{isUpdatingStatus ? pendingActionLabel : '🍳 Start Preparing'}</button>
           )}
-          {order.status === 'preparing' && (
-            <button onClick={() => handleStatusUpdate('ready')} style={{
+          {displayOrder.status === 'preparing' && (
+            <button onClick={() => handleStatusUpdate('ready')} disabled={isUpdatingStatus} style={{
               flex: 1, padding: 14, background: '#003311', color: '#00ff66', border: '1px solid #00ff66',
-              borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer',
-            }}>📦 Mark Ready</button>
+              borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: isUpdatingStatus ? 'not-allowed' : 'pointer',
+            }}>{isUpdatingStatus ? pendingActionLabel : '📦 Mark Ready'}</button>
           )}
-          {order.status === 'ready' && !isPickup && (
-            <button onClick={() => { setShowAssignModal(true); fetchDeliveryPersonnel(); }} style={{
+          {displayOrder.status === 'ready' && !isPickup && (
+            <button onClick={() => { setShowAssignModal(true); fetchDeliveryPersonnel(); }} disabled={isUpdatingStatus} style={{
               flex: 1, padding: 14, background: '#220033', color: '#b566ff', border: '1px solid #b566ff',
-              borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer',
-            }}>🚴 Assign Delivery Coordinator</button>
+              borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: isUpdatingStatus ? 'not-allowed' : 'pointer',
+            }}>{isUpdatingStatus ? pendingActionLabel : '🚴 Assign Delivery Coordinator'}</button>
           )}
         </div>
 
         {/* OTP Verification for Pickup */}
-        {isPickup && order.status === 'ready' && (
+        {isPickup && displayOrder.status === 'ready' && (
           <div style={{
             background: 'linear-gradient(135deg, #1a1a1a 0%, #111 100%)',
             border: '2px solid #d45555', borderRadius: 16, padding: 24,
@@ -248,7 +267,7 @@ export default function ManagerOrderDetail() {
       </div>
 
       {/* Timeline */}
-      <OrderStatusTracker status={order.status} orderType={order.order_type} />
+      <OrderStatusTracker status={displayOrder.status} orderType={displayOrder.order_type} />
 
       {/* Delivery Coordinator Assignment Modal */}
       {showAssignModal && (

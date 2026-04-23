@@ -5,7 +5,9 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { Activity, ArrowLeft } from 'lucide-react';
 import MessSelector from '../components/MessSelector';
+import CrowdDemoBanner from '../components/CrowdDemoBanner';
 import MessLiveDensity from '../components/MessLiveDensity';
+import { isCrowdDemoEnabled } from '../demo/crowdDemo';
 import PullToRefresh from '../../../components/PullToRefresh';
 import '../styles/crowd.css';
 
@@ -18,6 +20,7 @@ export default function CrowdDashboard() {
   const queryClient = useQueryClient();
   const [selectedMess, setSelectedMess] = useState(null);
   const userRole = localStorage.getItem('user_role');
+  const demoModeEnabled = isCrowdDemoEnabled();
   const handleRefresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['mess', 'list'] }),
@@ -74,14 +77,24 @@ export default function CrowdDashboard() {
           >
             <ArrowLeft size={18} />
           </button>
-          <h1 className="crowd-dashboard__title">Live Crowd Monitor</h1>
+          <h1 className="crowd-dashboard__title">
+            {demoModeEnabled ? 'Crowd Monitor Demo' : 'Live Crowd Monitor'}
+          </h1>
         </div>
         <p className="crowd-dashboard__subtitle">
-          Real-time crowd density across all mess halls
+          {demoModeEnabled
+            ? 'Simulated crowd density across all mess halls for presentation mode'
+            : 'Real-time crowd density across all mess halls'}
         </p>
       </div>
 
         <div className="crowd-dashboard__content">
+        {demoModeEnabled ? (
+          <div className="crowd-section">
+            <CrowdDemoBanner message="Presentation mode is active. Metrics change slowly on a 10-minute simulation loop." />
+          </div>
+        ) : null}
+
         {/* Mess Selector */}
         {userRole !== 'student' && (
           <div className="crowd-section">
@@ -93,7 +106,7 @@ export default function CrowdDashboard() {
         <div className="crowd-section">
           <div className="crowd-section__title">
             <Activity size={16} color="var(--st-accent)" />
-            Live Density
+            {demoModeEnabled ? 'Simulated Density' : 'Live Density'}
           </div>
 
           {isLoading ? (

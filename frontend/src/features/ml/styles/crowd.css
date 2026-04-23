@@ -73,6 +73,38 @@
   gap: 8px;
 }
 
+.crowd-demo-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, rgba(212, 85, 85, 0.14), rgba(245, 158, 11, 0.08));
+  border: 1px solid rgba(212, 85, 85, 0.28);
+  border-radius: 16px;
+}
+
+.crowd-demo-banner__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 6px 10px;
+  background: rgba(212, 85, 85, 0.18);
+  border: 1px solid rgba(212, 85, 85, 0.3);
+  border-radius: 999px;
+  color: #ffb4b4;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.crowd-demo-banner__text {
+  color: var(--st-text);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 /* ---- Density Indicator ---- */
 .density-indicator {
   display: inline-flex;
@@ -240,6 +272,10 @@
   letter-spacing: 0.5px;
 }
 
+.density-card__live-badge--demo {
+  color: #fbbf24;
+}
+
 .density-card__live-dot {
   width: 6px;
   height: 6px;
@@ -247,6 +283,11 @@
   background: var(--st-red);
   box-shadow: 0 0 6px var(--st-red-glow);
   animation: density-pulse 1.5s ease-in-out infinite;
+}
+
+.density-card__live-badge--demo .density-card__live-dot {
+  background: #fbbf24;
+  box-shadow: 0 0 6px rgba(251, 191, 36, 0.9);
 }
 
 .density-card__stats {
@@ -412,6 +453,15 @@
   flex: 1;
 }
 
+.recommendation-card__item-meta {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--st-accent);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
 .recommendation-card__item-time {
   font-size: 14px;
   font-weight: 600;
@@ -501,6 +551,45 @@
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.crowd-demo-panel {
+  background: var(--st-gray);
+  border: 1px solid rgba(212, 85, 85, 0.2);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.crowd-demo-panel__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--st-text);
+  margin-bottom: 8px;
+}
+
+.crowd-demo-panel__text {
+  font-size: 13px;
+  color: var(--st-text-dim);
+  line-height: 1.6;
+}
+
+.crowd-demo-panel__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.crowd-demo-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--st-light-gray);
+  border: 1px solid var(--st-border);
+  border-radius: 999px;
+  color: var(--st-text);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 /* ---- Crowd Heatmap ---- */

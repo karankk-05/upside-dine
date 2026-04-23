@@ -78,17 +78,28 @@ class PaymentCreateOrderView(GenericAPIView):
             defaults={
                 "amount": order.total_amount,
                 "currency": "INR",
+                "payment_method": "razorpay",
                 "status": Payment.STATUS_PENDING,
             },
         )
         payment.amount = order.total_amount
+        payment.payment_method = "razorpay"
 
         try:
             razorpay_order = create_razorpay_order(order)
             payment.razorpay_order_id = razorpay_order.get("id")
             payment.status = Payment.STATUS_PENDING
             payment.raw_response = razorpay_order
-            payment.save(update_fields=["amount", "razorpay_order_id", "status", "raw_response", "updated_at"])
+            payment.save(
+                update_fields=[
+                    "amount",
+                    "payment_method",
+                    "razorpay_order_id",
+                    "status",
+                    "raw_response",
+                    "updated_at",
+                ]
+            )
         except Exception as exc:
             mark_payment_failed(payment, exc)
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)

@@ -16,8 +16,6 @@ import '../canteen.css';
 
 const DEFAULT_PAYMENT_CONFIG = {
   payment_mode: 'both',
-  upi_id: '',
-  qr_image_url: '',
 };
 
 const CHECKOUT_LANGUAGE_OPTIONS = [
@@ -62,7 +60,7 @@ const resolveInitialCheckoutLanguage = () => {
 };
 
 const PAYMENT_METHOD_LABELS = {
-  online: 'Pay Online',
+  online: 'Pay with Razorpay',
   cash: 'Pay Later',
 };
 
@@ -147,6 +145,7 @@ export default function CheckoutPage() {
       const orderWithCheckoutMeta = {
         ...order,
         checkout_payment_method: paymentMethod,
+        checkout_payment_config: paymentConfig,
       };
       setOrderData(orderWithCheckoutMeta);
 
@@ -286,7 +285,11 @@ export default function CheckoutPage() {
               onClick={() => setPaymentMethod(method)}
               style={{ display: 'flex', alignItems: 'center', gap: 8 }}
             >
-              {method === 'online' ? <CreditCard size={14} /> : <Wallet size={14} />}
+              {method === 'online' ? (
+                <CreditCard size={14} />
+              ) : (
+                <Wallet size={14} />
+              )}
               {PAYMENT_METHOD_LABELS[method]}
             </button>
           ))}

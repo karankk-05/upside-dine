@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import { CheckCircle } from 'lucide-react';
 import '../canteen.css';
 
 export default function OrderConfirmation({ order, onClose }) {
@@ -46,8 +45,8 @@ export default function OrderConfirmation({ order, onClose }) {
         }}>
           {order.items?.map((item, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
-              <span>{item.name || item.item_name} × {item.quantity}</span>
-              <span style={{ color: '#d45555' }}>₹{(item.price || item.unit_price) * item.quantity}</span>
+              <span>{item.menu_item_name || item.name || item.item_name} × {item.quantity}</span>
+              <span style={{ color: '#d45555' }}>₹{item.total_price || (item.price || item.unit_price) * item.quantity}</span>
             </div>
           ))}
           <div style={{ borderTop: '1px solid #333', marginTop: 8, paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>

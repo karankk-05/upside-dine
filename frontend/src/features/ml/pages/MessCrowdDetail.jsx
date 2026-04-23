@@ -4,9 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { ArrowLeft, Radio } from 'lucide-react';
 import { motion } from 'framer-motion';
+import CrowdDemoBanner from '../components/CrowdDemoBanner';
 import MessLiveDensity from '../components/MessLiveDensity';
 import CrowdHistoryChart from '../components/CrowdHistoryChart';
 import BestTimeRecommendation from '../components/BestTimeRecommendation';
+import { isCrowdDemoEnabled } from '../demo/crowdDemo';
 import { useCrowdSocket } from '../hooks/useCrowdSocket';
 import '../styles/crowd.css';
 
@@ -18,6 +20,7 @@ export default function MessCrowdDetail() {
   const { messId } = useParams();
   const navigate = useNavigate();
   const messIdNum = Number(messId);
+  const demoModeEnabled = isCrowdDemoEnabled();
 
   // Attempt WebSocket for real-time updates
   const { isConnected } = useCrowdSocket(messIdNum);
@@ -53,11 +56,26 @@ export default function MessCrowdDetail() {
         </div>
         <p className="crowd-dashboard__subtitle" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Radio size={12} color={isConnected ? '#4ade80' : 'var(--st-text-dim)'} />
-          {isConnected ? 'Live updates connected' : 'Polling for updates'}
+          {demoModeEnabled
+            ? 'Demo simulation loop active'
+            : isConnected
+              ? 'Live updates connected'
+              : 'Polling for updates'}
         </p>
       </div>
 
       <div className="crowd-dashboard__content">
+        {demoModeEnabled ? (
+          <motion.div
+            className="crowd-section"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+          >
+            <CrowdDemoBanner message="This mess detail view is running on the same 10-minute presentation simulation loop." />
+          </motion.div>
+        ) : null}
+
         {/* Live Density Hero */}
         <motion.div
           className="crowd-section"

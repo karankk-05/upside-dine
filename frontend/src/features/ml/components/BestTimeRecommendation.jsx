@@ -57,7 +57,7 @@ export default function BestTimeRecommendation({ messId }) {
       <ul className="recommendation-card__list">
         {bestTimes.map((slot, idx) => (
           <motion.li
-            key={slot.hour}
+            key={`${slot.meal_key || idx}-${slot.time_range}`}
             className="recommendation-card__item"
             initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
@@ -65,10 +65,14 @@ export default function BestTimeRecommendation({ messId }) {
           >
             <div className="recommendation-card__item-rank">{idx + 1}</div>
             <div className="recommendation-card__item-info">
+              {slot.meal_label ? (
+                <div className="recommendation-card__item-meta">{slot.meal_label}</div>
+              ) : null}
               <div className="recommendation-card__item-time">{slot.time_range}</div>
               <div className="recommendation-card__item-people">
                 <Users size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />
                 ~{Math.round(slot.avg_people)} people avg
+                {slot.avg_density != null ? ` • ${Math.round(slot.avg_density)}% density` : ''}
               </div>
             </div>
           </motion.li>

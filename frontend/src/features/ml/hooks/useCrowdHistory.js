@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import { getDemoCrowdHistory, isCrowdDemoEnabled } from '../demo/crowdDemo';
 
 /**
  * Fetches hourly crowd history for a mess on a given date.
@@ -8,9 +9,15 @@ import axios from 'axios';
  * [{ id, mess_id, density_percentage, estimated_count, density_level, estimated_wait_minutes, recorded_at }]
  */
 export function useCrowdHistory(messId, date, options = {}) {
+  const demoModeEnabled = isCrowdDemoEnabled();
+
   return useQuery({
-    queryKey: ['crowd', 'history', messId, date],
+    queryKey: ['crowd', 'history', messId, date, demoModeEnabled ? 'demo' : 'api'],
     queryFn: async () => {
+      if (demoModeEnabled) {
+        return getDemoCrowdHistory(messId, date);
+      }
+
       const token = localStorage.getItem('access_token');
       const params = date ? { date } : {};
       const { data } = await axios.get(`/api/crowd/mess/${messId}/history/`, {
@@ -20,7 +27,7 @@ export function useCrowdHistory(messId, date, options = {}) {
       return data;
     },
     enabled: !!messId,
-    staleTime: 60000,
+    staleTime: demoModeEnabled ? 300000 : 60000,
     ...options,
   });
 }

@@ -125,6 +125,7 @@ export default function CrowdHistoryChart({ messId }) {
               stroke="#555"
               tick={{ fill: '#999', fontSize: 11 }}
               axisLine={{ stroke: '#333' }}
+              minTickGap={24}
             />
             <YAxis
               stroke="#555"

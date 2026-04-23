@@ -14,6 +14,7 @@ from apps.users.models import MessAccount
 from .models import MessBooking, MessMenuItem
 
 TWO_DECIMAL_PLACES = Decimal("0.01")
+NEXT_DAY_BOOKING_OPENS_AT_HOUR = 20
 
 
 class MessServiceError(Exception):
@@ -99,8 +100,8 @@ def validate_booking_request(student, menu_item: MessMenuItem, quantity: int) ->
     if menu_item.available_quantity < quantity:
         raise InsufficientStockError("Insufficient stock for requested quantity.")
 
-    # Apply 10 PM booking rule
-    # Students can book for "Today", OR they can book for "Tomorrow" only if it's past 10 PM today.
+    # Apply next-day booking rule.
+    # Students can book for "Today", OR they can book for "Tomorrow" only if it's past 8 PM today.
     # Other days are restricted.
     current_time = timezone.localtime(timezone.now())
     current_day_idx = current_time.weekday()
@@ -116,13 +117,13 @@ def validate_booking_request(student, menu_item: MessMenuItem, quantity: int) ->
             # It's not today. Is it tomorrow?
             tomorrow_idx = (current_day_idx + 1) % 7
             if target_day_idx == tomorrow_idx:
-                if current_time.hour < 22:
+                if current_time.hour < NEXT_DAY_BOOKING_OPENS_AT_HOUR:
                     raise BookingValidationError(
-                        f"Bookings for {menu_item.day_of_week.capitalize()} extras open at 10 PM today."
+                        f"Bookings for {menu_item.day_of_week.capitalize()} extras open at 8 PM today."
                     )
             else:
                 raise BookingValidationError(
-                    f"Bookings for {menu_item.day_of_week.capitalize()} are not yet open. You can only book for today, or for tomorrow after 10 PM."
+                    f"Bookings for {menu_item.day_of_week.capitalize()} are not yet open. You can only book for today, or for tomorrow after 8 PM."
                 )
 
     total = calculate_booking_total(menu_item, quantity)

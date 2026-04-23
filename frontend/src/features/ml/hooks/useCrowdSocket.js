@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { isCrowdDemoEnabled } from '../demo/crowdDemo';
 
 /**
  * WebSocket hook for real-time crowd density updates.
@@ -17,6 +18,7 @@ export function useCrowdSocket(messId) {
   const reconnectAttempt = useRef(0);
   const reconnectTimer = useRef(null);
   const maxReconnectAttempts = 10;
+  const demoModeEnabled = isCrowdDemoEnabled();
 
   const getWsUrl = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -25,6 +27,7 @@ export function useCrowdSocket(messId) {
   }, [messId]);
 
   const connect = useCallback(() => {
+    if (demoModeEnabled) return;
     if (!messId) return;
 
     try {
@@ -66,7 +69,7 @@ export function useCrowdSocket(messId) {
       // WebSocket construction failed — server likely not supporting WS yet
       scheduleReconnect();
     }
-  }, [messId, getWsUrl, queryClient]);
+  }, [demoModeEnabled, messId, getWsUrl, queryClient]);
 
   const scheduleReconnect = useCallback(() => {
     if (reconnectAttempt.current >= maxReconnectAttempts) return;
@@ -92,12 +95,17 @@ export function useCrowdSocket(messId) {
   }, []);
 
   useEffect(() => {
+    if (demoModeEnabled) {
+      return undefined;
+    }
     connect();
     return () => disconnect();
-  }, [messId, connect, disconnect]);
+  }, [demoModeEnabled, messId, connect, disconnect]);
 
   return {
-    isConnected: !!wsRef.current && wsRef.current.readyState === WebSocket.OPEN,
+    isConnected: demoModeEnabled
+      ? true
+      : !!wsRef.current && wsRef.current.readyState === WebSocket.OPEN,
     disconnect,
     reconnect: connect,
   };

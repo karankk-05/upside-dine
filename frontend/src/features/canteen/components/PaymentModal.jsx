@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Loader } from 'lucide-react';
+import { CreditCard, Loader, X } from 'lucide-react';
 import { useCreatePayment } from '../hooks/useCreatePayment';
 import { useVerifyPayment } from '../hooks/useVerifyPayment';
 import '../canteen.css';
@@ -15,7 +15,7 @@ const loadRazorpay = () =>
   });
 
 const getPaymentErrorMessage = (error, fallback) =>
-  error?.response?.data?.detail || fallback;
+  error?.response?.data?.detail || error?.message || fallback;
 
 const normalizeCheckoutLanguage = (language) => {
   const normalized = String(language || 'en').trim().toLowerCase();
@@ -23,23 +23,50 @@ const normalizeCheckoutLanguage = (language) => {
   return supportedLanguages.has(normalized) ? normalized : 'en';
 };
 
-export default function PaymentModal({ amount, orderId, language = 'en', user = null, onSuccess, onClose }) {
+const formatAmount = (amount) => {
+  const numericAmount = Number(amount || 0);
+  if (!Number.isFinite(numericAmount)) {
+    return '0';
+  }
+  return numericAmount.toFixed(2).replace(/\.00$/, '');
+};
+
+export default function PaymentModal({
+  amount,
+  orderId,
+  language = 'en',
+  user = null,
+  onSuccess,
+  onClose,
+}) {
   const [loading, setLoading] = useState(false);
   const { mutateAsync: createPayment } = useCreatePayment();
   const { mutateAsync: verifyPayment } = useVerifyPayment();
 
   const handlePayment = async () => {
     setLoading(true);
-    const loaded = await loadRazorpay();
-    if (!loaded) { alert('Razorpay SDK failed to load'); setLoading(false); return; }
 
     try {
-      const res = await createPayment({ order_id: orderId, amount });
+      const loaded = await loadRazorpay();
+      if (!loaded) {
+        throw new Error('Razorpay SDK failed to load.');
+      }
+
+      const res = await createPayment({
+        order_id: orderId,
+        amount,
+      });
       const rzpOrderId = res.payment?.razorpay_order_id || res.razorpay_order?.id;
       const rzpAmount = res.razorpay_order?.amount || amount * 100;
       const selectedLanguage = normalizeCheckoutLanguage(language);
+      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || res.razorpay_key_id;
+
+      if (!rzpOrderId || !razorpayKey) {
+        throw new Error('Payment gateway is not configured correctly. Please try again.');
+      }
+
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || res.razorpay_key_id,
+        key: razorpayKey,
         amount: rzpAmount,
         currency: 'INR',
         name: 'Upside Dine',
@@ -62,14 +89,17 @@ export default function PaymentModal({ amount, orderId, language = 'en', user = 
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
             });
+            setLoading(false);
             onSuccess();
           } catch (error) {
+            setLoading(false);
             alert(getPaymentErrorMessage(error, 'Payment verification failed'));
           }
         },
         modal: { ondismiss: () => setLoading(false) },
         theme: { color: '#d45555' },
       };
+
       new window.Razorpay(options).open();
     } catch (error) {
       alert(getPaymentErrorMessage(error, 'Payment initiation failed'));
@@ -97,14 +127,33 @@ export default function PaymentModal({ amount, orderId, language = 'en', user = 
           onClick={handlePayment}
           disabled={loading}
           style={{
-            width: '100%', padding: 16, background: loading ? '#333' : '#d45555',
-            border: 'none', borderRadius: 12, color: '#fff', fontSize: 16,
-            fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
+            width: '100%',
+            padding: 16,
+            background: loading ? '#333' : '#d45555',
+            border: 'none',
+            borderRadius: 12,
+            color: '#fff',
+            fontSize: 16,
+            fontWeight: 700,
+            cursor: loading ? 'not-allowed' : 'pointer',
             boxShadow: loading ? 'none' : '0 4px 20px rgba(232, 85, 85, 0.3)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
           }}
         >
-          {loading ? <><Loader size={16} style={{ animation: 'canteen-spin 0.8s linear infinite' }} /> Processing...</> : `Pay ₹${amount}`}
+          {loading ? (
+            <>
+              <Loader size={16} style={{ animation: 'canteen-spin 0.8s linear infinite' }} />
+              Processing...
+            </>
+          ) : (
+            <>
+              <CreditCard size={16} />
+              Pay ₹{formatAmount(amount)}
+            </>
+          )}
         </button>
       </div>
     </div>

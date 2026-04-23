@@ -16,8 +16,10 @@ import {
 } from 'recharts';
 import { ArrowLeft, BarChart3, Clock, Users } from 'lucide-react';
 import { format, subDays } from 'date-fns';
+import CrowdDemoBanner from '../components/CrowdDemoBanner';
 import MessSelector from '../components/MessSelector';
 import CrowdHeatmap from '../components/CrowdHeatmap';
+import { getDemoWeekHistory, isCrowdDemoEnabled } from '../demo/crowdDemo';
 import '../styles/crowd.css';
 
 function AnalyticsTooltip({ active, payload }) {
@@ -47,6 +49,7 @@ function AnalyticsTooltip({ active, payload }) {
 export default function CrowdAnalytics() {
   const navigate = useNavigate();
   const [selectedMess, setSelectedMess] = useState(null);
+  const demoModeEnabled = isCrowdDemoEnabled();
 
   // Past 7 days of history for selected (or first) mess
   const { data: messes = [] } = useQuery({
@@ -65,9 +68,12 @@ export default function CrowdAnalytics() {
 
   // Fetch 7 days of history for heatmap + charts
   const { data: weekHistory = [], isLoading } = useQuery({
-    queryKey: ['crowd', 'history', activeMess, 'week'],
+    queryKey: ['crowd', 'history', activeMess, 'week', demoModeEnabled ? 'demo' : 'api'],
     queryFn: async () => {
       if (!activeMess) return [];
+      if (demoModeEnabled) {
+        return getDemoWeekHistory(activeMess);
+      }
       const token = localStorage.getItem('access_token');
       // Fetch each day's data
       const promises = Array.from({ length: 7 }, (_, i) => {
@@ -139,10 +145,20 @@ export default function CrowdAnalytics() {
           </button>
           <h1 className="crowd-dashboard__title">Crowd Analytics</h1>
         </div>
-        <p className="crowd-dashboard__subtitle">Detailed analysis — past 7 days</p>
+        <p className="crowd-dashboard__subtitle">
+          {demoModeEnabled
+            ? 'Detailed analysis generated from simulated crowd history'
+            : 'Detailed analysis — past 7 days'}
+        </p>
       </div>
 
       <div className="crowd-dashboard__content">
+        {demoModeEnabled ? (
+          <div className="crowd-section">
+            <CrowdDemoBanner message="Analytics are being populated from the same 10-minute presentation simulation, plus generated historical patterns." />
+          </div>
+        ) : null}
+
         {/* Mess Selector */}
         <div className="crowd-section">
           <MessSelector value={selectedMess} onChange={setSelectedMess} />

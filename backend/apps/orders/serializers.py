@@ -14,6 +14,11 @@ class OrderItemInputSerializer(serializers.Serializer):
 class PlaceOrderSerializer(serializers.Serializer):
     canteen_id = serializers.IntegerField()
     order_type = serializers.ChoiceField(choices=CanteenOrder.ORDER_TYPE_CHOICES, default=CanteenOrder.ORDER_TYPE_PICKUP)
+    payment_method = serializers.ChoiceField(
+        choices=[("cash", "Cash"), ("razorpay", "Razorpay")],
+        default="cash",
+        required=False,
+    )
     scheduled_time = serializers.DateTimeField(required=False, allow_null=True)
     delivery_address = serializers.CharField(required=False, allow_blank=True)
     notes = serializers.CharField(required=False, allow_blank=True)
@@ -42,6 +47,7 @@ class CanteenOrderSerializer(serializers.ModelSerializer):
     status_timeline = serializers.SerializerMethodField()
     delivery_person_name = serializers.SerializerMethodField()
     delivery_person_phone = serializers.SerializerMethodField()
+    payment_status = serializers.SerializerMethodField()
 
     class Meta:
         model = CanteenOrder
@@ -66,6 +72,7 @@ class CanteenOrderSerializer(serializers.ModelSerializer):
             "status_timeline",
             "delivery_person_name",
             "delivery_person_phone",
+            "payment_status",
         ]
 
     def get_delivery_person_name(self, obj):
@@ -86,9 +93,15 @@ class CanteenOrderSerializer(serializers.ModelSerializer):
             {"status": obj.status, "timestamp": obj.updated_at},
         ]
 
+    def get_payment_status(self, obj):
+        if not hasattr(obj, "payment") or not obj.payment:
+            return "not_required"
+        return obj.payment.status
+
 
 class CanteenOrderListSerializer(serializers.ModelSerializer):
     canteen_name = serializers.CharField(source="canteen.name", read_only=True)
+    payment_status = serializers.SerializerMethodField()
 
     class Meta:
         model = CanteenOrder
@@ -99,9 +112,15 @@ class CanteenOrderListSerializer(serializers.ModelSerializer):
             "order_type",
             "total_amount",
             "status",
+            "payment_status",
             "estimated_ready_time",
             "created_at",
         ]
+
+    def get_payment_status(self, obj):
+        if not hasattr(obj, "payment") or not obj.payment:
+            return "not_required"
+        return obj.payment.status
 
 
 class OrderStatusSerializer(serializers.ModelSerializer):

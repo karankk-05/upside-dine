@@ -5,10 +5,11 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from apps.canteen.models import Canteen, CanteenMenuItem
+from apps.payments.models import Payment
 from apps.users.models import Role, Staff, Student, User
 
 from .models import CanteenOrder, CanteenOrderItem
-from .services import create_order_for_student
+from .services import cancel_order, create_order_for_student
 
 
 class OrderServiceSmokeTests(TestCase):
@@ -45,6 +46,80 @@ class OrderServiceSmokeTests(TestCase):
         )
         self.assertEqual(order.total_amount, order.subtotal)
         self.assertEqual(order.items.count(), 1)
+
+    def test_cancelling_order_restores_inventory(self):
+        order = create_order_for_student(
+            self.student,
+            {
+                "canteen_id": self.canteen.id,
+                "order_type": "pickup",
+                "items": [{"menu_item_id": self.item.id, "quantity": 2}],
+            },
+        )
+
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.available_quantity, 8)
+
+        cancel_order(order, "Payment not completed")
+
+        self.item.refresh_from_db()
+        order.refresh_from_db()
+        self.assertEqual(order.status, CanteenOrder.STATUS_CANCELLED)
+        self.assertEqual(self.item.available_quantity, 10)
+
+
+class StudentOrderVisibilityApiTests(APITestCase):
+    def setUp(self):
+        self.student_role = Role.objects.create(role_name="student")
+        self.user = User.objects.create_user(
+            email="visibility.student@iitk.ac.in",
+            password="password123",
+            role=self.student_role,
+            is_active=True,
+            is_verified=True,
+        )
+        self.student = Student.objects.create(
+            user=self.user,
+            roll_number="VIS001",
+            full_name="Visibility Student",
+        )
+        self.canteen = Canteen.objects.create(
+            name="Visibility Canteen",
+            location="Hall 5",
+        )
+        self.cash_order = CanteenOrder.objects.create(
+            order_number="VIS-CASH-001",
+            student=self.student,
+            canteen=self.canteen,
+            subtotal=Decimal("50.00"),
+            delivery_fee=Decimal("0.00"),
+            total_amount=Decimal("50.00"),
+            status=CanteenOrder.STATUS_PENDING,
+        )
+        self.online_order = CanteenOrder.objects.create(
+            order_number="VIS-ONLINE-001",
+            student=self.student,
+            canteen=self.canteen,
+            subtotal=Decimal("75.00"),
+            delivery_fee=Decimal("0.00"),
+            total_amount=Decimal("75.00"),
+            status=CanteenOrder.STATUS_PENDING,
+        )
+        Payment.objects.create(
+            order=self.online_order,
+            amount=self.online_order.total_amount,
+            status=Payment.STATUS_PENDING,
+            payment_method="razorpay",
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_student_order_list_hides_unpaid_online_orders(self):
+        response = self.client.get("/api/orders/")
+
+        self.assertEqual(response.status_code, 200)
+        returned_order_numbers = {item["order_number"] for item in response.data}
+        self.assertIn(self.cash_order.order_number, returned_order_numbers)
+        self.assertNotIn(self.online_order.order_number, returned_order_numbers)
 
 
 class CanteenManagerPickupVerificationApiTests(APITestCase):

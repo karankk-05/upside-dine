@@ -217,8 +217,18 @@ def validate_status_transition(order, new_status):
         raise ValidationError({"status": "Delivery orders cannot be marked as picked up."})
 
 
+def restore_order_inventory(order):
+    items = list(order.items.select_related("menu_item").select_for_update())
+    for item in items:
+        menu_item = item.menu_item
+        menu_item.available_quantity += item.quantity
+        menu_item.save(update_fields=["available_quantity", "updated_at"])
+
+
+@transaction.atomic
 def cancel_order(order, reason=""):
     validate_status_transition(order, CanteenOrder.STATUS_CANCELLED)
+    restore_order_inventory(order)
     order.status = CanteenOrder.STATUS_CANCELLED
     order.cancellation_reason = reason[:250]
     order.save(update_fields=["status", "cancellation_reason", "updated_at"])

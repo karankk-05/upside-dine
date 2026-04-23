@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { CreditCard, Loader, X } from 'lucide-react';
+import { useCancelOrder } from '../hooks/useCancelOrder';
 import { useCreatePayment } from '../hooks/useCreatePayment';
 import { useVerifyPayment } from '../hooks/useVerifyPayment';
 import '../canteen.css';
@@ -37,11 +38,42 @@ export default function PaymentModal({
   language = 'en',
   user = null,
   onSuccess,
+  onAbort,
   onClose,
 }) {
   const [loading, setLoading] = useState(false);
+  const paymentCompletedRef = useRef(false);
+  const abortingRef = useRef(false);
+  const { mutateAsync: cancelOrder } = useCancelOrder();
   const { mutateAsync: createPayment } = useCreatePayment();
   const { mutateAsync: verifyPayment } = useVerifyPayment();
+
+  const cancelPendingOrder = async ({ closeSheet = true } = {}) => {
+    if (paymentCompletedRef.current || abortingRef.current) {
+      if (closeSheet) {
+        onClose();
+      }
+      return;
+    }
+
+    abortingRef.current = true;
+    try {
+      await cancelOrder(orderId);
+    } catch {
+      // Avoid blocking the UI if automatic cancellation fails.
+    } finally {
+      abortingRef.current = false;
+      setLoading(false);
+      onAbort?.();
+      if (closeSheet) {
+        onClose();
+      }
+    }
+  };
+
+  const handleSheetClose = async () => {
+    await cancelPendingOrder();
+  };
 
   const handlePayment = async () => {
     setLoading(true);
@@ -89,6 +121,7 @@ export default function PaymentModal({
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
             });
+            paymentCompletedRef.current = true;
             setLoading(false);
             onSuccess();
           } catch (error) {
@@ -96,24 +129,36 @@ export default function PaymentModal({
             alert(getPaymentErrorMessage(error, 'Payment verification failed'));
           }
         },
-        modal: { ondismiss: () => setLoading(false) },
+        modal: {
+          ondismiss: () => {
+            if (paymentCompletedRef.current) {
+              setLoading(false);
+              return;
+            }
+            cancelPendingOrder();
+          },
+        },
         theme: { color: '#d45555' },
       };
 
-      new window.Razorpay(options).open();
+      const razorpayInstance = new window.Razorpay(options);
+      razorpayInstance.on('payment.failed', async () => {
+        await cancelPendingOrder({ closeSheet: false });
+      });
+      razorpayInstance.open();
     } catch (error) {
       alert(getPaymentErrorMessage(error, 'Payment initiation failed'));
-      setLoading(false);
+      await cancelPendingOrder({ closeSheet: false });
     }
   };
 
   return (
     <div className="canteen-payment-overlay">
-      <div className="canteen-payment-backdrop" onClick={onClose} />
+      <div className="canteen-payment-backdrop" onClick={handleSheetClose} />
       <div className="canteen-payment-sheet">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h2 style={{ fontSize: 18, fontWeight: 700 }}>Payment</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}>
+          <button onClick={handleSheetClose} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>

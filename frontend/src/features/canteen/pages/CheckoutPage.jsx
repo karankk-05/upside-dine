@@ -134,6 +134,7 @@ export default function CheckoutPage() {
         canteen_id: canteenId,
         items: cart.map((item) => ({ menu_item: item.id, quantity: item.quantity })),
         order_type: orderType === 'prebook' ? 'prebooking' : orderType,
+        payment_method: paymentMethod === 'cash' ? 'cash' : 'razorpay',
         delivery_address: orderType === 'delivery' ? address : '',
         notes: notes || '',
       };
@@ -397,6 +398,10 @@ export default function CheckoutPage() {
             setPaymentOpen(false);
             setOrderPlaced(true);
             clearCart(canteenId);
+          }}
+          onAbort={() => {
+            setPaymentOpen(false);
+            setOrderData(null);
           }}
           onClose={() => setPaymentOpen(false)}
         />

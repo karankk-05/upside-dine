@@ -14,10 +14,6 @@ import {
 } from '../../../lib/formValidation';
 import '../canteen.css';
 
-const DEFAULT_PAYMENT_CONFIG = {
-  payment_mode: 'both',
-};
-
 const CHECKOUT_LANGUAGE_OPTIONS = [
   { value: 'en', label: 'English' },
   { value: 'hi', label: 'Hindi' },
@@ -102,10 +98,14 @@ export default function CheckoutPage() {
   const cart = useCartStore((state) => (canteenId ? state.getCart(canteenId) : []));
   const total = useCartStore((state) => (canteenId ? state.getTotal(canteenId) : 0));
   const { data: currentUser } = useCurrentUser({ enabled: Boolean(canteenId) });
-  const { data: canteen } = useCanteenDetail(canteenId);
+  const { data: canteen, isLoading: isLoadingCanteen } = useCanteenDetail(canteenId);
 
-  const paymentConfig = canteen?.payment_config || DEFAULT_PAYMENT_CONFIG;
+  const paymentConfig = canteen?.payment_config || null;
+  const paymentConfigReady = Boolean(paymentConfig);
   const availablePaymentMethods = useMemo(() => {
+    if (!paymentConfigReady) {
+      return [];
+    }
     if (paymentConfig.payment_mode === 'cash') {
       return ['cash'];
     }
@@ -113,19 +113,28 @@ export default function CheckoutPage() {
       return ['online'];
     }
     return ['online', 'cash'];
-  }, [paymentConfig.payment_mode]);
+  }, [paymentConfig, paymentConfigReady]);
 
   useEffect(() => {
+    if (!paymentConfigReady) {
+      return;
+    }
     if (!availablePaymentMethods.includes(paymentMethod)) {
       setPaymentMethod(availablePaymentMethods[0] || 'online');
     }
-  }, [availablePaymentMethods, paymentMethod]);
+  }, [availablePaymentMethods, paymentConfigReady, paymentMethod]);
 
   const handlePlaceOrder = async () => {
     setSubmitting(true);
     try {
       if (!canteenId || cart.length === 0) {
         alert('Select a canteen cart before placing an order.');
+        setSubmitting(false);
+        return;
+      }
+
+      if (!paymentConfigReady) {
+        alert('Payment options are still loading. Please wait a moment and try again.');
         setSubmitting(false);
         return;
       }
@@ -278,34 +287,53 @@ export default function CheckoutPage() {
 
       <div className="canteen-checkout__section">
         <p className="canteen-checkout__section-title">Payment Method</p>
-        <div className="canteen-filter-tabs">
-          {availablePaymentMethods.map((method) => (
-            <button
-              key={method}
-              className={`canteen-filter-tab ${paymentMethod === method ? 'active' : ''}`}
-              onClick={() => setPaymentMethod(method)}
-              style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-            >
-              {method === 'online' ? (
-                <CreditCard size={14} />
-              ) : (
-                <Wallet size={14} />
-              )}
-              {PAYMENT_METHOD_LABELS[method]}
-            </button>
-          ))}
-        </div>
-        <p style={{ color: '#9b9b9b', fontSize: 13, marginTop: 10, lineHeight: 1.5 }}>
-          {getPaymentHelpText(paymentMethod, orderType)}
-        </p>
-        {paymentMethod === 'cash' ? (
-          <p style={{ color: '#d9b06f', fontSize: 12, marginTop: 6 }}>
-            This canteen accepts pay-later orders through its cash payment mode.
-          </p>
-        ) : null}
+        {!paymentConfigReady ? (
+          <>
+            <div className="canteen-filter-tabs">
+              <button
+                className="canteen-filter-tab"
+                disabled
+                style={{ opacity: 0.6, cursor: 'wait' }}
+              >
+                Loading payment options...
+              </button>
+            </div>
+            <p style={{ color: '#9b9b9b', fontSize: 13, marginTop: 10, lineHeight: 1.5 }}>
+              Fetching the canteen&apos;s latest payment settings.
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="canteen-filter-tabs">
+              {availablePaymentMethods.map((method) => (
+                <button
+                  key={method}
+                  className={`canteen-filter-tab ${paymentMethod === method ? 'active' : ''}`}
+                  onClick={() => setPaymentMethod(method)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                >
+                  {method === 'online' ? (
+                    <CreditCard size={14} />
+                  ) : (
+                    <Wallet size={14} />
+                  )}
+                  {PAYMENT_METHOD_LABELS[method]}
+                </button>
+              ))}
+            </div>
+            <p style={{ color: '#9b9b9b', fontSize: 13, marginTop: 10, lineHeight: 1.5 }}>
+              {getPaymentHelpText(paymentMethod, orderType)}
+            </p>
+            {paymentMethod === 'cash' ? (
+              <p style={{ color: '#d9b06f', fontSize: 12, marginTop: 6 }}>
+                This canteen accepts pay-later orders through its cash payment mode.
+              </p>
+            ) : null}
+          </>
+        )}
       </div>
 
-      {paymentMethod === 'online' ? (
+      {paymentConfigReady && paymentMethod === 'online' ? (
         <div className="canteen-checkout__section">
           <p className="canteen-checkout__section-title">Payment Language</p>
           <select
@@ -378,11 +406,13 @@ export default function CheckoutPage() {
       <button
         className="canteen-checkout__submit"
         onClick={handlePlaceOrder}
-        disabled={submitting}
-        style={{ opacity: submitting ? 0.6 : 1 }}
+        disabled={submitting || !paymentConfigReady || isLoadingCanteen}
+        style={{ opacity: submitting || !paymentConfigReady || isLoadingCanteen ? 0.6 : 1 }}
       >
         {submitting
           ? 'Placing Order...'
+          : !paymentConfigReady || isLoadingCanteen
+            ? 'Loading Payment Options...'
           : paymentMethod === 'cash'
             ? `Place Order and Pay Later - Rs ${total}`
             : `Continue to Payment - Rs ${total}`}

@@ -2,9 +2,10 @@ from decimal import Decimal
 
 from django.test import TestCase
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError
 from rest_framework.test import APITestCase
 
-from apps.canteen.models import Canteen, CanteenMenuItem
+from apps.canteen.models import Canteen, CanteenMenuItem, CanteenPaymentConfig
 from apps.payments.models import Payment
 from apps.users.models import Role, Staff, Student, User
 
@@ -66,6 +67,23 @@ class OrderServiceSmokeTests(TestCase):
         order.refresh_from_db()
         self.assertEqual(order.status, CanteenOrder.STATUS_CANCELLED)
         self.assertEqual(self.item.available_quantity, 10)
+
+    def test_online_only_canteen_rejects_cash_orders(self):
+        CanteenPaymentConfig.objects.create(
+            canteen=self.canteen,
+            payment_mode=CanteenPaymentConfig.PAYMENT_MODE_ONLINE,
+        )
+
+        with self.assertRaisesMessage(ValidationError, "This canteen only accepts online payments."):
+            create_order_for_student(
+                self.student,
+                {
+                    "canteen_id": self.canteen.id,
+                    "order_type": "pickup",
+                    "payment_method": "cash",
+                    "items": [{"menu_item_id": self.item.id, "quantity": 1}],
+                },
+            )
 
 
 class StudentOrderVisibilityApiTests(APITestCase):

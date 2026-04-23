@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Truck } from 'lucide-react';
 import { useManagerOrderDetail } from '../hooks/useManagerOrderDetail';
+import { MANAGER_ORDERS_QUERY_KEY } from '../hooks/useManagerOrders';
+import { MANAGER_STATS_QUERY_KEY } from '../hooks/useManagerStats';
 import { useUpdateOrderStatus } from '../hooks/useUpdateOrderStatus';
 import OrderStatusTracker from '../components/OrderStatusTracker';
 import api from '../../../lib/api';
@@ -10,6 +13,7 @@ import '../canteen.css';
 export default function ManagerOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: order, isLoading, refetch } = useManagerOrderDetail(id);
   const { mutateAsync: updateStatus } = useUpdateOrderStatus();
 
@@ -23,6 +27,13 @@ export default function ManagerOrderDetail() {
   const [deliveryPersonnel, setDeliveryPersonnel] = useState([]);
   const [loadingPersonnel, setLoadingPersonnel] = useState(false);
   const [assigning, setAssigning] = useState(false);
+
+  const refreshManagerSummaries = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: MANAGER_ORDERS_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: MANAGER_STATS_QUERY_KEY }),
+    ]);
+  };
 
   const fetchDeliveryPersonnel = async () => {
     setLoadingPersonnel(true);
@@ -39,7 +50,7 @@ export default function ManagerOrderDetail() {
   const handleStatusUpdate = async (newStatus, extraData = {}) => {
     try {
       await updateStatus({ id, status: newStatus, ...extraData });
-      refetch();
+      await Promise.all([refetch(), refreshManagerSummaries()]);
       setShowAssignModal(false);
     } catch (err) {
       const errData = err.response?.data;
@@ -52,7 +63,7 @@ export default function ManagerOrderDetail() {
     setAssigning(true);
     try {
       await updateStatus({ id, status: 'out_for_delivery', delivery_person_id: dpId });
-      refetch();
+      await Promise.all([refetch(), refreshManagerSummaries()]);
       setShowAssignModal(false);
     } catch (err) {
       alert(err.response?.data?.detail || 'Failed to assign');
@@ -67,7 +78,7 @@ export default function ManagerOrderDetail() {
     setOtpError('');
     try {
       await api.post(`/canteen-manager/orders/${id}/verify-pickup/`, { pickup_otp: otpInput });
-      refetch();
+      await Promise.all([refetch(), refreshManagerSummaries()]);
     } catch (err) {
       setOtpError(err.response?.data?.pickup_otp || err.response?.data?.detail || 'Invalid OTP');
     } finally {

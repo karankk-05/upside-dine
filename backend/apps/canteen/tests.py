@@ -3,8 +3,10 @@ from decimal import Decimal
 from django.test import TestCase
 from rest_framework.test import APITestCase
 
+from apps.orders.models import CanteenOrder
+from apps.payments.models import Payment
 from .models import Canteen, CanteenPaymentConfig
-from apps.users.models import Role, Staff, User
+from apps.users.models import Role, Staff, Student, User
 from .models import CanteenMenuCategory, CanteenMenuItem
 
 
@@ -132,3 +134,69 @@ class CanteenDetailPaymentConfigApiTests(APITestCase):
                 "qr_image_url": "https://example.com/issue51-qr.png",
             },
         )
+
+
+class CanteenManagerStatsApiTests(APITestCase):
+    def setUp(self):
+        self.manager_role = Role.objects.create(role_name="canteen_manager")
+        self.student_role = Role.objects.create(role_name="student")
+        self.canteen = Canteen.objects.create(name="Issue 89 Canteen", location="Hall 8")
+        self.manager = User.objects.create_user(
+            email="issue89.manager@iitk.ac.in",
+            password="password123",
+            role=self.manager_role,
+            is_active=True,
+            is_verified=True,
+        )
+        Staff.objects.create(
+            user=self.manager,
+            full_name="Issue 89 Manager",
+            employee_code="ISSUE89MGR",
+            canteen=self.canteen,
+        )
+        self.student_user = User.objects.create_user(
+            email="issue89.student@iitk.ac.in",
+            password="password123",
+            role=self.student_role,
+            is_active=True,
+            is_verified=True,
+        )
+        self.student = Student.objects.create(
+            user=self.student_user,
+            roll_number="ISSUE89",
+            full_name="Issue 89 Student",
+        )
+        self.client.force_authenticate(user=self.manager)
+
+    def test_stats_ignore_unpaid_online_orders(self):
+        CanteenOrder.objects.create(
+            order_number="ISSUE89-CASH",
+            student=self.student,
+            canteen=self.canteen,
+            subtotal=Decimal("60.00"),
+            delivery_fee=Decimal("0.00"),
+            total_amount=Decimal("60.00"),
+            status=CanteenOrder.STATUS_PENDING,
+        )
+        unpaid_online_order = CanteenOrder.objects.create(
+            order_number="ISSUE89-ONLINE",
+            student=self.student,
+            canteen=self.canteen,
+            subtotal=Decimal("75.00"),
+            delivery_fee=Decimal("0.00"),
+            total_amount=Decimal("75.00"),
+            status=CanteenOrder.STATUS_PENDING,
+        )
+        Payment.objects.create(
+            order=unpaid_online_order,
+            amount=unpaid_online_order.total_amount,
+            status=Payment.STATUS_PENDING,
+            payment_method="razorpay",
+        )
+
+        response = self.client.get("/api/canteen-manager/stats/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["total_orders"], 1)
+        self.assertEqual(response.data[0]["pending_orders"], 1)

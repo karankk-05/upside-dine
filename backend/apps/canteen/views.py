@@ -13,6 +13,7 @@ from rest_framework.generics import (
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 
+from apps.payments.models import Payment
 from .filters import CanteenFilter, CanteenMenuItemFilter
 from .models import Canteen, CanteenMenuCategory, CanteenMenuItem, CanteenPaymentConfig
 from .serializers import (
@@ -46,6 +47,17 @@ def _get_manager_canteens(user):
     if not canteen_id:
         return Canteen.objects.none()
     return Canteen.objects.filter(id=canteen_id)
+
+
+PAID_PAYMENT_STATUSES = [
+    Payment.STATUS_AUTHORIZED,
+    Payment.STATUS_CAPTURED,
+    Payment.STATUS_REFUNDED,
+]
+
+
+def _visible_canteen_orders_queryset(queryset):
+    return queryset.filter(Q(payment__isnull=True) | Q(payment__status__in=PAID_PAYMENT_STATUSES))
 
 
 def _normalize_category_name(value):
@@ -281,7 +293,9 @@ class CanteenManagerStatsView(GenericAPIView):
         today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
         stats = []
         for canteen in canteens:
-            orders = CanteenOrder.objects.filter(canteen=canteen, created_at__gte=today_start)
+            orders = _visible_canteen_orders_queryset(
+                CanteenOrder.objects.filter(canteen=canteen, created_at__gte=today_start)
+            )
             aggregate = orders.aggregate(
                 total_orders=Count("id"),
                 total_revenue=Sum(

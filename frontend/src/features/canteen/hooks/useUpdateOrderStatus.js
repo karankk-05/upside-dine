@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../lib/api";
+import { MANAGER_ORDERS_QUERY_KEY } from "./useManagerOrders";
+import { MANAGER_STATS_QUERY_KEY } from "./useManagerStats";
 
 export const useUpdateOrderStatus = () => {
   const queryClient = useQueryClient();
@@ -11,7 +13,8 @@ export const useUpdateOrderStatus = () => {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["manager-orders"] });
+      queryClient.invalidateQueries({ queryKey: MANAGER_ORDERS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: MANAGER_STATS_QUERY_KEY });
     },
   });
 };

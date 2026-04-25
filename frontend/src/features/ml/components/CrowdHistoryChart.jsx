@@ -46,10 +46,12 @@ function CustomTooltip({ active, payload }) {
  * Includes date picker for past trends.
  * Props: messId
  */
-export default function CrowdHistoryChart({ messId }) {
+export default function CrowdHistoryChart({ messId, demoMode }) {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
-  const { data: rawHistory = [], isLoading } = useCrowdHistory(messId, selectedDate);
+  const { data: rawHistory = [], isLoading } = useCrowdHistory(messId, selectedDate, {
+    demoMode,
+  });
 
   const chartData = useMemo(() => {
     return rawHistory.map((m) => {

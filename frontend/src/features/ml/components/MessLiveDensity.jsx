@@ -10,8 +10,8 @@ import '../styles/crowd.css';
  * Shows density level, person count, estimated wait time.
  * Props: messId, messName, onClick
  */
-export default function MessLiveDensity({ messId, messName, onClick }) {
-  const { data, isLoading, isError } = useLiveCrowdDensity(messId);
+export default function MessLiveDensity({ messId, messName, onClick, demoMode }) {
+  const { data, isLoading, isError } = useLiveCrowdDensity(messId, { demoMode });
 
   if (isLoading) {
     return <div className="skeleton skeleton-card" />;

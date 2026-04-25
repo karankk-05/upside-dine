@@ -9,7 +9,8 @@ import { getDemoCrowdHistory, isCrowdDemoEnabled } from '../demo/crowdDemo';
  * [{ id, mess_id, density_percentage, estimated_count, density_level, estimated_wait_minutes, recorded_at }]
  */
 export function useCrowdHistory(messId, date, options = {}) {
-  const demoModeEnabled = isCrowdDemoEnabled();
+  const { demoMode, ...queryOptions } = options;
+  const demoModeEnabled = demoMode ?? isCrowdDemoEnabled();
 
   return useQuery({
     queryKey: ['crowd', 'history', messId, date, demoModeEnabled ? 'demo' : 'api'],
@@ -28,7 +29,7 @@ export function useCrowdHistory(messId, date, options = {}) {
     },
     enabled: !!messId,
     staleTime: demoModeEnabled ? 300000 : 60000,
-    ...options,
+    ...queryOptions,
   });
 }
 

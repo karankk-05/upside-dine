@@ -105,6 +105,60 @@
   line-height: 1.6;
 }
 
+.crowd-mode-toggle {
+  padding: 16px 18px;
+  background: var(--st-gray);
+  border: 1px solid var(--st-border);
+  border-radius: 16px;
+}
+
+.crowd-mode-toggle__header {
+  margin-bottom: 12px;
+}
+
+.crowd-mode-toggle__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--st-text);
+  margin-bottom: 4px;
+}
+
+.crowd-mode-toggle__description {
+  font-size: 12px;
+  color: var(--st-text-dim);
+  line-height: 1.5;
+}
+
+.crowd-mode-toggle__tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.crowd-mode-toggle__tab {
+  padding: 12px 14px;
+  background: var(--st-dark);
+  border: 1px solid var(--st-border);
+  border-radius: 12px;
+  color: var(--st-text-dim);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.crowd-mode-toggle__tab:hover {
+  border-color: var(--st-accent-dim);
+  color: var(--st-text);
+}
+
+.crowd-mode-toggle__tab--active {
+  background: rgba(212, 85, 85, 0.12);
+  border-color: var(--st-accent);
+  color: var(--st-accent);
+  box-shadow: 0 0 14px rgba(212, 85, 85, 0.14);
+}
+
 /* ---- Density Indicator ---- */
 .density-indicator {
   display: inline-flex;

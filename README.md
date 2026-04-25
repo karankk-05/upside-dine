@@ -1,458 +1,253 @@
-# Upside Dine
+<h1 align="center">
+  <br>
+  <img src="docs/readme/assets/logo.png" alt="UpsideDine" width="380">
+  <br><br>
+  A Unified Campus Dining Platform
+  <br>
+</h1>
 
-A comprehensive restaurant reservation and dining experience platform built with Django, React, and modern web technologies.
+<p align="center">
+  <strong>IIT Kanpur &nbsp;|&nbsp; CS253 -- Software Development and Operations &nbsp;|&nbsp; Group 18 -- HiveMinds</strong>
+</p>
 
-## ⚡ Quick Start
-
-**New team member?** → See **[QUICKSTART.md](QUICKSTART.md)** - Complete setup + Git workflow
-
-**Advanced setup?** → See **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Manual installation without Docker
-
-**TL;DR:**
-```bash
-git clone https://github.com/karankk-05/upside-dine.git
-cd upside_dine
-git checkout -b yourname-feature
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-docker-compose up --build
-docker-compose exec backend python manage.py migrate
-docker-compose exec -it backend python manage.py createsuperuser
-# Open http://localhost:3000
-```
+<p align="center">
+  <code>Django REST</code> &nbsp;
+  <code>React 18</code> &nbsp;
+  <code>FastAPI</code> &nbsp;
+  <code>YOLOv8</code> &nbsp;
+  <code>PostgreSQL</code> &nbsp;
+  <code>Redis</code> &nbsp;
+  <code>Docker Compose</code> &nbsp;
+  <code>WebSockets</code>
+</p>
 
 ---
 
-## 📋 Table of Contents
+## About
 
-- [Overview](#overview)
-- [Technology Stack](#technology-stack)
-- [System Requirements](#system-requirements)
-- [Project Structure](#project-structure)
-- [Development Environment Setup](#development-environment-setup)
-  - [Prerequisites Installation](#prerequisites-installation)
-  - [Backend Setup](#backend-setup)
-  - [Frontend Setup](#frontend-setup)
-  - [Redis Setup](#redis-setup)
-  - [Database Setup](#database-setup)
-- [Running the Application](#running-the-application)
-- [Docker Setup](#docker-setup)
-- [Environment Variables](#environment-variables)
-- [Development Workflow](#development-workflow)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Troubleshooting](#troubleshooting)
+UpsideDine is a full-stack campus dining platform built for IIT Kanpur that addresses the inefficiencies of mess and canteen operations across 14+ residential halls. Born from a survey of 160+ students where **85% said they delay meals to avoid crowds** and **89% wanted remote canteen ordering**, the platform digitizes the entire dining experience.
 
-## 🎯 Overview
+The system replaces paper-based extras coupons with a secure QR-based token system, provides real-time crowd monitoring using computer vision, enables remote food ordering with integrated payments, and manages a complete delivery logistics pipeline -- all within a single, role-based application serving students, mess managers, canteen managers, mess workers, delivery coordinators, and administrators.
 
-Upside Dine is a modern restaurant reservation platform that provides seamless dining experiences through intelligent booking systems, real-time notifications, and personalized recommendations.
+Deployed on an IITK server behind an Ngrok tunnel to bypass campus firewall restrictions, the platform runs as a containerized microservice architecture with 9 Docker containers orchestrated via Docker Compose.
 
-## 🛠️ Technology Stack
+---
 
-### Backend
-- **Django 5.0+** - Web framework
-- **Django REST Framework** - REST API
-- **Django Channels** - WebSocket support for real-time features
-- **Celery** - Asynchronous task queue
-- **FastAPI** - ML microservice
-- **PostgreSQL** - Primary database
-- **Redis** - Cache and message broker
+## Live Demo and Download
 
-### Frontend
-- **React 18+** - UI framework
-- **React Router** - Navigation
-- **Axios** - HTTP client
-- **WebSocket** - Real-time communication
+| | |
+|---|---|
+| **Live Application** | [cushy-chanda-unmaltable.ngrok-free.dev](https://cushy-chanda-unmaltable.ngrok-free.dev) |
+| **Android APK** | [`upside_dine.apk`](upside_dine.apk) -- download and install directly on any Android device |
 
-### Infrastructure
-- **Nginx** - Reverse proxy and static file serving
-- **Docker & Docker Compose** - Containerization
-- **Gunicorn** - WSGI HTTP server
-- **Daphne** - ASGI server for Django Channels
 
-## 💻 System Requirements
+> **Note:** The live deployment runs on an IITK campus server. Availability depends on the server being online and the Ngrok tunnel being active.
 
-### Minimum Requirements
-- **OS**: macOS 11+, Ubuntu 20.04+, Windows 10+ (with WSL2)
-- **RAM**: 8GB (16GB recommended for Docker)
-- **Storage**: 10GB free space
-- **CPU**: 2 cores (4 cores recommended)
+---
 
-### Software Requirements
-- **Docker Desktop**: 20.10+ (includes Docker Compose)
-- **Git**: 2.30+
+## Core Features
 
-That's it! Everything else (Python, Node.js, PostgreSQL, Redis) runs inside Docker containers.
+| Feature | Description |
+|---|---|
+| **Digital Extras Booking** | Students book mess extras from the daily menu and receive a time-limited QR code. Mess workers scan the QR at the counter to verify and redeem the booking. Replaces the legacy paper coupon system entirely. |
+| **Smart Crowd Monitoring** | A YOLOv8-based person detection model polls live camera feeds from mess halls, calculates real-time crowd density percentages, estimates wait times, and recommends the best time to visit. Results are pushed via Redis and consumed by the frontend over WebSockets. |
+| **Remote Canteen Ordering** | Students browse canteen menus, add items to cart, and checkout with Razorpay-integrated payments (UPI, cards). Orders support both pickup and delivery modes with live status tracking. |
+| **Delivery Logistics** | Canteen managers assign ready orders to delivery coordinators. Coordinators accept deliveries, pick up from the canteen, and close the order by entering the student's OTP -- ensuring verified handoff at every step. |
 
-## 📁 Project Structure
+---
 
-```
-upside_dine/
-├── backend/                 # Django backend
-│   ├── config/             # Django settings
-│   ├── apps/               # Django applications
-│   │   ├── users/         # User management
-│   │   ├── restaurants/   # Restaurant management
-│   │   ├── bookings/      # Reservation system
-│   │   ├── reviews/       # Review & rating system
-│   │   └── notifications/ # Notification system
-│   ├── api/               # API endpoints
-│   ├── ml_service/        # FastAPI ML service
-│   ├── requirements.txt   # Python dependencies
-│   └── manage.py          # Django CLI
-├── frontend/              # React frontend
-│   ├── src/
-│   │   ├── components/   # React components
-│   │   ├── pages/       # Page components
-│   │   ├── services/    # API services
-│   │   ├── hooks/       # Custom hooks
-│   │   ├── utils/       # Utility functions
-│   │   └── App.jsx      # Main app component
-│   ├── public/          # Static assets
-│   └── package.json     # Node dependencies
-├── nginx/               # Nginx configuration
-├── docker/              # Docker configurations
-├── docs/                # Documentation
-├── .gitignore          # Git ignore rules
-├── docker-compose.yml  # Docker compose config
-└── README.md           # This file
-```
+## The Ecosystem
 
-## 🚀 Development Environment Setup
+The platform operates on a **3-tier role hierarchy** with 6 distinct user roles, each with their own dedicated dashboard and permission scope.
+
+<p align="center">
+  <img src="docs/readme/assets/ecosystem.svg" alt="UpsideDine Ecosystem" width="100%">
+</p>
+
+---
+
+## System Architecture
+
+A 5-layer, **9-container** Docker Compose stack with external service integrations.
+
+<p align="center">
+  <img src="docs/readme/assets/architecture.svg" alt="System Architecture" width="100%">
+</p>
+
+**Layer breakdown:**
+
+- **Client** -- React 18 PWA built with Vite, TailwindCSS, Zustand (state), React Query (server state), and Capacitor (Android APK). Communicates via REST and WebSocket.
+- **Gateway** -- Nginx reverse proxy routing `/` to the frontend, `/api/` to Django, `/ws/` to Daphne, and `/static/` to the shared volume.
+- **Application** -- Django REST API (users, mess, canteen, orders, payments, crowd modules with JWT auth and RBAC), Daphne ASGI server (Django Channels WebSocket for real-time order and crowd updates), and a FastAPI + YOLOv8 ML service for crowd detection.
+- **Background** -- Celery Worker for async task processing (email OTPs, payment webhooks) and Celery Beat for scheduled jobs (booking expiry, daily inventory resets).
+- **Data** -- PostgreSQL 14 as the primary relational database and Redis 7 serving triple duty as cache, Celery message broker, and Channels pub/sub backend.
+
+**External Services:** Razorpay (payments, webhooks, UPI, refunds), Brevo SMTP (OTP email delivery), IP Cameras (RTSP/HTTP feeds for crowd monitoring).
+
+---
+
+## Deployment
+
+<p align="center">
+  <img src="docs/readme/assets/deployment.png" alt="Deployment Architecture" width="100%">
+</p>
+
+The entire stack is deployed on a single IITK server. An **Ngrok tunnel** exposes the application to the public internet, bypassing the campus firewall that blocks outgoing database connections from internal servers.
+
+---
+
+## App Preview
+
+<p align="center">
+  <img src="docs/readme/assets/hero.png" alt="UpsideDine App" width="600">
+</p>
+
+<p align="center">
+  <img src="docs/readme/assets/mockup_dashboard.png" alt="Student Dashboard" width="200">&nbsp;&nbsp;&nbsp;
+  <img src="docs/readme/assets/mockup_qr.png" alt="QR Booking" width="200">&nbsp;&nbsp;&nbsp;
+  <img src="docs/readme/assets/mockup_crowd.png" alt="Crowd Monitor" width="200">&nbsp;&nbsp;&nbsp;
+  <img src="docs/readme/assets/mockup_canteen.png" alt="Canteen Ordering" width="200">
+</p>
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Backend** | Python 3.10, Django 5.0, Django REST Framework, Django Channels, Daphne (ASGI), Celery, Celery Beat |
+| **Frontend** | React 18, Vite 5, TailwindCSS, Zustand, React Query (TanStack), Framer Motion, React Router, Recharts, html5-qrcode |
+| **ML Service** | Python 3.10, FastAPI, Ultralytics YOLOv8, OpenCV |
+| **Database** | PostgreSQL 14, Redis 7 |
+| **Infrastructure** | Docker Compose, Nginx, Ngrok, Capacitor (Android) |
+| **External** | Razorpay (Payments), Brevo (Email/SMTP), IP Cameras (RTSP) |
+| **Auth** | JWT (SimpleJWT), OTP-based email verification, Role-Based Access Control |
+| **API Docs** | drf-spectacular (OpenAPI 3.0), Swagger UI, ReDoc |
+| **Testing** | pytest, pytest-django, Vitest, React Testing Library |
+| **Quality** | Black, isort, flake8, mypy, ESLint, Prettier |
+
+---
+
+## Quick Start with Docker
 
 ### Prerequisites
 
-You need **Docker Desktop** installed. That's it!
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) installed on your machine.
 
-#### Install Docker
+### Steps
 
-**macOS:**
+**1. Clone the repository**
+
 ```bash
-brew install --cask docker
-# Or download from: https://www.docker.com/products/docker-desktop
+git clone https://github.com/karankk-05/upside-dine.git
+cd upside-dine
 ```
 
-**Ubuntu/Linux:**
-```bash
-sudo apt install docker.io docker-compose -y
-sudo systemctl start docker
-sudo systemctl enable docker
-sudo usermod -aG docker $USER
-newgrp docker
-```
-
-**Windows:**
-Download Docker Desktop from: https://www.docker.com/products/docker-desktop
-
-Verify installation:
-```bash
-docker --version
-docker-compose --version
-```
-
-### Setup
-
-1. **Clone the repository:**
-```bash
-git clone <repository-url>
-cd upside_dine
-```
-
-2. **Configure Environment (Optional):**
-
-For basic development, defaults work fine. Only configure if you need email OTP:
+**2. Set up environment files**
 
 ```bash
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
-
-# Edit backend/.env with your email if needed
 ```
 
-3. **Start everything:**
-```bash
-docker-compose up --build
-```
+Edit `backend/.env` with your credentials (database, email, Razorpay keys). The defaults work for local development with Docker.
 
-4. **Initialize database (first time only):**
-
-In a new terminal:
-```bash
-docker-compose exec backend python manage.py migrate
-docker-compose exec backend python manage.py createsuperuser
-```
-
-5. **Access the application:**
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000/api/
-- Admin Panel: http://localhost:8000/admin/
-
-## 🏃 Running the Application
-
-### Start Services
+**3. Build and start all services**
 
 ```bash
-# Start all services (see logs)
-docker-compose up
-
-# Start in background
-docker-compose up -d
+docker compose up --build
 ```
 
-### Stop Services
+This will start all 9 containers: PostgreSQL, Redis, Django backend, Celery worker, Celery beat, Daphne (WebSocket), FastAPI ML service, React frontend, and Nginx.
+
+**4. Access the application**
+
+| Service | URL |
+|---|---|
+| Application | [http://localhost:48080](http://localhost:48080) |
+| API Docs (Swagger) | [http://localhost:48080/api/docs/](http://localhost:48080/api/docs/) |
+| API Docs (ReDoc) | [http://localhost:48080/api/redoc/](http://localhost:48080/api/redoc/) |
+| Database Admin | [http://localhost:9090](http://localhost:9090) |
+
+**5. Stop all services**
 
 ```bash
-# Stop all services
-docker-compose down
-
-# Stop and remove database (fresh start)
-docker-compose down -v
+docker compose down
 ```
 
-### View Logs
+To also remove persisted data (database, media):
 
 ```bash
-# All services
-docker-compose logs -f
-
-# Specific service
-docker-compose logs -f backend
-docker-compose logs -f frontend
+docker compose down -v
 ```
-
-### Common Commands
-
-```bash
-# Rebuild after code changes
-docker-compose up --build
-
-# Run Django commands
-docker-compose exec backend python manage.py migrate
-docker-compose exec backend python manage.py makemigrations
-docker-compose exec backend python manage.py createsuperuser
-docker-compose exec backend python manage.py shell
-docker-compose exec backend python manage.py test
-
-# Run frontend commands
-docker-compose exec frontend npm install package-name
-docker-compose exec frontend npm test
-
-# Restart specific service
-docker-compose restart backend
-
-# Check service status
-docker-compose ps
-```
-
-## 🔐 Environment Variables
-
-### Backend (.env)
-
-```env
-# Django Settings
-SECRET_KEY=your-secret-key-here
-DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
-
-# Database
-DATABASE_NAME=upside_dine_db
-DATABASE_USER=postgres
-DATABASE_PASSWORD=your_password
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
-
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_DB=0
-
-# Celery
-CELERY_BROKER_URL=redis://localhost:6379/1
-CELERY_RESULT_BACKEND=redis://localhost:6379/2
-
-# Email (for OTP)
-EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-EMAIL_HOST_USER=your_email@gmail.com
-EMAIL_HOST_PASSWORD=your_app_password
-
-# JWT Settings
-JWT_SECRET_KEY=your-jwt-secret
-JWT_ACCESS_TOKEN_LIFETIME=30  # minutes
-JWT_REFRESH_TOKEN_LIFETIME=7  # days
-
-# CORS
-CORS_ALLOWED_ORIGINS=http://localhost:3000
-
-# ML Service
-ML_SERVICE_URL=http://localhost:8001
-```
-
-### Frontend (.env)
-
-```env
-REACT_APP_API_URL=http://localhost:8000/api
-REACT_APP_WS_URL=ws://localhost:8000/ws
-REACT_APP_ENV=development
-```
-
-## 👨‍💻 Development Workflow
-
-### Git Workflow
-
-1. **Create a new branch**:
-```bash
-git checkout -b feature/your-feature-name
-```
-
-2. **Make changes and commit**:
-```bash
-git add .
-git commit -m "Description of changes"
-```
-
-3. **Push to remote**:
-```bash
-git push origin feature/your-feature-name
-```
-
-4. **Create pull request** on GitHub/GitLab
-
-### Code Quality
-
-**Backend (Python)**:
-```bash
-# Run linting
-flake8 .
-
-# Run type checking
-mypy .
-
-# Format code
-black .
-```
-
-**Frontend (JavaScript)**:
-```bash
-# Run linting
-npm run lint
-
-# Format code
-npm run format
-```
-
-## 🧪 Testing
-
-### Run Tests
-
-```bash
-# Backend tests
-docker-compose exec backend python manage.py test
-
-# Frontend tests
-docker-compose exec frontend npm test
-
-# Backend tests with coverage
-docker-compose exec backend coverage run --source='.' manage.py test
-docker-compose exec backend coverage report
-
-# Frontend tests with coverage
-docker-compose exec frontend npm test -- --coverage
-```
-
-### Linting and Formatting
-
-```bash
-# Backend
-docker-compose exec backend black .
-docker-compose exec backend flake8 .
-
-# Frontend
-docker-compose exec frontend npm run lint
-docker-compose exec frontend npm run format
-```
-
-## 🚢 Deployment
-
-### Production Checklist
-
-- [ ] Set `DEBUG=False` in backend `.env`
-- [ ] Update `ALLOWED_HOSTS` with production domain
-- [ ] Set strong `SECRET_KEY` and `JWT_SECRET_KEY`
-- [ ] Configure production database
-- [ ] Set up SSL certificates
-- [ ] Configure email service (SendGrid, AWS SES, etc.)
-- [ ] Set up monitoring (Sentry, New Relic, etc.)
-- [ ] Configure backup strategy
-- [ ] Set up CI/CD pipeline
-- [ ] Update CORS settings
-- [ ] Collect static files: `python manage.py collectstatic`
-
-## 🔧 Troubleshooting
-
-### Docker Issues
-
-**Ports already in use:**
-```bash
-docker-compose down
-lsof -ti:3000 | xargs kill -9
-lsof -ti:8000 | xargs kill -9
-docker-compose up
-```
-
-**Services not starting:**
-```bash
-# Check Docker is running
-docker ps
-
-# Clean restart
-docker-compose down -v
-docker-compose up --build
-```
-
-**Database issues:**
-```bash
-# Fresh start (WARNING: Deletes all data!)
-docker-compose down -v
-docker-compose up --build
-docker-compose exec backend python manage.py migrate
-docker-compose exec backend python manage.py createsuperuser
-```
-
-**Code changes not reflecting:**
-```bash
-# Restart specific service
-docker-compose restart backend
-
-# Or rebuild
-docker-compose up --build backend
-```
-
-**View detailed logs:**
-```bash
-docker-compose logs -f backend
-docker-compose logs -f celery_worker
-docker-compose logs -f frontend
-```
-
-## 📚 Additional Resources
-
-- [Django Documentation](https://docs.djangoproject.com/)
-- [React Documentation](https://react.dev/)
-- [Django REST Framework](https://www.django-rest-framework.org/)
-- [Celery Documentation](https://docs.celeryq.dev/)
-- [Docker Documentation](https://docs.docker.com/)
-
-## 👥 Team
-
-Developed by **HiveMinds**
-
-## 📄 License
-
-[Add your license here]
 
 ---
 
-For questions or support, please contact [your-email@example.com]
+## Project Structure
+
+```
+upside-dine/
+|-- backend/                  # Django REST API
+|   |-- apps/
+|   |   |-- users/            # Authentication, roles, OTP
+|   |   |-- mess/             # Mess management, extras booking
+|   |   |-- canteen/          # Canteen menus, categories
+|   |   |-- orders/           # Order lifecycle, delivery
+|   |   |-- payments/         # Razorpay integration
+|   |   |-- crowd/            # Camera feed management
+|   |-- api/                  # Health checks, shared endpoints
+|   |-- config/               # Django settings, ASGI, Celery
+|   |-- Dockerfile
+|   `-- requirements.txt
+|-- frontend/                 # React 18 PWA
+|   |-- src/
+|   |   |-- features/         # Auth, mess, canteen, ML modules
+|   |   |-- pages/            # Dashboard pages per role
+|   |   |-- components/       # Shared UI components
+|   |   |-- stores/           # Zustand state stores
+|   |   |-- hooks/            # Custom React hooks
+|   |   `-- lib/              # API client, query config
+|   |-- Dockerfile
+|   `-- package.json
+|-- ml_service/               # FastAPI + YOLOv8
+|   |-- models/               # YOLO detector wrapper
+|   |-- services/             # Crowd analyzer, video processor
+|   |-- main.py               # FastAPI application
+|   |-- Dockerfile
+|   `-- requirements.txt
+|-- nginx/
+|   `-- nginx.conf            # Reverse proxy configuration
+|-- docker-compose.yml        # Full stack orchestration
+|-- docs/                     # Project documentation (SRS, design specs, etc.)
+`-- .gitignore
+```
+
+---
+
+## Detailed Documentation
+
+| Component | README |
+|---|---|
+| Backend (Django REST API) | [backend/README.md](backend/README.md) |
+| Frontend (React PWA) | [frontend/README.md](frontend/README.md) |
+| ML Service (FastAPI + YOLOv8) | [ml_service/README.md](ml_service/README.md) |
+| Infrastructure (Docker + Nginx) | [docker/README.md](docker/README.md) |
+
+---
+
+## Documentation
+
+The `docs/` directory contains the complete project documentation:
+
+- **SRS** -- Software Requirements Specification
+- **Design Specifications** -- System and UI design document
+- **Implementation** -- Implementation details and decisions
+- **Test Document** -- Testing strategy, test cases, and results
+- **User Manual** -- End-user guide for all roles
+- **Presentation** -- Final project presentation
+
+---
+
+<p align="center">
+  <sub>Built by HiveMinds (Group 18) for CS253 at IIT Kanpur</sub>
+</p>

@@ -12,13 +12,13 @@ import { isCrowdDemoEnabled } from '../demo/crowdDemo';
  * Gracefully degrades if WS is unavailable – the polling hook
  * (useLiveCrowdDensity) serves as the fallback.
  */
-export function useCrowdSocket(messId) {
+export function useCrowdSocket(messId, options = {}) {
   const queryClient = useQueryClient();
   const wsRef = useRef(null);
   const reconnectAttempt = useRef(0);
   const reconnectTimer = useRef(null);
   const maxReconnectAttempts = 10;
-  const demoModeEnabled = isCrowdDemoEnabled();
+  const demoModeEnabled = options.demoMode ?? isCrowdDemoEnabled();
 
   const getWsUrl = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -45,7 +45,7 @@ export function useCrowdSocket(messId) {
 
           if (message.type === 'density_update' || message.type === 'wait_time_update') {
             // Update React Query cache for live density
-            queryClient.setQueryData(['crowd', 'live', messId], (old) => ({
+            queryClient.setQueryData(['crowd', 'live', messId, 'api'], (old) => ({
               ...old,
               ...message.data,
             }));

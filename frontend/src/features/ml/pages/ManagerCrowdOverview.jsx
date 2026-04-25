@@ -5,9 +5,11 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { ArrowLeft, BarChart3, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import CrowdDemoBanner from '../components/CrowdDemoBanner';
+import CrowdModeToggle from '../components/CrowdModeToggle';
 import DensityIndicator from '../components/DensityIndicator';
 import CameraFeedStatus from '../components/CameraFeedStatus';
-import { CROWD_DEMO_LOOP_MINUTES, isCrowdDemoEnabled } from '../demo/crowdDemo';
+import { CROWD_DEMO_LOOP_MINUTES } from '../demo/crowdDemo';
+import { useManagerCrowdMode } from '../hooks/useStudentCrowdMode';
 import { useLiveCrowdDensity } from '../hooks/useLiveCrowdDensity';
 import PullToRefresh from '../../../components/PullToRefresh';
 import { STANDARD_INPUT_PROPS, sanitizeUrl } from '../../../lib/formValidation';
@@ -17,8 +19,8 @@ import '../styles/crowd.css';
 /**
  * Single mess card with trend arrow for manager overview.
  */
-function ManagerDensityCard({ messId, messName }) {
-  const { data, isLoading, isError } = useLiveCrowdDensity(messId);
+function ManagerDensityCard({ messId, messName, demoMode }) {
+  const { data, isLoading, isError } = useLiveCrowdDensity(messId, { demoMode });
 
   if (isLoading) return <div className="skeleton skeleton-card" />;
   if (isError || !data) {
@@ -102,7 +104,7 @@ export default function ManagerCrowdOverview() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const userRole = localStorage.getItem('user_role');
-  const demoModeEnabled = isCrowdDemoEnabled();
+  const { mode, demoModeEnabled, setMode } = useManagerCrowdMode();
   const [feedUrl, setFeedUrl] = React.useState('');
   const [selectedFeedMess, setSelectedFeedMess] = React.useState('');
   const [submittingFeed, setSubmittingFeed] = React.useState(false);
@@ -111,6 +113,8 @@ export default function ManagerCrowdOverview() {
       queryClient.invalidateQueries({ queryKey: ['mess', 'list'] }),
       queryClient.invalidateQueries({ queryKey: ['manager', 'stats'] }),
       queryClient.invalidateQueries({ queryKey: ['crowd', 'live'] }),
+      queryClient.invalidateQueries({ queryKey: ['crowd', 'history'] }),
+      queryClient.invalidateQueries({ queryKey: ['crowd', 'recommendation'] }),
       queryClient.invalidateQueries({ queryKey: ['crowd', 'feeds'] }),
     ]);
   };
@@ -175,6 +179,10 @@ export default function ManagerCrowdOverview() {
       </div>
 
         <div className="crowd-dashboard__content">
+        <div className="crowd-section">
+          <CrowdModeToggle mode={mode} onChange={setMode} />
+        </div>
+
         {demoModeEnabled ? (
           <div className="crowd-section">
             <CrowdDemoBanner message="No live camera feed is required. This dashboard now runs on a 10-minute simulation loop for your presentation." />
@@ -224,6 +232,7 @@ export default function ManagerCrowdOverview() {
                   key={mess.id}
                   messId={mess.id}
                   messName={mess.name || `Mess ${mess.id}`}
+                  demoMode={demoModeEnabled}
                 />
               ))}
             </div>

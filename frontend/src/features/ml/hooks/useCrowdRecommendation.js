@@ -12,7 +12,8 @@ import {
  * { mess_id, recommendation, best_times: [{ hour, time_range, avg_people }] }
  */
 export function useCrowdRecommendation(messId, options = {}) {
-  const demoModeEnabled = isCrowdDemoEnabled();
+  const { demoMode, ...queryOptions } = options;
+  const demoModeEnabled = demoMode ?? isCrowdDemoEnabled();
 
   return useQuery({
     queryKey: ['crowd', 'recommendation', messId, demoModeEnabled ? 'demo' : 'api'],
@@ -29,7 +30,7 @@ export function useCrowdRecommendation(messId, options = {}) {
     },
     enabled: !!messId,
     staleTime: 300000, // 5 min — recommendations don't change fast
-    ...options,
+    ...queryOptions,
   });
 }
 

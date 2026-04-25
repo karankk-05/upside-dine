@@ -14,7 +14,8 @@ import {
  * { mess_id, person_count, density_percentage, density_level, estimated_wait_minutes, timestamp, feed_url }
  */
 export function useLiveCrowdDensity(messId, options = {}) {
-  const demoModeEnabled = isCrowdDemoEnabled();
+  const { demoMode, ...queryOptions } = options;
+  const demoModeEnabled = demoMode ?? isCrowdDemoEnabled();
 
   return useQuery({
     queryKey: ['crowd', 'live', messId, demoModeEnabled ? 'demo' : 'api'],
@@ -39,7 +40,7 @@ export function useLiveCrowdDensity(messId, options = {}) {
     refetchIntervalInBackground: demoModeEnabled,
     retry: false,
     staleTime: demoModeEnabled ? 0 : 3000,
-    ...options,
+    ...queryOptions,
   });
 }
 

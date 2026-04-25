@@ -17,9 +17,11 @@ import {
 import { ArrowLeft, BarChart3, Clock, Users } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import CrowdDemoBanner from '../components/CrowdDemoBanner';
+import CrowdModeToggle from '../components/CrowdModeToggle';
 import MessSelector from '../components/MessSelector';
 import CrowdHeatmap from '../components/CrowdHeatmap';
-import { getDemoWeekHistory, isCrowdDemoEnabled } from '../demo/crowdDemo';
+import { getDemoWeekHistory } from '../demo/crowdDemo';
+import { useManagerCrowdMode } from '../hooks/useStudentCrowdMode';
 import '../styles/crowd.css';
 
 function AnalyticsTooltip({ active, payload }) {
@@ -49,7 +51,7 @@ function AnalyticsTooltip({ active, payload }) {
 export default function CrowdAnalytics() {
   const navigate = useNavigate();
   const [selectedMess, setSelectedMess] = useState(null);
-  const demoModeEnabled = isCrowdDemoEnabled();
+  const { mode, demoModeEnabled, setMode } = useManagerCrowdMode();
 
   // Past 7 days of history for selected (or first) mess
   const { data: messes = [] } = useQuery({
@@ -153,6 +155,10 @@ export default function CrowdAnalytics() {
       </div>
 
       <div className="crowd-dashboard__content">
+        <div className="crowd-section">
+          <CrowdModeToggle mode={mode} onChange={setMode} />
+        </div>
+
         {demoModeEnabled ? (
           <div className="crowd-section">
             <CrowdDemoBanner message="Analytics are being populated from the same 10-minute presentation simulation, plus generated historical patterns." />

@@ -8,8 +8,8 @@ import '../styles/crowd.css';
  * Recommendation card showing the best times to visit a mess.
  * Props: messId
  */
-export default function BestTimeRecommendation({ messId }) {
-  const { data, isLoading, isError } = useCrowdRecommendation(messId);
+export default function BestTimeRecommendation({ messId, demoMode }) {
+  const { data, isLoading, isError } = useCrowdRecommendation(messId, { demoMode });
 
   if (isLoading) {
     return <div className="skeleton" style={{ height: 180, borderRadius: 16 }} />;

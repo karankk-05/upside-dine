@@ -6,8 +6,9 @@ import { motion } from 'framer-motion';
 import { Activity, ArrowLeft } from 'lucide-react';
 import MessSelector from '../components/MessSelector';
 import CrowdDemoBanner from '../components/CrowdDemoBanner';
+import CrowdModeToggle from '../components/CrowdModeToggle';
 import MessLiveDensity from '../components/MessLiveDensity';
-import { isCrowdDemoEnabled } from '../demo/crowdDemo';
+import { useStudentCrowdMode } from '../hooks/useStudentCrowdMode';
 import PullToRefresh from '../../../components/PullToRefresh';
 import '../styles/crowd.css';
 
@@ -20,11 +21,14 @@ export default function CrowdDashboard() {
   const queryClient = useQueryClient();
   const [selectedMess, setSelectedMess] = useState(null);
   const userRole = localStorage.getItem('user_role');
-  const demoModeEnabled = isCrowdDemoEnabled();
+  const { mode, demoModeEnabled, setMode } = useStudentCrowdMode();
   const handleRefresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['mess', 'list'] }),
       queryClient.invalidateQueries({ queryKey: ['user', 'profile'] }),
+      queryClient.invalidateQueries({ queryKey: ['crowd', 'live'] }),
+      queryClient.invalidateQueries({ queryKey: ['crowd', 'history'] }),
+      queryClient.invalidateQueries({ queryKey: ['crowd', 'recommendation'] }),
     ]);
   };
 
@@ -89,6 +93,12 @@ export default function CrowdDashboard() {
       </div>
 
         <div className="crowd-dashboard__content">
+        {userRole === 'student' ? (
+          <div className="crowd-section">
+            <CrowdModeToggle mode={mode} onChange={setMode} />
+          </div>
+        ) : null}
+
         {demoModeEnabled ? (
           <div className="crowd-section">
             <CrowdDemoBanner message="Presentation mode is active. Metrics change slowly on a 10-minute simulation loop." />
@@ -134,6 +144,7 @@ export default function CrowdDashboard() {
                   key={mess.id}
                   messId={mess.id}
                   messName={mess.name || `Mess ${mess.id}`}
+                  demoMode={demoModeEnabled}
                   onClick={() => navigate(`/crowd/mess/${mess.id}`)}
                 />
               ))}

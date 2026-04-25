@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { isCrowdDemoEnabled } from '../demo/crowdDemo';
 
 /**
  * WebSocket hook for real-time crowd density updates.
@@ -11,12 +12,13 @@ import { useQueryClient } from '@tanstack/react-query';
  * Gracefully degrades if WS is unavailable – the polling hook
  * (useLiveCrowdDensity) serves as the fallback.
  */
-export function useCrowdSocket(messId) {
+export function useCrowdSocket(messId, options = {}) {
   const queryClient = useQueryClient();
   const wsRef = useRef(null);
   const reconnectAttempt = useRef(0);
   const reconnectTimer = useRef(null);
   const maxReconnectAttempts = 10;
+  const demoModeEnabled = options.demoMode ?? isCrowdDemoEnabled();
 
   const getWsUrl = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -25,6 +27,7 @@ export function useCrowdSocket(messId) {
   }, [messId]);
 
   const connect = useCallback(() => {
+    if (demoModeEnabled) return;
     if (!messId) return;
 
     try {
@@ -42,7 +45,7 @@ export function useCrowdSocket(messId) {
 
           if (message.type === 'density_update' || message.type === 'wait_time_update') {
             // Update React Query cache for live density
-            queryClient.setQueryData(['crowd', 'live', messId], (old) => ({
+            queryClient.setQueryData(['crowd', 'live', messId, 'api'], (old) => ({
               ...old,
               ...message.data,
             }));
@@ -66,7 +69,7 @@ export function useCrowdSocket(messId) {
       // WebSocket construction failed — server likely not supporting WS yet
       scheduleReconnect();
     }
-  }, [messId, getWsUrl, queryClient]);
+  }, [demoModeEnabled, messId, getWsUrl, queryClient]);
 
   const scheduleReconnect = useCallback(() => {
     if (reconnectAttempt.current >= maxReconnectAttempts) return;
@@ -92,12 +95,17 @@ export function useCrowdSocket(messId) {
   }, []);
 
   useEffect(() => {
+    if (demoModeEnabled) {
+      return undefined;
+    }
     connect();
     return () => disconnect();
-  }, [messId, connect, disconnect]);
+  }, [demoModeEnabled, messId, connect, disconnect]);
 
   return {
-    isConnected: !!wsRef.current && wsRef.current.readyState === WebSocket.OPEN,
+    isConnected: demoModeEnabled
+      ? true
+      : !!wsRef.current && wsRef.current.readyState === WebSocket.OPEN,
     disconnect,
     reconnect: connect,
   };

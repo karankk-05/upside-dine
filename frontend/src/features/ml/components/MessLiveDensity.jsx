@@ -10,8 +10,8 @@ import '../styles/crowd.css';
  * Shows density level, person count, estimated wait time.
  * Props: messId, messName, onClick
  */
-export default function MessLiveDensity({ messId, messName, onClick }) {
-  const { data, isLoading, isError } = useLiveCrowdDensity(messId);
+export default function MessLiveDensity({ messId, messName, onClick, demoMode }) {
+  const { data, isLoading, isError } = useLiveCrowdDensity(messId, { demoMode });
 
   if (isLoading) {
     return <div className="skeleton skeleton-card" />;
@@ -35,6 +35,7 @@ export default function MessLiveDensity({ messId, messName, onClick }) {
   const waitMin = Math.round(data.estimated_wait_minutes || 0);
   const personCount = data.person_count || 0;
   const densityPct = Math.round(data.density_percentage || 0);
+  const isDemoMode = Boolean(data.demo_mode);
 
   return (
     <motion.div
@@ -48,9 +49,13 @@ export default function MessLiveDensity({ messId, messName, onClick }) {
     >
       <div className="density-card__header">
         <span className="density-card__name">{messName || `Mess ${messId}`}</span>
-        <div className="density-card__live-badge">
+        <div
+          className={`density-card__live-badge ${
+            isDemoMode ? 'density-card__live-badge--demo' : ''
+          }`}
+        >
           <span className="density-card__live-dot" />
-          LIVE
+          {isDemoMode ? 'DEMO' : 'LIVE'}
         </div>
       </div>
 

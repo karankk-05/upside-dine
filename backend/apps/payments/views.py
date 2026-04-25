@@ -8,6 +8,7 @@ from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.orders.models import CanteenOrder
+from apps.orders.services import cancel_order
 from apps.users.permissions import IsStudent
 
 from .models import Payment
@@ -78,19 +79,35 @@ class PaymentCreateOrderView(GenericAPIView):
             defaults={
                 "amount": order.total_amount,
                 "currency": "INR",
+                "payment_method": "razorpay",
                 "status": Payment.STATUS_PENDING,
             },
         )
         payment.amount = order.total_amount
+        payment.payment_method = "razorpay"
 
         try:
             razorpay_order = create_razorpay_order(order)
             payment.razorpay_order_id = razorpay_order.get("id")
             payment.status = Payment.STATUS_PENDING
             payment.raw_response = razorpay_order
-            payment.save(update_fields=["amount", "razorpay_order_id", "status", "raw_response", "updated_at"])
+            payment.save(
+                update_fields=[
+                    "amount",
+                    "payment_method",
+                    "razorpay_order_id",
+                    "status",
+                    "raw_response",
+                    "updated_at",
+                ]
+            )
         except Exception as exc:
             mark_payment_failed(payment, exc)
+            if order.status == CanteenOrder.STATUS_PENDING:
+                try:
+                    cancel_order(order, "Payment initiation failed.")
+                except Exception:
+                    pass
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(
@@ -126,6 +143,11 @@ class PaymentVerifyView(GenericAPIView):
         )
         if not is_valid:
             mark_payment_failed(payment, "Invalid payment signature.")
+            if payment.order.status == CanteenOrder.STATUS_PENDING:
+                try:
+                    cancel_order(payment.order, "Payment verification failed.")
+                except Exception:
+                    pass
             return Response({"detail": "Invalid payment signature."}, status=status.HTTP_400_BAD_REQUEST)
 
         mark_payment_captured(
@@ -178,6 +200,24 @@ class PaymentWebhookView(GenericAPIView):
                             "updated_at",
                         ]
                     )
+
+        if event == "payment.failed":
+            payment_entity = payload.get("payment", {}).get("entity", {})
+            razorpay_order_id = payment_entity.get("order_id")
+            failure_reason = (
+                payment_entity.get("error_description")
+                or payment_entity.get("error_reason")
+                or "Payment failed."
+            )
+            if razorpay_order_id:
+                payment = Payment.objects.filter(razorpay_order_id=razorpay_order_id).select_related("order").first()
+                if payment:
+                    mark_payment_failed(payment, failure_reason)
+                    if payment.order.status == CanteenOrder.STATUS_PENDING:
+                        try:
+                            cancel_order(payment.order, "Payment failed.")
+                        except Exception:
+                            pass
 
         if event == "refund.processed":
             refund_entity = payload.get("refund", {}).get("entity", {})

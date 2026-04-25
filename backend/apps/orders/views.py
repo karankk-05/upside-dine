@@ -1,12 +1,14 @@
 from datetime import timedelta
 
 from django.utils import timezone
+from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.generics import GenericAPIView, ListAPIView, RetrieveAPIView
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 
+from apps.payments.models import Payment
 from .models import CanteenOrder
 from .serializers import (
     CancelOrderSerializer,
@@ -17,7 +19,13 @@ from .serializers import (
     PickupVerifySerializer,
     PlaceOrderSerializer,
 )
-from .services import cancel_order, create_order_for_student, validate_status_transition, verify_pickup
+from .services import (
+    cancel_order,
+    create_order_for_student,
+    restore_order_inventory,
+    validate_status_transition,
+    verify_pickup,
+)
 
 
 class IsCanteenManagerOrAdmin(BasePermission):
@@ -28,6 +36,19 @@ class IsCanteenManagerOrAdmin(BasePermission):
         if user.is_superuser:
             return True
         return bool(user.role and user.role.role_name == "canteen_manager")
+
+
+PAID_PAYMENT_STATUSES = [
+    Payment.STATUS_AUTHORIZED,
+    Payment.STATUS_CAPTURED,
+    Payment.STATUS_REFUNDED,
+]
+
+
+def _visible_order_queryset(queryset):
+    return queryset.filter(
+        Q(payment__isnull=True) | Q(payment__status__in=PAID_PAYMENT_STATUSES)
+    )
 
 
 def _require_student_profile(request):
@@ -56,7 +77,9 @@ class OrderListCreateView(GenericAPIView):
                 {"detail": "Only students can view personal order history from this endpoint."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        orders = CanteenOrder.objects.filter(student=student_profile).select_related("canteen")
+        orders = _visible_order_queryset(
+            CanteenOrder.objects.filter(student=student_profile).select_related("canteen", "payment")
+        )
         return Response(CanteenOrderListSerializer(orders, many=True).data)
 
     def post(self, request):
@@ -69,6 +92,16 @@ class OrderListCreateView(GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         order = create_order_for_student(student_profile, serializer.validated_data)
+        if serializer.validated_data.get("payment_method") == "razorpay":
+            Payment.objects.update_or_create(
+                order=order,
+                defaults={
+                    "amount": order.total_amount,
+                    "currency": "INR",
+                    "payment_method": "razorpay",
+                    "status": Payment.STATUS_PENDING,
+                },
+            )
         return Response(CanteenOrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
 
@@ -80,7 +113,11 @@ class OrderDetailView(RetrieveAPIView):
         student_profile = _require_student_profile(self.request)
         if not student_profile:
             return CanteenOrder.objects.none()
-        return CanteenOrder.objects.filter(student=student_profile).select_related("canteen").prefetch_related("items")
+        return _visible_order_queryset(
+            CanteenOrder.objects.filter(student=student_profile)
+            .select_related("canteen", "payment")
+            .prefetch_related("items")
+        )
 
 
 class OrderCancelView(GenericAPIView):
@@ -114,7 +151,9 @@ class OrderStatusView(GenericAPIView):
                 {"detail": "Only students can check personal order status from this endpoint."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        order = CanteenOrder.objects.filter(id=id, student=student_profile).first()
+        order = _visible_order_queryset(
+            CanteenOrder.objects.filter(id=id, student=student_profile).select_related("payment")
+        ).first()
         if not order:
             return Response({"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(self.get_serializer(order).data)
@@ -125,7 +164,9 @@ class CanteenManagerOrderListView(ListAPIView):
     serializer_class = CanteenOrderSerializer
 
     def get_queryset(self):
-        queryset = CanteenOrder.objects.select_related("canteen", "student", "student__user").prefetch_related("items")
+        queryset = _visible_order_queryset(
+            CanteenOrder.objects.select_related("canteen", "student", "student__user", "payment").prefetch_related("items")
+        )
         manager_canteen_ids = _manager_canteen_ids(self.request.user)
         if manager_canteen_ids is not None:
             queryset = queryset.filter(canteen_id__in=manager_canteen_ids)
@@ -141,7 +182,9 @@ class CanteenManagerOrderDetailView(GenericAPIView):
     serializer_class = CanteenOrderSerializer
 
     def get(self, request, id):
-        queryset = CanteenOrder.objects.select_related("canteen", "student", "student__user").prefetch_related("items__menu_item")
+        queryset = _visible_order_queryset(
+            CanteenOrder.objects.select_related("canteen", "student", "student__user", "payment").prefetch_related("items__menu_item")
+        )
         manager_canteen_ids = _manager_canteen_ids(request.user)
         if manager_canteen_ids is not None:
             queryset = queryset.filter(canteen_id__in=manager_canteen_ids)
@@ -170,7 +213,7 @@ class CanteenManagerOrderAcceptView(GenericAPIView):
         return Response(self.get_serializer(order).data)
 
     def _get_order(self, request, order_id):
-        queryset = CanteenOrder.objects.all()
+        queryset = _visible_order_queryset(CanteenOrder.objects.select_related("payment"))
         manager_canteen_ids = _manager_canteen_ids(request.user)
         if manager_canteen_ids is not None:
             queryset = queryset.filter(canteen_id__in=manager_canteen_ids)
@@ -189,12 +232,13 @@ class CanteenManagerOrderRejectView(GenericAPIView):
             validate_status_transition(order, CanteenOrder.STATUS_REJECTED)
         except Exception as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        restore_order_inventory(order)
         order.status = CanteenOrder.STATUS_REJECTED
         order.save(update_fields=["status", "updated_at"])
         return Response(self.get_serializer(order).data)
 
     def _get_order(self, request, order_id):
-        queryset = CanteenOrder.objects.all()
+        queryset = _visible_order_queryset(CanteenOrder.objects.select_related("payment"))
         manager_canteen_ids = _manager_canteen_ids(request.user)
         if manager_canteen_ids is not None:
             queryset = queryset.filter(canteen_id__in=manager_canteen_ids)
@@ -243,7 +287,7 @@ class CanteenManagerOrderStatusUpdateView(GenericAPIView):
         return Response(OrderStatusSerializer(order).data)
 
     def _get_order(self, request, order_id):
-        queryset = CanteenOrder.objects.all()
+        queryset = _visible_order_queryset(CanteenOrder.objects.select_related("payment"))
         manager_canteen_ids = _manager_canteen_ids(request.user)
         if manager_canteen_ids is not None:
             queryset = queryset.filter(canteen_id__in=manager_canteen_ids)
@@ -274,7 +318,7 @@ class CanteenManagerVerifyPickupView(GenericAPIView):
         return Response(OrderStatusSerializer(order).data)
 
     def _get_order(self, request, order_id):
-        queryset = CanteenOrder.objects.all()
+        queryset = _visible_order_queryset(CanteenOrder.objects.select_related("payment"))
         manager_canteen_ids = _manager_canteen_ids(request.user)
         if manager_canteen_ids is not None:
             queryset = queryset.filter(canteen_id__in=manager_canteen_ids)

@@ -7,7 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
-from apps.canteen.models import Canteen, CanteenMenuItem
+from apps.canteen.models import Canteen, CanteenMenuItem, CanteenPaymentConfig
 
 from .models import CanteenOrder, CanteenOrderItem
 
@@ -147,16 +147,33 @@ def validate_and_prepare_items(canteen, items_payload):
     return prepared_items, subtotal, max_prep_mins
 
 
+def validate_payment_method(canteen, payment_method):
+    config = getattr(canteen, "payment_config", None)
+    payment_mode = getattr(config, "payment_mode", CanteenPaymentConfig.PAYMENT_MODE_BOTH)
+
+    if payment_mode == CanteenPaymentConfig.PAYMENT_MODE_ONLINE and payment_method != "razorpay":
+        raise ValidationError({"payment_method": "This canteen only accepts online payments."})
+
+    if payment_mode == CanteenPaymentConfig.PAYMENT_MODE_CASH and payment_method != "cash":
+        raise ValidationError({"payment_method": "This canteen only accepts pay-later orders."})
+
+
 @transaction.atomic
 def create_order_for_student(student, validated_data):
-    canteen = Canteen.objects.select_for_update().filter(id=validated_data["canteen_id"], is_active=True).first()
+    canteen = (
+        Canteen.objects.select_for_update()
+        .filter(id=validated_data["canteen_id"], is_active=True)
+        .first()
+    )
     if not canteen:
         raise ValidationError({"canteen_id": "Canteen not found."})
 
     order_type = validated_data.get("order_type", CanteenOrder.ORDER_TYPE_PICKUP)
+    payment_method = validated_data.get("payment_method", "cash")
     delivery_address = (validated_data.get("delivery_address") or "").strip()
     if order_type == CanteenOrder.ORDER_TYPE_DELIVERY and not delivery_address:
         raise ValidationError({"delivery_address": "Delivery address is required for delivery orders."})
+    validate_payment_method(canteen, payment_method)
 
     prepared_items, subtotal, max_prep_mins = validate_and_prepare_items(canteen, validated_data["items"])
     delivery_fee = calculate_delivery_fee(canteen, subtotal, order_type)
@@ -217,8 +234,18 @@ def validate_status_transition(order, new_status):
         raise ValidationError({"status": "Delivery orders cannot be marked as picked up."})
 
 
+def restore_order_inventory(order):
+    items = list(order.items.select_related("menu_item").select_for_update())
+    for item in items:
+        menu_item = item.menu_item
+        menu_item.available_quantity += item.quantity
+        menu_item.save(update_fields=["available_quantity", "updated_at"])
+
+
+@transaction.atomic
 def cancel_order(order, reason=""):
     validate_status_transition(order, CanteenOrder.STATUS_CANCELLED)
+    restore_order_inventory(order)
     order.status = CanteenOrder.STATUS_CANCELLED
     order.cancellation_reason = reason[:250]
     order.save(update_fields=["status", "cancellation_reason", "updated_at"])

@@ -5,7 +5,10 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { Activity, ArrowLeft } from 'lucide-react';
 import MessSelector from '../components/MessSelector';
+import CrowdDemoBanner from '../components/CrowdDemoBanner';
+import CrowdModeToggle from '../components/CrowdModeToggle';
 import MessLiveDensity from '../components/MessLiveDensity';
+import { useStudentCrowdMode } from '../hooks/useStudentCrowdMode';
 import PullToRefresh from '../../../components/PullToRefresh';
 import '../styles/crowd.css';
 
@@ -18,10 +21,14 @@ export default function CrowdDashboard() {
   const queryClient = useQueryClient();
   const [selectedMess, setSelectedMess] = useState(null);
   const userRole = localStorage.getItem('user_role');
+  const { mode, demoModeEnabled, setMode } = useStudentCrowdMode();
   const handleRefresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['mess', 'list'] }),
       queryClient.invalidateQueries({ queryKey: ['user', 'profile'] }),
+      queryClient.invalidateQueries({ queryKey: ['crowd', 'live'] }),
+      queryClient.invalidateQueries({ queryKey: ['crowd', 'history'] }),
+      queryClient.invalidateQueries({ queryKey: ['crowd', 'recommendation'] }),
     ]);
   };
 
@@ -74,14 +81,30 @@ export default function CrowdDashboard() {
           >
             <ArrowLeft size={18} />
           </button>
-          <h1 className="crowd-dashboard__title">Live Crowd Monitor</h1>
+          <h1 className="crowd-dashboard__title">
+            {demoModeEnabled ? 'Crowd Monitor Demo' : 'Live Crowd Monitor'}
+          </h1>
         </div>
         <p className="crowd-dashboard__subtitle">
-          Real-time crowd density across all mess halls
+          {demoModeEnabled
+            ? 'Simulated crowd density across all mess halls for presentation mode'
+            : 'Real-time crowd density across all mess halls'}
         </p>
       </div>
 
         <div className="crowd-dashboard__content">
+        {userRole === 'student' ? (
+          <div className="crowd-section">
+            <CrowdModeToggle mode={mode} onChange={setMode} />
+          </div>
+        ) : null}
+
+        {demoModeEnabled ? (
+          <div className="crowd-section">
+            <CrowdDemoBanner message="Presentation mode is active. Metrics change slowly on a 10-minute simulation loop." />
+          </div>
+        ) : null}
+
         {/* Mess Selector */}
         {userRole !== 'student' && (
           <div className="crowd-section">
@@ -93,7 +116,7 @@ export default function CrowdDashboard() {
         <div className="crowd-section">
           <div className="crowd-section__title">
             <Activity size={16} color="var(--st-accent)" />
-            Live Density
+            {demoModeEnabled ? 'Simulated Density' : 'Live Density'}
           </div>
 
           {isLoading ? (
@@ -121,6 +144,7 @@ export default function CrowdDashboard() {
                   key={mess.id}
                   messId={mess.id}
                   messName={mess.name || `Mess ${mess.id}`}
+                  demoMode={demoModeEnabled}
                   onClick={() => navigate(`/crowd/mess/${mess.id}`)}
                 />
               ))}

@@ -1,6 +1,7 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from importlib.util import find_spec
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.utils import timezone
@@ -100,6 +101,56 @@ class MessServiceTests(TestCase):
         self.menu_item.save(update_fields=["is_active"])
         with self.assertRaises(BookingValidationError):
             validate_booking_request(self.student, self.menu_item, 1)
+
+    def test_validate_booking_request_rejects_tomorrow_booking_before_8pm(self):
+        tomorrow_item = MessMenuItem.objects.create(
+            mess=self.mess,
+            item_name="Veg Burger",
+            description="Snack item",
+            price=Decimal("50.00"),
+            meal_type=MessMenuItem.MealType.SNACK,
+            day_of_week=MessMenuItem.DayOfWeek.TUESDAY,
+            available_quantity=5,
+            default_quantity=6,
+            is_active=True,
+        )
+        mocked_time = timezone.make_aware(
+            datetime(2026, 4, 20, 19, 59),
+            timezone.get_current_timezone(),
+        )
+
+        with patch("apps.mess.services.timezone.now", return_value=mocked_time), patch(
+            "apps.mess.services.timezone.localtime", return_value=mocked_time
+        ):
+            with self.assertRaisesMessage(
+                BookingValidationError,
+                "Bookings for Tuesday extras open at 8 PM today.",
+            ):
+                validate_booking_request(self.student, tomorrow_item, 1)
+
+    def test_validate_booking_request_allows_tomorrow_booking_at_8pm(self):
+        tomorrow_item = MessMenuItem.objects.create(
+            mess=self.mess,
+            item_name="Masala Maggi",
+            description="Evening snack",
+            price=Decimal("45.00"),
+            meal_type=MessMenuItem.MealType.SNACK,
+            day_of_week=MessMenuItem.DayOfWeek.TUESDAY,
+            available_quantity=5,
+            default_quantity=6,
+            is_active=True,
+        )
+        mocked_time = timezone.make_aware(
+            datetime(2026, 4, 20, 20, 0),
+            timezone.get_current_timezone(),
+        )
+
+        with patch("apps.mess.services.timezone.now", return_value=mocked_time), patch(
+            "apps.mess.services.timezone.localtime", return_value=mocked_time
+        ):
+            total = validate_booking_request(self.student, tomorrow_item, 2)
+
+        self.assertEqual(total, Decimal("90.00"))
 
     def test_debit_and_refund_account_updates_balance(self):
         debit_mess_account(self.student, Decimal("50.00"))

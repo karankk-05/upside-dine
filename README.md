@@ -33,14 +33,10 @@ Deployed on an IITK server behind an Ngrok tunnel to bypass campus firewall rest
 
 ---
 
-## Live Demo and Download
+## Live Application and Download
 
-| | |
-|---|---|
-| **Live Application** | [cushy-chanda-unmaltable.ngrok-free.dev](https://cushy-chanda-unmaltable.ngrok-free.dev) |
-| **Android APK** | [`upside_dine.apk`](upside_dine.apk) -- download and install directly on any Android device |
-
-
+- **Live Application**: [cushy-chanda-unmaltable.ngrok-free.dev](https://cushy-chanda-unmaltable.ngrok-free.dev)
+- **Android APK**: [`upside_dine.apk`](upside_dine.apk) &mdash; download and install directly on any Android device
 > **Note:** The live deployment runs on an IITK campus server. Availability depends on the server being online and the Ngrok tunnel being active.
 
 ---
